@@ -1,0 +1,55 @@
+{
+ "byggd": "2026-08-08",
+ "antalProdukter": 3632,
+ "antalStilar": 60,
+ "varians": [
+  0.394,
+  0.211
+ ],
+ "axlar": [
+  {
+   "komponent": 1,
+   "negativ": [
+    "sirapslimpa",
+    "pomerans",
+    "choklad",
+    "tallbarr",
+    "torkad frukt",
+    "örter"
+   ],
+   "positiv": [
+    "syrlig",
+    "fruktig",
+    "kryddig",
+    "ljust bröd",
+    "banan",
+    "bärig"
+   ]
+  },
+  {
+   "komponent": 2,
+   "negativ": [
+    "kaffe",
+    "kavring",
+    "rostad",
+    "syrlig",
+    "mörk choklad",
+    "lakrits"
+   ],
+   "positiv": [
+    "örter",
+    "aprikos",
+    "honung",
+    "apelsinskal",
+    "ljust bröd",
+    "sirapslimpa"
+   ]
+  }
+ ],
+ "rattar": {
+  "MIN_DF": 5,
+  "TEXT_KOMPONENTER": 8,
+  "VIKT_NUM": 0.6,
+  "VIKT_SYRA": 0.6
+ }
+}

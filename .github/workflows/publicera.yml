@@ -1,0 +1,72 @@
+name: Bygg och publicera
+
+on:
+  push:
+    branches: [main]
+  # Söndag 04:10 svensk tid. Källan uppdateras 03:00, så datan hunnit landa.
+  # Cron i GitHub Actions går i UTC och tar ingen hänsyn till sommartid;
+  # 02:10 UTC blir 04:10 på sommaren och 03:10 på vintern. Det spelar ingen
+  # roll här — sortimentet ändras långsamt.
+  schedule:
+    - cron: '10 2 * * 0'
+  workflow_dispatch: # gör det möjligt att trycka på knappen manuellt
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Låt en pågående publicering bli klar istället för att avbrytas.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bygg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Råfilen är 100 MB och hämtas från en privatpersons server. Cachen har
+      # veckonumret i nyckeln, så en vanlig push återanvänder den och bara det
+      # schemalagda söndagsjobbet hämtar på nytt.
+      - name: Veckonummer
+        id: vecka
+        run: echo "v=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: data/rå
+          key: sortiment-${{ steps.vecka.outputs.v }}
+
+      - name: Hämta sortimentet
+        run: npm run data:hämta
+
+      - name: Bygg datan
+        run: npm run data
+
+      - name: Bygg appen
+        env:
+          BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicera:
+    needs: bygg
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,471 @@
+/* Prickarna bär all kulör. Allt annat är neutralt, och bakgrunden ligger i
+   mitten av SRM-skalan så att både halmgul pilsner och nästan svart stout
+   syns mot den. */
+
+:root {
+  --botten: #17171a;
+  --yta: #1f1f23;
+  --linje: #34343a;
+  --text: #e6e4e0;
+  --svag: #8b8a86;
+
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--botten);
+  color: var(--text);
+  overflow: hidden;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Kartan och panelen sida vid sida. Kartan krymper, den försvinner inte —
+   man ska se var man är medan man läser om stilen. */
+.scen {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Kartan är sidans tes: den ligger där direkt, i full storlek. */
+.karta {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.karta svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.karta svg:active {
+  cursor: grabbing;
+}
+
+.karta circle {
+  cursor: pointer;
+}
+
+.etikett {
+  fill: var(--svag);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--botten);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.etikett.aktiv {
+  fill: var(--text);
+}
+
+.axel {
+  position: absolute;
+  color: var(--svag);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.axel.vänster {
+  left: 16px;
+  top: 50%;
+}
+.axel.höger {
+  right: 16px;
+  top: 50%;
+}
+.axel.upp {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.axel.ned {
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.knappnål {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  background: var(--yta);
+  border: 1px solid var(--linje);
+  border-radius: 5px;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.knappnål span {
+  color: var(--svag);
+}
+
+footer {
+  display: flex;
+  gap: 20px;
+  align-items: baseline;
+  padding: 10px 16px;
+  border-top: 1px solid var(--linje);
+  font-size: 11px;
+  color: var(--svag);
+}
+
+footer span:first-child {
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+footer span:last-child {
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ panel -- */
+
+.panel {
+  position: relative;
+  flex: 0 0 380px;
+  overflow-y: auto;
+  padding: 22px 24px 40px;
+  border-left: 1px solid var(--linje);
+  background: var(--yta);
+  overscroll-behavior: contain;
+}
+
+.panel h2 {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin: 2px 0 4px;
+  text-wrap: balance;
+}
+
+.panel h3 {
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--svag);
+  font-weight: 500;
+  margin: 26px 0 10px;
+}
+
+.panel h3 .not {
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.72;
+}
+
+.panel .meta {
+  font-size: 12px;
+  color: var(--svag);
+  margin: 0;
+}
+
+.panel .undertitel {
+  font-size: 13px;
+  color: var(--svag);
+  margin: 0;
+}
+
+.stäng {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--svag);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stäng:hover {
+  background: var(--linje);
+  color: var(--text);
+}
+
+.tillbaka {
+  border: 0;
+  background: transparent;
+  color: var(--svag);
+  font-size: 12px;
+  padding: 0;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.tillbaka:hover {
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------- staplar -- */
+
+.staplar {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stapel {
+  display: grid;
+  grid-template-columns: 68px 1fr 22px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.stapel-namn {
+  color: var(--svag);
+}
+
+.stapel-spår {
+  position: relative;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--botten);
+  overflow: hidden;
+}
+
+.stapel-fyll {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.stapel-median,
+.stapel-jämför {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+}
+
+.stapel-median {
+  background: rgb(255 255 255 / 0.55);
+}
+
+.stapel-jämför {
+  background: rgb(255 255 255 / 0.28);
+}
+
+.stapel-tal {
+  color: var(--svag);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.teckenförklaring {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--svag);
+  margin: 9px 0 0;
+}
+
+.prick {
+  display: inline-block;
+  width: 2px;
+  height: 10px;
+  margin-left: 6px;
+}
+
+.prick.median {
+  background: rgb(255 255 255 / 0.55);
+  margin-left: 0;
+}
+
+.prick.jämför {
+  background: rgb(255 255 255 / 0.28);
+}
+
+/* ---------------------------------------------------------------- listor -- */
+
+.fakta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px 14px;
+  margin: 16px 0 0;
+}
+
+.fakta div {
+  display: flex;
+  flex-direction: column;
+}
+
+.fakta dt {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--svag);
+}
+
+.fakta dd {
+  margin: 1px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.termer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.termer li {
+  font-size: 11.5px;
+  color: var(--text);
+  background: var(--botten);
+  border: 1px solid var(--linje);
+  border-radius: 99px;
+  padding: 2px 9px;
+}
+
+.smaktext {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.laddar,
+.fel {
+  font-size: 12px;
+  color: var(--svag);
+  margin: 0;
+}
+
+.fel {
+  color: #d98b6a;
+}
+
+.produkter {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: rad;
+}
+
+.produkter button,
+.grannar button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.produkter button {
+  display: grid;
+  gap: 1px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--linje);
+  border-radius: 0;
+}
+
+.produkter button:hover {
+  background: var(--botten);
+}
+
+.p-namn {
+  font-size: 13px;
+}
+
+.p-meta,
+.p-tal {
+  font-size: 11.5px;
+  color: var(--svag);
+}
+
+.p-tal {
+  font-variant-numeric: tabular-nums;
+}
+
+.grannar {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.grannar button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.grannar button:hover {
+  background: var(--botten);
+}
+
+.g-prick {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.g-antal {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--svag);
+  font-variant-numeric: tabular-nums;
+}
+
+:where(button, [tabindex]):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* På smal skärm lägger sig panelen underst istället för bredvid, så att
+   kartan behåller sin bredd. */
+@media (max-width: 760px) {
+  .scen {
+    flex-direction: column;
+  }
+
+  .panel {
+    flex: 0 0 55%;
+    border-left: 0;
+    border-top: 1px solid var(--linje);
+  }
+}

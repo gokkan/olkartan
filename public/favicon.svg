@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Tre prickar ur SRM-skalan: kartan i miniatyr. -->
+  <circle cx="11" cy="12" r="7.5" fill="#f2cd5c"/>
+  <circle cx="21" cy="17" r="6" fill="#d07c1e"/>
+  <circle cx="13" cy="23" r="5" fill="#3b1a10"/>
+</svg>
