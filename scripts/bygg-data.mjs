@@ -344,7 +344,6 @@ const sm = kolumnMedel(stilMedel)
 const sc = centrera(stilMedel, sm)
 const kartKomp = egenvektorer(kovarians(sc), 2)
 const koord = projicera(sc, kartKomp)
-const totalVarians = kartKomp.reduce((s, k) => s + k.egenvärde, 0) / sc[0].length
 const varians = kartKomp.map((k) => k.egenvärde)
 const variansSum = sc[0]
   .map((_, i) => {
