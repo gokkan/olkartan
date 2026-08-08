@@ -43,10 +43,12 @@ Råfilen cachas med veckonumret som nyckel, så en vanlig push återanvänder de
 
 ```bash
 gh auth login
-gh repo create olkartan --private --source . --push
+gh repo create olkartan --public --source . --push
 ```
 
 Slå sedan på Pages i repots inställningar: **Settings → Pages → Source: GitHub Actions**.
+
+Repot är publikt eftersom GitHub Pages kräver Pro eller Team för att publicera från ett privat repo. Det gör ingen skada här: koden innehåller inga hemligheter, och datan är Systembolagets öppna sortiment.
 
 Arbetsflödet sätter `BASE` till `/<reponamn>/` eftersom ett projektsite ligger under en underkatalog. Byter du reponamn eller flyttar till en egen domän följer bygget med automatiskt.
 
