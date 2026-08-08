@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:bevaka": "vitest",
     "test:likhet": "node scripts/testa-likhet.mjs",
-    "test:lankar": "node scripts/testa-lankar.mjs"
+    "test:lankar": "node scripts/testa-lankar.mjs",
+    "test:mobil": "node scripts/testa-mobil.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

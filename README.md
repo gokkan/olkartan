@@ -31,6 +31,7 @@ npm run dev
 | `npm run test:karta` | mjuk zoom, inflygning och ölmolnet |
 | `npm run test:likhet` | "liknande öl" i produktvyn |
 | `npm run test:lankar` | permalänk, smakordssökning och sortimentsfilter |
+| `npm run test:mobil` | nypzoom och axelord på telefonskärm |
 
 `npm test` körs i deployen. Gränssnittstesterna gör det inte — de kräver att `npm run dev` kör i en annan terminal och att Playwright är installerat (`npm i -D playwright && npx playwright install chromium`), och 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.
 

@@ -45,16 +45,38 @@ type Props = {
   onVäljProdukt: (p: Produkt) => void
 }
 
+/* Axelorden är långa — "sirapslimpa, pomerans, choklad" tar halva bredden på
+   en telefon. På smal skärm räcker det tyngsta ordet åt varje håll. */
+function useSmalSkärm() {
+  const fråga = '(max-width: 700px)'
+  const [smal, setSmal] = useState(() => matchMedia(fråga).matches)
+  useEffect(() => {
+    const m = matchMedia(fråga)
+    const vid = () => setSmal(m.matches)
+    m.addEventListener('change', vid)
+    return () => m.removeEventListener('change', vid)
+  }, [])
+  return smal
+}
+
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
   { stilar, meta, vald, molnet, antalPerStil, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
+  const smal = useSmalSkärm()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vy, setVy] = useState<Vy>({ k: 1, tx: 0, ty: 0 })
   const [hovrad, setHovrad] = useState<Stil | null>(null)
   const [hovradProdukt, setHovradProdukt] = useState<Produkt | null>(null)
   const [pekare, setPekare] = useState({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number; tx: number; ty: number; rörd: boolean } | null>(null)
+  /* Alla fingrar som rör skärmen, och nypet de eventuellt utför. */
+  const fingrar = useRef(new Map<number, { x: number; y: number }>())
+  const nyp = useRef<{
+    avstånd: number
+    k: number
+    innehåll: { x: number; y: number }
+  } | null>(null)
 
   /* Vyn finns i tre exemplar med olika uppgifter: `vy` är den som ritas,
      `vyNu` är samma värde läsbart utan att stänga in det i en callback, och
@@ -101,6 +123,47 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     },
     [],
   )
+
+  /* Kartan är liggande, telefonen stående. Ryms hela ritytan i bredd blir den
+     ett smalt band mitt på en svart skärm — två tredjedelar av telefonen
+     oanvänd. Vid start zoomas den därför så att höjden fylls, och man
+     panorerar i sidled i stället. På en bred skärm är faktorn nära ett och
+     ingenting märks. */
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    if (!r.width || !r.height) return
+    const ryms = Math.min(r.width / W, r.height / H)
+    const fyller = Math.max(r.width / W, r.height / H)
+    const k = Math.min(MAX_SKALA, Math.max(1, (fyller / ryms) * 0.82))
+    if (k <= 1.05) return
+    // Rikta mot tyngdpunkten, inte mot ritytans geometriska mitt. Ölen ligger
+    // inte jämnt fördelade — mitten av rutan är ett glest område, och en
+    // startvy som pekar dit ser tom ut. Vikten är antalet öl per stil.
+    let vikt = 0
+    let cx = 0
+    let cy = 0
+    for (const punkt of punkter) {
+      const v = punkt.stil.antal
+      vikt += v
+      cx += punkt.px * v
+      cy += punkt.py * v
+    }
+    if (vikt > 0) {
+      cx /= vikt
+      cy /= vikt
+    } else {
+      cx = W / 2
+      cy = H / 2
+    }
+    const start = { k, tx: W / 2 - cx * k, ty: H / 2 - cy * k }
+    mål.current = start
+    sätt(start)
+    // Punkterna behövs bara vid första ritningen; vyn ska inte hoppa om
+    // filtret senare ändrar prickarnas storlek.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sätt])
 
   /* Datakoordinater → ritytan. Y vänds: PCA räknar uppåt, SVG nedåt. */
   const skala = useMemo(() => {
@@ -244,22 +307,63 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     return () => el.removeEventListener('wheel', hjul)
   }, [tillSvg, animera])
 
-  function nedPekare(e: ReactPointerEvent<SVGSVGElement>) {
-    const { x, y } = tillSvg(e)
-    // En dragning avbryter en pågående inflygning — annars slåss de om vyn.
+  /** Avbryt en pågående inflygning — annars slåss den med fingret om vyn. */
+  function stoppaGlid() {
     if (bild.current !== null) {
       cancelAnimationFrame(bild.current)
       bild.current = null
       mål.current = vyNu.current
     }
-    drag.current = { x, y, tx: vyNu.current.tx, ty: vyNu.current.ty, rörd: false }
+  }
+
+  /* Nypet räknas ur två fingrar: förhållandet mellan fingrarnas avstånd nu
+     och vid nypets början ger skalan, och punkten i innehållet som låg under
+     mittpunkten hålls kvar där. Då blir zoom och tvåfingerpanorering samma
+     rörelse, precis som man förväntar sig. */
+  function startaNyp() {
+    const [a, b] = [...fingrar.current.values()]
+    const mitt = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+    const v = vyNu.current
+    nyp.current = {
+      avstånd: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      k: v.k,
+      // Mittpunkten uttryckt i innehållets koordinater, inte skärmens.
+      innehåll: { x: (mitt.x - v.tx) / v.k, y: (mitt.y - v.ty) / v.k },
+    }
+    drag.current = null
+  }
+
+  function nedPekare(e: ReactPointerEvent<SVGSVGElement>) {
+    const { x, y } = tillSvg(e)
+    stoppaGlid()
+    fingrar.current.set(e.pointerId, { x, y })
+
+    if (fingrar.current.size === 2) {
+      startaNyp()
+    } else if (fingrar.current.size === 1) {
+      drag.current = { x, y, tx: vyNu.current.tx, ty: vyNu.current.ty, rörd: false }
+    }
   }
 
   function rörPekare(e: ReactPointerEvent<SVGSVGElement>) {
     setPekare({ x: e.clientX, y: e.clientY })
+    const { x, y } = tillSvg(e)
+    if (fingrar.current.has(e.pointerId)) fingrar.current.set(e.pointerId, { x, y })
+
+    const n = nyp.current
+    if (n && fingrar.current.size >= 2) {
+      const [a, b] = [...fingrar.current.values()]
+      const avstånd = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y))
+      const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, (n.k * avstånd) / n.avstånd))
+      const mitt = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+      const ny = { k, tx: mitt.x - n.innehåll.x * k, ty: mitt.y - n.innehåll.y * k }
+      mål.current = ny
+      sätt(ny)
+      return
+    }
+
     const d = drag.current
     if (!d) return
-    const { x, y } = tillSvg(e)
     // Några pixlars darr när man klickar ska inte räknas som en dragning.
     if (!d.rörd && Math.hypot(x - d.x, y - d.y) > 3 / vyNu.current.k) {
       d.rörd = true
@@ -274,7 +378,19 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     sätt(ny)
   }
 
-  const släpp = () => (drag.current = null)
+  function släpp(e?: ReactPointerEvent<SVGSVGElement>) {
+    if (e) fingrar.current.delete(e.pointerId)
+    else fingrar.current.clear()
+    // Lyfter man ett finger ur ett nyp ska det kvarvarande inte rycka till —
+    // panoreringen startas om från där fingret nu är.
+    if (fingrar.current.size < 2) nyp.current = null
+    if (fingrar.current.size === 1) {
+      const [f] = [...fingrar.current.values()]
+      drag.current = { ...f, tx: vyNu.current.tx, ty: vyNu.current.ty, rörd: true }
+    } else if (fingrar.current.size === 0) {
+      drag.current = null
+    }
+  }
 
   /* Ett klick som avslutar en panorering ska inte välja stilen under fingret. */
   const drog = () => drag.current?.rörd === true
@@ -299,6 +415,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
         onPointerDown={nedPekare}
         onPointerMove={rörPekare}
         onPointerUp={släpp}
+        onPointerCancel={släpp}
         onPointerLeave={() => {
           släpp()
           setHovrad(null)
@@ -388,10 +505,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
 
       {/* Axlarna namnges av de ord som väger tyngst i respektive riktning —
           hämtade ur meta.json, inte handskrivna. */}
-      <div className="axel vänster">← {xAxel.negativ.slice(0, 3).join(', ')}</div>
-      <div className="axel höger">{xAxel.positiv.slice(0, 3).join(', ')} →</div>
-      <div className="axel upp">↑ {yAxel.positiv.slice(0, 3).join(', ')}</div>
-      <div className="axel ned">↓ {yAxel.negativ.slice(0, 3).join(', ')}</div>
+      <div className="axel vänster">← {xAxel.negativ.slice(0, smal ? 1 : 3).join(', ')}</div>
+      <div className="axel höger">{xAxel.positiv.slice(0, smal ? 1 : 3).join(', ')} →</div>
+      <div className="axel upp">↑ {yAxel.positiv.slice(0, smal ? 1 : 3).join(', ')}</div>
+      <div className="axel ned">↓ {yAxel.negativ.slice(0, smal ? 1 : 3).join(', ')}</div>
 
       {knappnål && (
         <div className="knappnål" style={{ left: pekare.x + 14, top: pekare.y + 14 }}>

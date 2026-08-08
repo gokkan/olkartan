@@ -745,3 +745,30 @@ footer span:last-child {
 .produkter button.markerad {
   background: var(--botten);
 }
+
+/* På telefon får axelorden inte äta upp kartan. Texten kortas till ett ord i
+   komponenten; här krymper den och hindras från att breda ut sig. */
+@media (max-width: 700px) {
+  .axel {
+    font-size: 10px;
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .axel.vänster {
+    left: 8px;
+  }
+
+  .axel.höger {
+    right: 8px;
+  }
+}
+
+/* Sista raden i foten är en hjälptext som inte får ta två rader på telefon. */
+@media (max-width: 560px) {
+  footer span:last-child {
+    display: none;
+  }
+}

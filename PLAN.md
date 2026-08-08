@@ -220,6 +220,24 @@ Får man fem rekommendationer och inte kan köpa fyra av dem är appen irriteran
 
 ---
 
+## Telefon och dubbletter
+
+**Samma öl fanns flera gånger.** Sortimentet innehåller samma öl under flera artikelnummer — burk och flaska, två storlekar, och framför allt övergångar där Systembolaget byter artikelnummer och båda ligger kvar. Pistonhead Kustom Lager fanns som artikel från 2011 och en från 2026, identiska i allt utom pantbeloppet. 214 grupper, 471 produkter, och 183 av grupperna hade dessutom exakt samma smakdata.
+
+För en smakkarta är enheten "en öl", inte "en artikel". Byggskriptet slår ihop dem och väljer representant i tur och ordning: den som går att få tag på, den i fast sortiment, den billigaste per liter, och sist lägsta id så att utfallet blir detsamma varje körning. 3 632 öl blev 3 375.
+
+**Nypzoom.** Fanns inte alls — bara hjulet var inkopplat. Två fingrars avstånd ger skalan och punkten under mittpunkten hålls kvar, så att zoom och tvåfingerpanorering blir samma rörelse.
+
+Testet av den är värt en anteckning: hemmasnickrade  gav falskt negativt, eftersom de tar en annan väg genom webbläsaren än riktig beröring. Med CDP:s , som Chromium gör om till pointer events precis som en telefon gör, fungerade det direkt. Buggen låg i testet, inte i appen.
+
+**Kartan fyllde inte skärmen.** Ritytan är liggande 10:7, telefonen stående 1:2 — hela kartan rymdes i bredd och blev ett smalt band mitt på en svart skärm, med två tredjedelar av telefonen oanvänd. Nu zoomas den vid start så att höjden fylls, och man panorerar i sidled.
+
+Den första versionen riktade mot ritytans geometriska mitt och landade i ett glest område. Startvyn siktar därför på tyngdpunkten, viktad efter antal öl per stil — där ölen faktiskt finns.
+
+**Axelorden** kortas till ett ord på smal skärm. "sirapslimpa, pomerans, choklad" tog halva bredden; nu tar det bredaste 15 %.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.

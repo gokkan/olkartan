@@ -219,7 +219,45 @@ for (const p of alla) {
   öl.push(p)
 }
 
-console.log(`  ${alla.length} produkter in, ${öl.length} öl kvar\n`)
+/* --- samma öl två gånger ------------------------------------------------
+ * Sortimentet innehåller samma öl under flera artikelnummer: burk och
+ * flaska, två storlekar, och framför allt övergångar där Systembolaget byter
+ * artikelnummer och båda ligger kvar ett tag. Pistonhead Kustom Lager finns
+ * som artikel från 2011 och en från 2026, identiska i allt utom pantbeloppet.
+ *
+ * För en smakkarta är enheten "en öl", inte "en artikel". 183 av de 214
+ * dubblettgrupperna har dessutom exakt samma smakdata, så sammanslagningen
+ * kostar ingenting — den tar bara bort brus ur listorna och ur stilarnas
+ * medelvärden.
+ *
+ * Representanten väljs i tur och ordning: den som går att få tag på, den som
+ * finns i fast sortiment, den billigaste per liter, och sist lägsta id så att
+ * utfallet blir detsamma vid varje körning.
+ */
+const perLiter = (p) => (p.volume ? p.price / p.volume : Infinity)
+const bättre = (a, b) => {
+  if (!!a.isSupplierTemporaryNotAvailable !== !!b.isSupplierTemporaryNotAvailable)
+    return a.isSupplierTemporaryNotAvailable ? b : a
+  const fastA = a.assortmentText === 'Fast sortiment'
+  const fastB = b.assortmentText === 'Fast sortiment'
+  if (fastA !== fastB) return fastA ? a : b
+  if (perLiter(a) !== perLiter(b)) return perLiter(a) < perLiter(b) ? a : b
+  return a.productId <= b.productId ? a : b
+}
+
+const unika = new Map()
+for (const p of öl) {
+  const nyckel = [p.productNameBold, p.productNameThin ?? '', p.producerName ?? ''].join(' ')
+  const fanns = unika.get(nyckel)
+  unika.set(nyckel, fanns ? bättre(fanns, p) : p)
+}
+const dubbletter = öl.length - unika.size
+öl.length = 0
+öl.push(...unika.values())
+
+console.log(
+  `  ${alla.length} produkter in, ${öl.length} öl kvar (${dubbletter} dubbletter slogs ihop)\n`,
+)
 
 /* --- termrymd ---------------------------------------------------------- */
 const df = new Map()
