@@ -286,7 +286,11 @@ Resultatet är att telefonen visar samma sak som skrivbordet i samma storlek —
 
 **Kortet täckte skärmen.** Panelen delade höjden med kartan och tog 55 %. Nu ligger den ovanpå kartan i stället, i två lägen: vid första trycket kommer den upp precis så långt att rubriken syns — 146 punkter, och 459 prickar ligger kvar ovanför — och drar man i greppet fälls resten upp. Drar man ned från kikläget stängs den. Ett tryck på greppet växlar, för den som inte förstår att kortet går att dra.
 
-Kikhöjden mäts fram ur innehållet i stället för att gissas: vyerna märker ut sin sista rubrikrad med `data-kik`, och kortet öppnas precis så långt. Ett ölnamn i två rader får då mer plats än ett i en, och flaskbilden räknas med.
+Kikhöjden mäts fram ur innehållet i stället för att gissas: vyerna märker ut sin sista rubrikrad med `data-kik`, och kortet öppnas så långt plus 34 punkter. Ett ölnamn i två rader får mer plats än ett i en, och flaskbilden räknas med — `ResizeObserver` lyssnar på rubrikstycket och inte bara på kortet, för bilden kommer över nätet och skjuter ned resten när den landar.
+
+De 34 extra punkterna är hela poängen med att inte sluta vid en kant. Slutade kiket snyggt efter rubriken såg kortet färdigt ut, och då fanns ingen anledning att dra i det. Nu klipps nästa rad av under en toning — avklippet blir ett budskap i stället för ett slarvfel. Handtaget är dessutom två streck som vinklas till en flack pil uppåt i kikläget och lägger sig platta när kortet är uppfällt.
+
+Och man behöver inte hitta handtaget: ett tryck var som helst på kortet fäller upp det. I kikläget är innehållet under rubriken avstängt för pekaren, så den halva knapp som sticker upp ur kiket inte går att utlösa av misstag — trycket fäller upp kortet i stället.
 
 ---
 

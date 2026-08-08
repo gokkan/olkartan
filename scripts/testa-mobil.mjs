@@ -141,6 +141,14 @@ async function svep(längd) {
   await p.waitForTimeout(450)
 }
 
+/* Ett tryck mitt på kortet ska fälla upp det — inte alla hittar greppet. */
+await p.touchscreen.tap(skärm.width / 2, k.topp + 60)
+await p.waitForTimeout(450)
+k = await kortet()
+console.log(`  tryck på kortet: ${k.synligt} px synligt, uppfällt ${k.kikar ? '✗' : '✓'}`)
+await svep(200)
+await p.waitForTimeout(200)
+
 await svep(-260)
 k = await kortet()
 console.log(`  dragen uppåt: ${k.synligt} px synligt, kikläge ${k.kikar ? '✗' : '✓ borta'}`)

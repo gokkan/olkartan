@@ -519,6 +519,38 @@ footer span:last-child {
      skulle flytta text ut ur bild utan att kortet öppnades. */
   .panel.kikar {
     overflow: hidden;
+    cursor: pointer;
+  }
+
+  /* Toningen ligger över den avklippta raden längst ned i kiket och gör
+     avklippet till ett budskap i stället för ett slarvfel: det finns mer.
+     Under ett drag är den i vägen — då syns kanten ändå. */
+  .panel.kikar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--kik) - 40px);
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, var(--yta));
+    pointer-events: none;
+    transition: opacity 150ms;
+  }
+
+  .panel.kikar.drar::after {
+    opacity: 0;
+  }
+
+  /* Innehållet under rubriken är avstängt för pekaren medan kortet kikar.
+     Halva knappar sticker upp ur kiket, och ett tryck på en sådan ska fälla
+     upp kortet — inte utlösa den. */
+  .panel.kikar > * {
+    pointer-events: none;
+  }
+
+  .panel.kikar > .grepp,
+  .panel.kikar > .stäng {
+    pointer-events: auto;
   }
 }
 
@@ -817,11 +849,23 @@ footer span:last-child {
     touch-action: none;
   }
 
+  /* Två streck i stället för ett. I kikläget vinklas de till en flack pil
+     uppåt — samma handtag som alla andra kort har, men det säger också åt
+     vilket håll det ska. Uppfällt lägger de sig platta och blir ett streck. */
   .grepp span {
-    width: 36px;
+    width: 19px;
     height: 4px;
     border-radius: 99px;
     background: var(--linje);
+    transition: transform 220ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+
+  .panel.kikar .grepp span:first-child {
+    transform: translateX(1.5px) rotate(-9deg);
+  }
+
+  .panel.kikar .grepp span:last-child {
+    transform: translateX(-1.5px) rotate(9deg);
   }
 
   .grepp:active span {

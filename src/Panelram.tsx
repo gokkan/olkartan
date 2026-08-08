@@ -4,6 +4,8 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
@@ -13,6 +15,10 @@ import { useSmalSkärm } from './lib/skarm'
 const GRÄNS = 60
 /** Om inget `data-kik` hittas: så högt kortet öppnas ändå. */
 const KIK_RESERV = 150
+/* Kiket slutar inte vid rubriken utan en bit in i nästa stycke. Slutar det
+   snyggt vid en kant ser kortet färdigt ut, och då finns ingen anledning att
+   dra i det. En avklippt rad under en toning säger att det finns mer. */
+const GLUGG = 34
 
 /**
  * Ramen runt panelen — samma för stilvyn, produktvyn och urvalsvyn.
@@ -30,6 +36,7 @@ const KIK_RESERV = 150
  *
  * Svepet startar bara från greppet högst upp. Tar man tag var som helst i
  * kortet slåss svepet med rullningen, och då blir listan omöjlig att läsa.
+ * Ett vanligt tryck på kortet räcker däremot för att fälla upp det.
  */
 export default function Panelram({
   children,
@@ -55,7 +62,7 @@ export default function Panelram({
     const höjd = el.offsetHeight
     const märke = el.querySelector('[data-kik]')
     const kik = märke
-      ? märke.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 14
+      ? märke.getBoundingClientRect().bottom - el.getBoundingClientRect().top + GLUGG
       : KIK_RESERV
     // Samma värden ut ska inte ge en ny rendering: mätningen körs om varje
     // gång innehållet byts, och ett nytt objekt varje gång vore en snurra.
@@ -69,6 +76,12 @@ export default function Panelram({
     if (!el) return
     const ro = new ResizeObserver(mät)
     ro.observe(el)
+    // Också märket självt. Kortet har en fast höjd och ändrar aldrig storlek,
+    // men rubrikstycket gör det — flaskbilden kommer över nätet och skjuter
+    // ned resten när den landar. Mäts kiket bara en gång hamnar bilden under
+    // skärmkanten.
+    const märke = el.querySelector('[data-kik]')
+    if (märke) ro.observe(märke)
     return () => ro.disconnect()
   }, [smal, mät, children])
 
@@ -103,6 +116,15 @@ export default function Panelram({
     setDy(e.clientY - start.current)
   }
 
+  /* Ett tryck var som helst på kortet fäller upp det. I kikläget är
+     innehållet under rubriken ändå avstängt för pekaren, så det finns inget
+     att träffa fel på — och den som inte förstår greppet hittar ändå in. */
+  function tryck(e: ReactMouseEvent<HTMLElement>) {
+    if (öppet) return
+    if ((e.target as Element).closest('.grepp, .stäng')) return
+    setÖppet(true)
+  }
+
   function upp() {
     if (!drar) return
     setDrar(false)
@@ -125,7 +147,15 @@ export default function Panelram({
     <aside
       ref={ramen}
       className={`panel${drar ? ' drar' : ''}${smal && !öppet ? ' kikar' : ''}`}
-      style={smal ? { transform: `translateY(${förskjutning}px)` } : undefined}
+      onClick={smal ? tryck : undefined}
+      style={
+        smal
+          ? ({
+              transform: `translateY(${förskjutning}px)`,
+              '--kik': `${mått.kik}px`,
+            } as CSSProperties)
+          : undefined
+      }
     >
       {smal && (
         <div
@@ -140,6 +170,9 @@ export default function Panelram({
           aria-label={öppet ? 'Dra ned för att fälla ihop' : 'Dra upp för att läsa mer'}
           onKeyDown={(e) => e.key === 'Enter' && setÖppet((v) => !v)}
         >
+          {/* Två streck som bildar en flack pil uppåt i kikläget och lägger
+              sig platta när kortet är uppfällt. */}
+          <span />
           <span />
         </div>
       )}
