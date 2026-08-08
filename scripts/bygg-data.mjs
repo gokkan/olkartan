@@ -290,11 +290,31 @@ const Tc = centrera(T, Tm)
 const textKomp = egenvektorer(kovarians(Tc), TEXT_KOMPONENTER)
 let TX = projicera(Tc, textKomp)
 
-// Standardisera varje textkomponent, annars dominerar den första allt.
-const txSd = TX[0].map((_, i) => {
+/* Textkomponenterna skalas om innan de möter klockorna.
+ *
+ * Utan omskalning bestämmer PC1 nästan allt. Med full vitning — varje
+ * komponent till standardavvikelse 1 — får PC8 samma tyngd som PC1, och PC8
+ * av en 152-dimensionell ordrymd är till stor del brus. Båda ytterligheterna
+ * är fel; VIKTNING=egenvarde bygger den andra varianten för jämförelse.
+ */
+const txRåSd = TX[0].map((_, i) => {
   const m = TX.reduce((s, r) => s + r[i], 0) / TX.length
   return Math.sqrt(TX.reduce((s, r) => s + (r[i] - m) ** 2, 0) / TX.length) || 1
 })
+console.log(
+  `textkomponenter: ${txRåSd.map((sd, i) => `PC${i + 1} ${((sd / txRåSd[0]) ** 2 * 100).toFixed(0)}%`).join('  ')}  (varians relativt PC1)`,
+)
+
+// Behåll komponenternas inbördes tyngd, men ge blocket samma totala varians
+// som vitningen ger, så att VIKT_NUM betyder samma sak i båda varianterna.
+const txSd =
+  process.env.VIKTNING === 'egenvarde'
+    ? (() => {
+        const total = txRåSd.reduce((s, sd) => s + sd * sd, 0)
+        const k = Math.sqrt(total / TEXT_KOMPONENTER)
+        return txRåSd.map(() => k)
+      })()
+    : txRåSd
 TX = TX.map((r) => r.map((v, i) => v / txSd[i]))
 
 /* --- numeriska axlar --------------------------------------------------- */
