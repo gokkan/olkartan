@@ -8,7 +8,9 @@ Det här är andra utkastet. Det första byggde på ett antagande om datan som i
 
 ## Vad som ändrades, och varför
 
-**Ölen har tre smakklockor, inte fem.** Första utkastet räknade med `tasteClockBitter`, `Body`, `Sweetness`, `Fruitacid` och `Casque`. För öl är fruktsyra `0` hos samtliga 5 073 produkter — den är en vinaxel. Strävhet och rökighet likaså. Fatkaraktär är i praktiken binär: 4 058 öl har värdet 1, bara 97 har mer. Kvar blir beska, fyllighet och sötma.
+**Ölen har tre smakklockor, inte fem.** Första utkastet räknade med `tasteClockBitter`, `Body`, `Sweetness`, `Fruitacid` och `Casque`. För öl är fruktsyra `0` hos samtliga 5 073 produkter, och strävhet och rökighet likaså. Fatkaraktär är i praktiken binär: 4 058 öl har värdet 1, bara 97 har mer. Kvar blir beska, fyllighet och sötma.
+
+Det är inte tomma fält som någon glömt fylla i. `tasteClocks`, arrayen Systembolaget faktiskt publicerar per produkt, innehåller exakt tre poster för öl — `Bitter`, `Body`, `Sweetness` — och bara två uppsättningar förekommer i hela ölsortimentet: de tre, eller ingen alls. Fruktsyra, strävhet och rökighet är vinaxlar som ligger kvar som nollor i schemat. Det spelar roll längre ned: syran på kartan är därför en regel vi skrivit själva, inte ett värde vi läst av, och det är inte av lättja.
 
 **Tre axlar räcker inte.** 4 160 öl med smakdata fördelar sig på 287 unika punkter. 337 öl delar exakt samma vektor. De tjugo vanligaste punkterna täcker 62% av sortimentet. En grannsökning i den rymden returnerar hundratals träffar på avstånd noll och svarar "nästan identisk smakprofil" på nästan varje fråga.
 
@@ -20,7 +22,14 @@ Det här är andra utkastet. Det första byggde på ett antagande om datan som i
 
 Det ger ett kontrollerat vokabulär på ungefär 30 karaktärsord (*maltig, humlearomatisk, rostad, syrlig, bärig*) och 288 smakdeskriptorer, varav 156 återkommer minst fem gånger (*kaffe, kavring, grapefrukt, tallbarr, banan*). Det är i praktiken ett färdigt smaklexikon, skrivet av folk som smakat ölen.
 
-Med texten inräknad blir 77% av ölen unika i rymden istället för 7%, och stout hamnar där stout hör hemma.
+Med texten inräknad separerar rymden faktiskt. Måttet som säger något är avståndet till närmaste granne, som andel av avståndet mellan två slumpvis valda öl:
+
+```
+bara de tre klockorna                0 %    467 av 483 har en exakt dubblett
+text + klockor + abv + syra         16 %     17 av 483 har en exakt dubblett
+```
+
+Att räkna unika vektorer vore ett svagare mått — två öl kan skilja sig på fjärde decimalen och ändå räknas som olika. Medianavståndet säger om rymden håller isär dem. Och stout hamnar där stout hör hemma.
 
 ---
 
@@ -52,7 +61,29 @@ Servern drivs av en privatperson. Hämta sällan, cacha lokalt, committa aldrig 
 
 Utdata: `src/data/stilar.json` och `meta.json`, som byggs in, samt `public/data/produkter.json`, som hämtas separat. Stilarna behövs direkt och är små; produkterna är 2,3 MB och behövs först vid ett klick, så kartan ska inte vänta på dem.
 
-**Viktningen är den enda känsliga ratten.** `VIKT_NUM = 0.6` styr klockornas tyngd mot texten. Höjs den suddas stout och IPA ihop igen — de har nästan identiska klockvärden och det är bara texten som skiljer dem. Sänks den tappar kartan sin koppling till beska och styrka.
+**`VIKT_NUM = 0.6` är den känsligaste ratten**, men inte den enda. Den styr klockornas tyngd mot texten: höjs den suddas stout och IPA ihop igen — de har nästan identiska klockvärden och det är bara texten som skiljer dem — och sänks den tappar kartan sin koppling till beska och styrka.
+
+De andra rattarna är `MIN_DF = 5`, åtta textkomponenter, divisorerna 10/12/11, alkoholtaket vid 15 %, syrans 0,7 och dess 40-teckenfönster. Och en som är lätt att missa för att den ser ut som en självklarhet: **standardiseringen av textkomponenterna**. Att vitna alla åtta till samma varians är ett val som ger PC8 samma tyngd som PC1, och det är samma sorts ratt som `VIKT_NUM` fast åt andra hållet. Se nedan.
+
+**Vitning eller egenvärdesviktning?** Textkomponenterna skalas om innan de möter klockorna. Utan omskalning bestämmer PC1 nästan allt; med full vitning väger PC8 lika tungt som PC1. Invändningen mot vitning är att en trailing-komponent i en 152-dimensionell ordrymd mest är brus, och att förstärka den är att förstärka brus. Så ser spektret ut:
+
+```
+PC1 100%  PC2 85%  PC3 55%  PC4 41%  PC5 36%  PC6 34%  PC7 33%  PC8 32%
+```
+
+Det är platt. PC8 har en tredjedel av PC1:s varians, inte en femtiondel, så vitningen förstärker den med 1,8× — inte tio. Premissen håller alltså inte för just den här ordrymden, men frågan går inte att avgöra på resonemang. `VIKTNING=egenvarde` bygger den andra varianten.
+
+Utfallet: kartorna korrelerar 0,95 på x och 0,94 på y, alla fem kontrollerna passerar i båda, och egenvärdesvarianten är marginellt bättre på alla fem. Men på fyra mått som *inte* är bland kontrollerna — och som därför inte kan smickra en ändring jag själv skulle vilja göra — är utfallet blandat:
+
+```
+                                          vitning   egenvärde
+närmaste stilmitt är den egna, 13D          32,0 %      33,7 %
+detsamma på kartans 2D                      15,6 %      15,9 %
+stilarnas täthet (lägre är tätare)            3,72        3,84
+kartan bevarar avstånden (13D ↔ 2D)          0,548       0,599
+```
+
+Två bättre, ett oförändrat, ett sämre. Medianstilen flyttar samtidigt 0,42 spridningsenheter — trettio gånger mer än en sortimentsuppdatering gör. **Vitningen får stå kvar.** Att flytta hela kartan för +0,05 i avståndstrohet är fel pris för den som lärt sig var stilarna ligger. Optionen och mätningen ligger kvar så att beslutet går att ompröva utan att göras om.
 
 **Acceptanskriterium:** `npm run data` går igenom utan fel, minst 30 stilar med minst 3 produkter var. Stilar med färre flaggas `liten: true` men kastas inte.
 
@@ -181,7 +212,14 @@ Två fel byggdes bort på vägen. Tre öl saknar bryggeri, och en null där tog 
 
 **Varje öl har en egen plats.** Byggskriptet projicerar produkterna på samma bas som stilarna, så koordinaterna fanns redan — de ritades bara inte ut. Väljer man en stil tonas dess cirkel ned till en ring och de enskilda ölen träder fram som småprickar, klickbara.
 
-Molnet visar två saker som stilkartan döljer. Spridningen inom en stil varierar kraftigt: Berliner weisse ligger på 0,25 spridningsenheter i median, "Smaksatt/kryddad öl" på 1,29 — den senare är ingen smakstil alls utan en restkategori. Och **85 % av alla öl ligger närmare någon annan stils mittpunkt än sin egen**, med överlapp precis där gränsen är administrativ snarare än sensorisk: IPA mot New England IPA, tysk pilsner mot tjeckisk, övrig syrlig öl mot berliner weisse.
+Molnet visar två saker som stilkartan döljer. Spridningen inom en stil varierar kraftigt: Berliner weisse ligger på 0,25 spridningsenheter i median, "Smaksatt/kryddad öl" på 1,29 — den senare är ingen smakstil alls utan en restkategori. Och de flesta öl ligger närmare någon annan stils mittpunkt än sin egen, med överlapp precis där gränsen är administrativ snarare än sensorisk: IPA mot New England IPA, tysk pilsner mot tjeckisk, övrig syrlig öl mot berliner weisse. Hur många beror på var man mäter, och skillnaden är själv värd att se:
+
+```
+i 13 dimensioner (hela smakrymden)   68 %
+på kartans 2 dimensioner             84 %
+```
+
+68 % är påståendet om verkligheten. 84 % är vad man ser. De sexton procentenheterna emellan är vad projektionen kostar — kartaxlarna fångar 60 % av spridningen *mellan* stilar och ingenting av spridningen *inom* dem. Det är också därför likhetsmotorn räknar i 13D och inte på kartkoordinaterna.
 
 Det är argumentet för att fas 3 ska räkna likhet mellan öl och inte mellan stilar.
 
