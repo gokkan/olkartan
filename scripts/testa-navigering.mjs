@@ -14,7 +14,7 @@
  */
 import { chromium } from 'playwright'
 
-const url = 'http://localhost:5173'
+const url = process.argv[2] ?? 'http://localhost:5173'
 const b = await chromium.launch()
 const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
 const fel = []
