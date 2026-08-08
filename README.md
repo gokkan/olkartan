@@ -2,6 +2,8 @@
 
 En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet.
 
+**→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
+
 Projektets bakgrund, beslut och faser finns i [PLAN.md](PLAN.md). Det här dokumentet handlar bara om att köra och publicera.
 
 ## Kom igång
