@@ -175,11 +175,29 @@ Appen presenterar och beskriver — den säljer inte. Inga köplänkar, inga aff
 
 ---
 
+## Drift
+
+Publiceras till GitHub Pages av `.github/workflows/publicera.yml`, som körs vid varje push till `main` och söndagar 04:10. Arbetsflödet hämtar sortimentet, bygger datan, bygger appen och publicerar — ingen data behöver committas. Råfilen cachas med veckonumret som nyckel, så bara söndagsjobbet belastar källservern.
+
+**Kartan tål att datan uppdateras.** Det var den verkliga risken med ett schemalagt bygge: PCA är deterministisk för samma indata, men när sortimentet ändras kan komponenterna rotera eller byta tecken, och då hoppar stilarna omkring för någon som lärt sig kartan. Testat genom att bygga om med 4 % av ölen borttagna:
+
+```
+median förflyttning per stil   0,015 spridningsenheter
+största förflyttning           0,173   (Kölsch-stil)
+kartans ytterkanter            oförändrade
+```
+
+Barley wine och Isbock ligger kvar längst till vänster, surölen längst till höger, och alla fem kontrollerna ger i praktiken samma värden. Teckenkonventionen i `egenvektorer()` — största laddningen alltid positiv — är det som hindrar spegelvändningar.
+
+Bygget sätter `BASE` till `/<reponamn>/` eftersom ett projektsite ligger under en underkatalog. Appen hämtar produktdatan via `import.meta.env.BASE_URL` och följer med automatiskt.
+
 ## Kom igång
 
 ```bash
 npm install
 npm run data:hämta    # ~100 MB till data/rå/, hoppas över om filen är färsk
-npm run data          # bygger src/data/*.json, kör kontrollerna
+npm run data          # bygger datan, kör kontrollerna
 npm run dev
 ```
+
+Se [README.md](README.md) för kommandon och för hur repot kopplas till GitHub Pages första gången.

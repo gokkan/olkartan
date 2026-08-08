@@ -50,6 +50,11 @@ jobs:
         run: npm run data:hämta
 
       - name: Bygg datan
+        # Råfilen är 100 MB JSON. Heapen räcker med standardinställningen på en
+        # vanlig körare, men sätts explicit så att bygget inte beror på hur
+        # mycket minne körarbilden råkar ha.
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run data
 
       - name: Bygg appen
