@@ -269,20 +269,12 @@ footer span:last-child {
   border-radius: 2px;
 }
 
-.stapel-median,
-.stapel-jämför {
+.stapel-markör {
   position: absolute;
   top: 0;
   width: 2px;
   height: 100%;
-}
-
-.stapel-median {
   background: rgb(255 255 255 / 0.55);
-}
-
-.stapel-jämför {
-  background: rgb(255 255 255 / 0.28);
 }
 
 .stapel-tal {
@@ -308,13 +300,9 @@ footer span:last-child {
   margin-left: 6px;
 }
 
-.prick.median {
+.prick.markör {
   background: rgb(255 255 255 / 0.55);
   margin-left: 0;
-}
-
-.prick.jämför {
-  background: rgb(255 255 255 / 0.28);
 }
 
 /* ---------------------------------------------------------------- listor -- */

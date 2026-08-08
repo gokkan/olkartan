@@ -8,7 +8,6 @@ import {
   kronor,
   närmasteStilar,
   produkterIStil,
-  sortimentetsMedian,
   typiskMat,
 } from './lib/urval'
 import { srm, srmStapel } from './lib/färg'
@@ -36,19 +35,23 @@ type Props = {
 
 /**
  * Tre vågräta staplar, inte ett radardiagram. Ett radardiagram med tre hörn är
- * en triangel och ser trasigt ut. Strecket markerar sortimentets median, så att
- * man ser om stilen ligger över eller under snittet och inte bara ett tal.
+ * en triangel och ser trasigt ut.
+ *
+ * Här stod tidigare också ett streck för hela sortimentets median. Det ströks:
+ * medianen är 6, 6 och 2, alltså samma tre lägen på varje kort man öppnar, och
+ * 43 av 60 stilar ligger inom ett klocksteg från den. Strecket satt i praktiken
+ * ovanpå stapeländen och sa ingenting. Kvar är `markör`, som bara produktvyn
+ * använder — där svarar den på en riktig fråga: är den här ölen beskare än en
+ * typisk stout?
  */
 function Staplar({
   värden,
-  referens,
   färg,
-  jämför,
+  markör,
 }: {
   värden: Record<string, number>
-  referens: Record<string, number>
   färg: string
-  jämför?: Record<string, number>
+  markör?: Record<string, number>
 }) {
   return (
     <div className="staplar">
@@ -62,14 +65,10 @@ function Staplar({
                 className="stapel-fyll"
                 style={{ width: `${(v / max) * 100}%`, background: färg }}
               />
-              <div
-                className="stapel-median"
-                style={{ left: `${(referens[nyckel] / max) * 100}%` }}
-              />
-              {jämför !== undefined && (
+              {markör !== undefined && (
                 <div
-                  className="stapel-jämför"
-                  style={{ left: `${(jämför[nyckel] / max) * 100}%` }}
+                  className="stapel-markör"
+                  style={{ left: `${(markör[nyckel] / max) * 100}%` }}
                 />
               )}
             </div>
@@ -96,7 +95,6 @@ export default function Panel({
   onStäng,
   onVisaMolnet,
 }: Props) {
-  const median = useMemo(() => (produkter ? sortimentetsMedian(produkter) : null), [produkter])
   const lista = useMemo(() => (produkter ? produkterIStil(produkter, stil) : []), [produkter, stil])
   const grannar = useMemo(() => närmasteStilar(stilar, stil), [stilar, stil])
   /* Appens kärna. Avståndet räknas i hela smakrymden, inte på kartans två
@@ -157,23 +155,17 @@ export default function Panel({
             )}
           </dl>
 
-          {median && (
-            <>
-              <h3>
-                Smakprofil <span className="not">mot stilens median</span>
-              </h3>
-              <Staplar
-                värden={{ beska: vald.beska, fyllighet: vald.fyllighet, sötma: vald.sötma }}
-                referens={median}
-                jämför={stilVärden}
-                färg={srmStapel(vald.mörkhet)}
-              />
-              <p className="teckenförklaring">
-                <span className="prick median" /> sortimentets median
-                <span className="prick jämför" /> {stil.namn}
-              </p>
-            </>
-          )}
+          <h3>
+            Smakprofil <span className="not">mot stilens median</span>
+          </h3>
+          <Staplar
+            värden={{ beska: vald.beska, fyllighet: vald.fyllighet, sötma: vald.sötma }}
+            markör={stilVärden}
+            färg={srmStapel(vald.mörkhet)}
+          />
+          <p className="teckenförklaring">
+            <span className="prick markör" /> {stil.namn}
+          </p>
 
           <h3>Så beskrivs den</h3>
           <p className="smaktext">{vald.smaktext}</p>
@@ -232,14 +224,10 @@ export default function Panel({
             </button>
           )}
 
-          {median && (
-            <>
-              <h3>
-                Smakprofil <span className="not">median, mot hela sortimentet</span>
-              </h3>
-              <Staplar värden={stilVärden} referens={median} färg={färg} />
-            </>
-          )}
+          <h3>
+            Smakprofil <span className="not">stilens median</span>
+          </h3>
+          <Staplar värden={stilVärden} färg={färg} />
 
           {stil.kännetecken.length > 0 && (
             <>

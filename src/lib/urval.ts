@@ -68,16 +68,6 @@ export function typiskMat(iStilen: Produkt[], alla: Produkt[], antal = 4): strin
     .map(([m]) => m)
 }
 
-/** Sortimentets median per axel, som referens att rita stilens profil emot. */
-export function sortimentetsMedian(produkter: Produkt[]): Record<string, number> {
-  const ut: Record<string, number> = {}
-  for (const { nyckel } of AXLAR) {
-    const v = produkter.map((p) => p[nyckel]).sort((a, b) => a - b)
-    ut[nyckel] = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2
-  }
-  return ut
-}
-
 export const kr = (n: number | null) => (n === null ? '–' : `${Math.round(n)} kr/l`)
 
 /** Svensk notation: 28,90 kr, inte 28.9 kr. */

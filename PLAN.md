@@ -98,7 +98,9 @@ Går någon av dem sönder efter en ändring säger skriptet till direkt iställ
 Klick på en stil öppnar en panel med:
 
 - stilens namn och föräldrakategori
-- **smakprofil över de tre riktiga axlarna** — beska, fyllighet, sötma. Ett radardiagram med tre hörn är en triangel och ser trasigt ut; använd tre vågräta staplar istället, med stilens median mot hela sortimentets.
+- **smakprofil över de tre riktiga axlarna** — beska, fyllighet, sötma. Ett radardiagram med tre hörn är en triangel och ser trasigt ut; använd tre vågräta staplar istället.
+
+  Staplarna hade från början också ett streck för hela sortimentets median. Det ströks senare: medianen är 6, 6 och 2, alltså exakt samma tre lägen på varje kort man öppnar, och 43 av 60 stilar ligger inom ett klocksteg från den. Strecket satt i praktiken ovanpå stapeländen och sa ingenting. I produktvyn står kvar ett enda streck — stilens median — och det svarar på en riktig fråga: är den här ölen beskare än en typisk stout?
 - **stilens kännetecken** — de termer som är överrepresenterade hos just den stilen jämfört med alla öl. Byggskriptet räknar redan ut dem. För torr porter och stout blir det *soja, rostade nötter, lakrits, pumpernickel, rostad*. Det säger mer om en stil än tre klocktal gör.
 - produktlista sorterad efter närhet till stilens medelvektor, så att de mest typiska exemplen hamnar överst. Visa produktnamn, bryggeri, land, ABV, pris per liter, sortiment.
 - de fem närmaste stilarna på kartan, klickbara
