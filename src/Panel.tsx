@@ -24,6 +24,7 @@ type Props = {
   onVäljProdukt: (p: Produkt) => void
   onTillbaka: () => void
   onStäng: () => void
+  onVisaMolnet: () => void
 }
 
 /**
@@ -84,6 +85,7 @@ export default function Panel({
   onVäljProdukt,
   onTillbaka,
   onStäng,
+  onVisaMolnet,
 }: Props) {
   const median = useMemo(() => (produkter ? sortimentetsMedian(produkter) : null), [produkter])
   const lista = useMemo(() => (produkter ? produkterIStil(produkter, stil) : []), [produkter, stil])
@@ -193,8 +195,13 @@ export default function Panel({
           <p className="meta">{stil.förälder}</p>
           <h2>{stil.namn}</h2>
           <p className="undertitel">
-            {stil.antal} öl · {stil.abv} % · {kr(stil.prisPerLiter)}
+            {lista.length} öl · {stil.abv} % · {kr(stil.prisPerLiter)}
           </p>
+          {lista.length > 1 && (
+            <button className="visa-molnet" onClick={onVisaMolnet}>
+              Rama in alla {lista.length} på kartan
+            </button>
+          )}
 
           {median && (
             <>

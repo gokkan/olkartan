@@ -24,7 +24,7 @@ p.on('pageerror', (e) => fel.push(String(e)))
 await p.goto(url, { waitUntil: 'networkidle' })
 await p.waitForSelector('.sok input', { timeout: 20000 })
 await p.waitForFunction(
-  () => document.querySelector('.sok input').placeholder.includes('3'),
+  () => !document.querySelector('.filter span')?.textContent?.includes('…'),
   null,
   { timeout: 20000 },
 )
@@ -56,13 +56,13 @@ await p.locator('.sok input').press('Enter')
 await p.waitForSelector('.panel h2')
 console.log('  vald produkt:', await p.locator('.panel h2').textContent())
 console.log('  panelens stil-tillbakalänk:', await p.locator('.tillbaka').textContent())
-// Markeringen är den vita konturen, inte en viss bredd — bredden skalas ner
-// när kartan zoomar in, så den går inte att jämföra mot ett fast tal.
+// Markeringen är numera att grannarna tonas ned medan den valda står kvar
+// i full opacitet. Den vita konturen är borta.
 const markerad = await p
   .locator('svg circle[data-stil]')
   .evaluateAll((els) =>
     els
-      .filter((e) => (e.getAttribute('stroke') ?? '').includes('0.85'))
+      .filter((e) => (e.getAttribute('opacity') ?? '1') === '1')
       .map((e) => e.getAttribute('data-stil')),
   )
 console.log('  markerad stil på kartan:', markerad.join(', ') || 'ingen')

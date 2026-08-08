@@ -21,9 +21,12 @@ p.on('pageerror', (e) => fel.push(String(e)))
 
 await p.goto(url, { waitUntil: 'networkidle' })
 await p.waitForSelector('.sok input')
-await p.waitForFunction(() => document.querySelector('.sok input')?.placeholder.includes('3'), null, {
-  timeout: 20000,
-})
+// Produkterna hämtas separat; räknaren i filtret visar … tills de är på plats.
+await p.waitForFunction(
+  () => !document.querySelector('.filter span')?.textContent?.includes('…'),
+  null,
+  { timeout: 25000 },
+)
 
 // Sök upp en öl de flesta känner igen och gå in i den.
 await p.locator('.sok input').fill('guinness draught')
@@ -50,7 +53,9 @@ for (let i = 0; i < Math.min(4, namn.length); i++) {
 // Varje träff ska ha en förklaring som är en hel mening.
 const tomma = förklaringar.filter((f) => !f.trim().endsWith('.'))
 console.log('')
-console.log(`  förklaring på varje träff: ${tomma.length === 0 ? '✓' : '✗ ' + tomma.length + ' saknar'}`)
+console.log(
+  `  förklaring på varje träff: ${tomma.length === 0 ? '✓' : '✗ ' + tomma.length + ' saknar'}`,
+)
 
 // Ingen träff får vara ölen själv.
 console.log(`  utesluter sig själv: ${namn.every((n) => n !== bas) ? '✓' : '✗'}`)

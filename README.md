@@ -1,6 +1,6 @@
 # Ölkartan
 
-En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet. Sök på öl, bryggeri eller stil, eller klicka dig runt på kartan.
+En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet. Sök på öl, bryggeri, stil eller smakord, eller klicka dig runt på kartan. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
@@ -30,6 +30,7 @@ npm run dev
 | `npm run test:sokning` | sökrutans träffar, tangentbord och markering på kartan |
 | `npm run test:karta` | mjuk zoom, inflygning och ölmolnet |
 | `npm run test:likhet` | "liknande öl" i produktvyn |
+| `npm run test:lankar` | permalänk, smakordssökning och sortimentsfilter |
 
 `npm test` körs i deployen. Gränssnittstesterna gör det inte — de kräver att `npm run dev` kör i en annan terminal och att Playwright är installerat (`npm i -D playwright && npx playwright install chromium`), och 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.
 

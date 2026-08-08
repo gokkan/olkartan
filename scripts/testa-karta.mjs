@@ -53,7 +53,7 @@ console.log(`  ${unika > 4 ? '✓ glider' : '✗ hackar (hoppar direkt till mål
 // 2. INFLYGNING VID SÖKNING
 console.log('\ninflygning från sökning:')
 await p.waitForFunction(
-  () => document.querySelector('.sok input')?.placeholder.includes('3'),
+  () => !document.querySelector('.filter span')?.textContent?.includes('…'),
   null,
   {
     timeout: 20000,

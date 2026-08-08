@@ -661,3 +661,87 @@ footer span:last-child {
     transition: none;
   }
 }
+
+/* --------------------------------------------------------------- reglage -- */
+
+.reglage {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: min(340px, calc(100% - 28px));
+  z-index: 5;
+}
+
+/* Sökrutan ligger nu i reglaget och behöver ingen egen placering. */
+.sok {
+  position: static;
+  width: 100%;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  padding: 5px 9px;
+  width: fit-content;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--linje);
+  font-size: 12px;
+  color: var(--svag);
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter input {
+  accent-color: var(--text);
+  margin: 0;
+  cursor: pointer;
+}
+
+.filter span {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.sok-ordprick {
+  width: 10px;
+  margin-top: 1px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--svag);
+  text-align: center;
+}
+
+.visa-molnet {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--linje);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--svag);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.visa-molnet:hover {
+  background: var(--botten);
+  color: var(--text);
+}
+
+/* Prick framför namnet i smakordslistan, där stilen inte ger färgen. */
+.p-prick {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.produkter button.markerad {
+  background: var(--botten);
+}

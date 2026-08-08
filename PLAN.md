@@ -191,14 +191,32 @@ Molnets prickar hade samma problem av en annan orsak — en kant på 1,1 px runt
 
 Och smaktexten följer inte alltid mallen: 34 öl skriver "rostad **öl** med inslag av …" eller "humlearomatisk **doft** med …". Parsern delade bara på ordet "smak", så för dem blev hela meningen ett karaktärsord och skräp som "rostad öl med inslag av pumpernickel" hamnade i termrymden. Efter rättningen föll antalet unika termer från 412 till 305, och kartans fem kontroller ger samma värden som förut.
 
-## Fas 4 — vidare
+## Fas 4 — genomgången, och mest struken ✅
 
-Först när fas 3 sitter:
+Fyra punkter stod kvar. Tre av dem överlevde inte en ärlig genomgång.
 
-- filter på kartan: land, prisintervall, ABV, sortimentstyp — prickarna krymper efter hur många produkter som återstår
-- "var ska jag börja"-läge: fem frågor som placerar användaren i rymden och föreslår närmaste stilar
-- jämför två öl sida vid sida
-- **sök på smakord** — "visa mig allt med kavring" är en fråga datan kan besvara rakt av, och den finns inte i någon annan öl-app
+**Permalänk ✅ klar.** Stod inte i planen alls, men var den största luckan: en app vars syfte är att visa någon något var inte delbar. Hela urvalet ligger nu i adressfältet — stil, öl, smakord och filter — och hashen är sanningen, inte en spegling av ett separat tillstånd. Det gör bakåtknappen gratis. En länk till en öl behöver inte bära stilen med sig; den framgår av ölen. Och ölen slås upp i hela sortimentet, inte bland de filtrerade, så en delad länk fungerar även för mottagaren som råkar ha filtret påslaget.
+
+**Sök på smakord ✅ klar.** "Visa mig allt med kavring" ger 290 öl, koncentrerade i det mörka rostade hörnet: imperial porter 83, torr porter 68, brown ale 20, dunkel 15, schwarzbier 11. Kostade nästan ingenting att bygga — orden var redan utplockade för att kartan ska fungera.
+
+**Sortimentsfilter ✅ klar.** Inte en bekvämlighet utan en reparation. Sju av tio öl finns bara lokalt eller på beställning:
+
+```
+Lokalt & Småskaligt    2 596   71%
+Fast sortiment           519   14%
+Ordervaror               268    7%
+Tillfälligt sortiment    214    6%
+```
+
+Får man fem rekommendationer och inte kan köpa fyra av dem är appen irriterande. Filtret gäller överallt — sökning, listor, liknande öl — och prickarna krymper med antalet som återstår, precis som första utkastet föreslog.
+
+**Filter på land, pris och ABV — struket.** 84 % av sortimentet är svenskt, så ett landsfilter tar bort en sjättedel och inget mer. Pris och ABV är mjuka preferenser som inte bär sin egen yta i gränssnittet.
+
+**"Var ska jag börja" — struket.** Appen har redan en bättre nybörjaringång: sök på en öl du druckit, se vad som liknar den. Samma jobb, ingen ny yta. En frågeguide skulle dessutom kräva en påhittad mappning från "gillar du beskt?" till en trettondimensionell vektor — det enda stället i hela appen där vi skulle gissa i stället för att mäta.
+
+**"Jämför två öl" — struket.** Den finns redan, bara inte som egen skärm. Förklaringen i "liknande öl" *är* en jämförelse mellan två öl, kokad till en mening. En sida-vid-sida-vy skulle visa samma tre staplar två gånger.
+
+**Automatisk inramning vid klick — struket, ersatt med en knapp.** Idén var att kartan skulle zooma så att stilens alla öl precis syns. Mätningen sa nej: medianstilens moln täcker 41 % av kartan och 15 av 57 täcker mer än halva. Inramningen hade alltså oftast inte gjort något alls, och ibland kastat in en på 8× — en kamerarörelse utan synlig regel. I stället viker grannarna undan när en stil väljs, och den som vill rama in molnet trycker på knappen i panelen.
 
 ---
 

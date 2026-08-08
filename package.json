@@ -15,7 +15,8 @@
     "test:karta": "node scripts/testa-karta.mjs",
     "test": "vitest run",
     "test:bevaka": "vitest",
-    "test:likhet": "node scripts/testa-likhet.mjs"
+    "test:likhet": "node scripts/testa-likhet.mjs",
+    "test:lankar": "node scripts/testa-lankar.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
