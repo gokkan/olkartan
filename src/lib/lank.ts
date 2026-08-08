@@ -14,30 +14,24 @@ export type Läge = {
   stil?: string
   öl?: string
   ord?: string
-  fast?: boolean
+  mat?: string
 }
 
-const NYCKLAR = ['stil', 'öl', 'ord', 'fast'] as const
+const NYCKLAR = ['stil', 'öl', 'ord', 'mat'] as const
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))
   const ut: Läge = {}
-  const stil = p.get('stil')
-  const öl = p.get('öl')
-  const ord = p.get('ord')
-  if (stil) ut.stil = stil
-  if (öl) ut.öl = öl
-  if (ord) ut.ord = ord
-  if (p.get('fast') === '1') ut.fast = true
+  for (const k of NYCKLAR) {
+    const v = p.get(k)
+    if (v) ut[k] = v
+  }
   return ut
 }
 
 export function tillHash(läge: Läge): string {
   const p = new URLSearchParams()
-  if (läge.stil) p.set('stil', läge.stil)
-  if (läge.öl) p.set('öl', läge.öl)
-  if (läge.ord) p.set('ord', läge.ord)
-  if (läge.fast) p.set('fast', '1')
+  for (const k of NYCKLAR) if (läge[k]) p.set(k, läge[k]!)
   const s = p.toString()
   return s ? '#' + s : ''
 }
@@ -45,8 +39,7 @@ export function tillHash(läge: Läge): string {
 /**
  * Skriver läget utan att lägga till en post i historiken för varje klick —
  * annars måste man trycka bakåt tjugo gånger för att komma ur appen. Bara
- * byte av stil, öl eller smakord räknas som ett steg värt att gå tillbaka
- * till; filtret ändrar bara den nuvarande posten.
+ * byte av det man tittar på räknas som ett steg värt att gå tillbaka till.
  */
 export function skrivLäge(läge: Läge, nyPost: boolean) {
   const hash = tillHash(läge)

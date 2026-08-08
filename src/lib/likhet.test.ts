@@ -38,6 +38,7 @@ function öl(delar: Partial<Produkt> = {}): Produkt {
     sötma: 2,
     syra: 0,
     fatlagrad: false,
+    mat: ['Nöt'],
     mörkhet: 1,
     smaktext: 'Maltig smak.',
     termer: ['kaffe', 'kavring'],

@@ -31,3 +31,6 @@ public/data/produkter.json
 
 # lokala Claude Code-inställningar, maskinspecifika
 .claude/settings.local.json
+
+# skärmbilder som testskripten skriver
+/*.png

@@ -24,7 +24,7 @@ p.on('pageerror', (e) => fel.push(String(e)))
 await p.goto(url, { waitUntil: 'networkidle' })
 await p.waitForSelector('.sok input', { timeout: 20000 })
 await p.waitForFunction(
-  () => !document.querySelector('.filter span')?.textContent?.includes('…'),
+  () => document.querySelector('.sok input')?.placeholder.includes('bryggeri'),
   null,
   { timeout: 20000 },
 )

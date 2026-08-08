@@ -405,6 +405,12 @@ const produkter = öl.map((p, i) => ({
   sötma: p.tasteClockSweetness,
   syra: +syraAv(p).toFixed(2),
   fatlagrad: (p.tasteClockCasque ?? 0) > 1,
+  // Systembolagets egen matchning mot maträtter. Enda fältet i katalogen som
+  // säger något om ölen som kartan inte redan vet — den bygger på smaktexten,
+  // det här på vad någon på Systembolaget tycker att ölen passar till.
+  // Ligger utanför kartan med flit: matchningen är grov och skulle dra ihop
+  // stilar som inte smakar lika.
+  mat: [...new Set(p.tasteSymbols ?? [])].sort(),
   mörkhet: mörkhet(p.color),
   smaktext: p.taste,
   // Prefixen K: och D: skiljer karaktärsord från inslag i termrymden, men
@@ -467,6 +473,11 @@ for (const [term, n] of df) {
   ordfrekvens[ord] = (ordfrekvens[ord] ?? 0) + n
 }
 
+/* Hur många öl varje maträtt är märkt för. Sökningen behöver talen innan
+ * produkterna hunnit hämtas, så de går in i meta. */
+const matfrekvens = {}
+for (const p of produkter) for (const m of p.mat) matfrekvens[m] = (matfrekvens[m] ?? 0) + 1
+
 const meta = {
   byggd: new Date().toISOString().slice(0, 10),
   antalProdukter: produkter.length,
@@ -475,6 +486,7 @@ const meta = {
   axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
   rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_SYRA },
   ordfrekvens,
+  matfrekvens,
 }
 
 // Stilarna är små och behövs direkt — de byggs in. Produkterna är 2,3 MB och
@@ -500,6 +512,7 @@ skrev
   produkter.json     ${r(produkter.length)}
   stilar.json        ${r(stilar.length)}   varav små (<${MIN_PRODUKTER_STIL}): ${stilar.filter((s) => s.liten).length}
   färg satt på       ${r(produkter.filter((p) => p.mörkhet !== null).length)} produkter
+  mat satt på        ${r(produkter.filter((p) => p.mat.length).length)} produkter
 
 kartans varians    PC1 ${(meta.varians[0] * 100).toFixed(0)}%   PC2 ${(meta.varians[1] * 100).toFixed(0)}%   tillsammans ${((meta.varians[0] + meta.varians[1]) * 100).toFixed(0)}%
   vänster  ${axlar[0].negativ.join(', ')}

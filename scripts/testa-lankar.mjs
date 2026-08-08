@@ -1,5 +1,5 @@
 /**
- * Test av permalänk, smakordssökning och sortimentsfilter.
+ * Test av permalänk, smakordssökning och matvyn.
  *
  *   npm run dev            i en terminal
  *   npm run test:lankar
@@ -15,9 +15,13 @@ const fel = []
 p.on('console', (m) => m.type() === 'error' && fel.push(m.text()))
 p.on('pageerror', (e) => fel.push(String(e)))
 
+/* Produkterna hämtas separat efter att kartan målats. Sökrutans platshållare
+   byter lydelse när de landat — enda signalen i gränssnittet. */
 const klar = async () => {
   await p.waitForSelector('svg circle')
-  await p.waitForFunction(() => !document.querySelector('.sok input')?.disabled)
+  await p.waitForFunction(() =>
+    document.querySelector('.sok input')?.placeholder.includes('bryggeri'),
+  )
 }
 
 /* --- 1. Permalänk: en adress ska återskapa urvalet vid inladdning --------- */
@@ -66,27 +70,38 @@ console.log('  vanligast i: ' + (await p.locator('.termer li').first().textConte
 console.log('  prickar på kartan: ' + (await p.locator('circle[data-ol]').count()))
 await p.screenshot({ path: 'smakord.png' })
 
-/* --- 5. Sortimentsfilter ------------------------------------------------- */
-console.log('\nfilter:')
+/* --- 5. Matvyn ----------------------------------------------------------- */
+console.log('\nmat:')
+await p.goto(bas, { waitUntil: 'networkidle' })
+await klar()
+await p.locator('.sok input').fill('fisk')
+await p.waitForTimeout(300)
+const matrad = p.locator('.sok-traffar li', { hasText: 'mat' }).first()
+await matrad.locator('button').click()
+await p.waitForSelector('.panel h2')
+console.log('  vald: ' + (await p.locator('.panel h2').textContent()))
+console.log('  ' + (await p.locator('.panel .undertitel').textContent()))
+console.log('  moln på kartan: ' + (await p.locator('circle[data-ol]').count()))
+console.log(`  hamnar i hashen: ${decodeURIComponent(p.url()).includes('mat=Fisk') ? '✓' : '✗'}`)
+
+/* Och tillbaka in i en produkt, där matchipsen ska gå att klicka på. */
+await p.goto(bas + '#%C3%B6l=507849', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.panel h2')
+const chips = p.locator('.term-knapp')
+console.log(`  matchips i produktvyn: ${await chips.count()}`)
+if (await chips.count()) {
+  await chips.first().click()
+  await p.waitForTimeout(300)
+  console.log('  klick på chips → ' + (await p.locator('.panel h2').textContent()))
+}
+
+/* --- 6. Rama in molnet --------------------------------------------------- */
 await p.goto(bas + '#stil=' + encodeURIComponent('India pale ale (IPA)'), {
   waitUntil: 'networkidle',
 })
 await klar()
-await p.waitForSelector('.produkter button')
-const innan = await p.locator('.produkter button').count()
-const molnInnan = await p.locator('circle[data-ol]').count()
-await p.locator('.filter input').check()
-await p.waitForTimeout(400)
-const efter = await p.locator('.produkter button').count()
-const molnEfter = await p.locator('circle[data-ol]').count()
-console.log(`  produkter i listan: ${innan} → ${efter}`)
-console.log(`  moln på kartan:     ${molnInnan} → ${molnEfter}`)
-console.log('  räknaren: ' + (await p.locator('.filter span').textContent()))
-console.log(`  filtret hamnar i hashen: ${p.url().includes('fast=1') ? '✓' : '✗'}`)
-
-/* --- 6. Rama in molnet --------------------------------------------------- */
-await p.locator('.filter input').uncheck()
-await p.waitForTimeout(300)
+await p.waitForSelector('.visa-molnet')
 const skala = async () =>
   parseFloat((await p.locator('svg > g').getAttribute('transform')).match(/scale\(([\d.]+)\)/)[1])
 const före = await skala()

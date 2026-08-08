@@ -362,6 +362,37 @@ footer span:last-child {
   padding: 2px 9px;
 }
 
+/* Matrutorna går att klicka på, till skillnad från smakordschipsen bredvid.
+   Den ljusare kanten är enda skillnaden i vila — på telefon finns ingen
+   pekare som kan avslöja det med hover. */
+.termer li:has(.term-knapp) {
+  padding: 0;
+  border-color: var(--svag);
+}
+
+.term-knapp {
+  padding: 2px 9px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.term-knapp:hover {
+  background: var(--yta);
+  color: var(--text);
+}
+
+.källnot {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--svag);
+  margin: 8px 0 0;
+}
+
 .smaktext {
   font-size: 13.5px;
   line-height: 1.55;
@@ -662,50 +693,6 @@ footer span:last-child {
   }
 }
 
-/* --------------------------------------------------------------- reglage -- */
-
-.reglage {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  width: min(340px, calc(100% - 28px));
-  z-index: 5;
-}
-
-/* Sökrutan ligger nu i reglaget och behöver ingen egen placering. */
-.sok {
-  position: static;
-  width: 100%;
-}
-
-.filter {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 7px;
-  padding: 5px 9px;
-  width: fit-content;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--yta) 88%, transparent);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--linje);
-  font-size: 12px;
-  color: var(--svag);
-  cursor: pointer;
-  user-select: none;
-}
-
-.filter input {
-  accent-color: var(--text);
-  margin: 0;
-  cursor: pointer;
-}
-
-.filter span {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.7;
-}
-
 .sok-ordprick {
   width: 10px;
   margin-top: 1px;
@@ -763,6 +750,12 @@ footer span:last-child {
 
   .axel.höger {
     right: 8px;
+  }
+
+  /* Sökrutan är nästan skärmbred på telefon och låg annars rakt över
+     uppåtpilen. Etiketten flyttas ned under den i stället. */
+  .axel.upp {
+    top: 58px;
   }
 }
 

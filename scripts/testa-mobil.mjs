@@ -74,6 +74,22 @@ for (const a of axlar) console.log(`  "${a.text}"  ${(a.andel * 100).toFixed(0)}
 const värst = Math.max(...axlar.map((a) => a.andel))
 console.log(`  bredaste: ${(värst * 100).toFixed(0)}%  ${värst < 0.45 ? '✓' : '✗ för brett'}`)
 
+/* Sökrutan är nästan skärmbred på telefon och låg tidigare rakt över
+   uppåtpilen. Rutorna får inte överlappa. */
+const krock = await p.evaluate(() => {
+  const a = document.querySelector('.axel.upp').getBoundingClientRect()
+  const s = document.querySelector('.sok').getBoundingClientRect()
+  return {
+    upp: [Math.round(a.top), Math.round(a.bottom)],
+    sok: [Math.round(s.top), Math.round(s.bottom)],
+    krockar: a.top < s.bottom && a.bottom > s.top && a.left < s.right && a.right > s.left,
+  }
+})
+console.log(
+  `\nuppåtpilen ${krock.upp.join('–')} px, sökrutan ${krock.sok.join('–')} px: ` +
+    (krock.krockar ? '✗ ligger under sökrutan' : '✓ fri'),
+)
+
 /* Panelen ska gå att öppna med ett finger. */
 await p.touchscreen.tap(skärm.width / 2, 200)
 await p.waitForTimeout(400)

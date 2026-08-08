@@ -358,5 +358,22 @@
   "ljust bröd ananas": 1,
   "blåstång": 1,
   "kola": 1
+ },
+ "matfrekvens": {
+  "Fläsk": 1906,
+  "Grönsaker": 1206,
+  "Lamm": 1641,
+  "Nöt": 1327,
+  "Sällskapsdryck": 3158,
+  "Fågel": 907,
+  "Aperitif": 67,
+  "Vilt": 191,
+  "Ost": 110,
+  "Fisk": 597,
+  "Dessert": 73,
+  "Kryddstarkt": 107,
+  "Skaldjur": 151,
+  "Buffémat": 137,
+  "Asiatiskt": 11
  }
 }

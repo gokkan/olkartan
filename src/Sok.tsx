@@ -16,6 +16,7 @@ const nyckla = (s: string) =>
 type Träff =
   | { typ: 'stil'; stil: Stil; rang: number; sortnamn: string }
   | { typ: 'ord'; ord: string; antal: number; rang: number; sortnamn: string }
+  | { typ: 'mat'; mat: string; antal: number; rang: number; sortnamn: string }
   | { typ: 'produkt'; produkt: Produkt; rang: number; sortnamn: string }
 
 /** Var i en text frågan träffar avgör hur högt träffen hamnar. */
@@ -30,16 +31,20 @@ export default function Sok({
   produkter,
   stilar,
   ordfrekvens,
+  matfrekvens,
   onVäljProdukt,
   onVäljStil,
   onVäljOrd,
+  onVäljMat,
 }: {
   produkter: Produkt[] | null
   stilar: Stil[]
   ordfrekvens: Record<string, number>
+  matfrekvens: Record<string, number>
   onVäljProdukt: (p: Produkt) => void
   onVäljStil: (s: Stil) => void
   onVäljOrd: (ord: string) => void
+  onVäljMat: (mat: string) => void
 }) {
   const [fråga, setFråga] = useState('')
   const [markerad, setMarkerad] = useState(0)
@@ -72,6 +77,13 @@ export default function Sok({
     [ordfrekvens],
   )
 
+  /* Maträtterna är femton stycken och alltid sökbara — de kommer ur meta och
+     behöver inte vänta på att produkterna hämtas. */
+  const matIndex = useMemo(
+    () => Object.entries(matfrekvens).map(([mat, antal]) => ({ mat, antal, nyckel: nyckla(mat) })),
+    [matfrekvens],
+  )
+
   const träffar = useMemo<Träff[]>(() => {
     const q = nyckla(fråga.trim())
     if (q.length < 2) return []
@@ -85,6 +97,14 @@ export default function Sok({
       if (träff >= 0) ut.push({ typ: 'stil', stil: rad.stil, rang: träff, sortnamn: rad.stil.namn })
     }
     ut.sort((a, b) => a.rang - b.rang || a.sortnamn.localeCompare(b.sortnamn, 'sv'))
+
+    const matTräffar: Träff[] = []
+    for (const rad of matIndex) {
+      const r = rangera(rad.nyckel, q)
+      if (r >= 0)
+        matTräffar.push({ typ: 'mat', mat: rad.mat, antal: rad.antal, rang: r, sortnamn: rad.mat })
+    }
+    matTräffar.sort((a, b) => a.rang - b.rang || a.sortnamn.localeCompare(b.sortnamn, 'sv'))
 
     // Smakorden mellan stilarna och produkterna: mer specifika än en stil,
     // bredare än en enskild öl.
@@ -110,12 +130,16 @@ export default function Sok({
     }
     produktTräffar.sort((a, b) => a.rang - b.rang || a.sortnamn.localeCompare(b.sortnamn, 'sv'))
 
-    return [...ut, ...ordTräffar.slice(0, 6), ...produktTräffar].slice(0, MAX_TRÄFFAR)
-  }, [fråga, produktIndex, stilIndex, ordIndex])
+    return [...ut, ...matTräffar, ...ordTräffar.slice(0, 6), ...produktTräffar].slice(
+      0,
+      MAX_TRÄFFAR,
+    )
+  }, [fråga, produktIndex, stilIndex, ordIndex, matIndex])
 
   function välj(t: Träff) {
     if (t.typ === 'stil') onVäljStil(t.stil)
     else if (t.typ === 'ord') onVäljOrd(t.ord)
+    else if (t.typ === 'mat') onVäljMat(t.mat)
     else onVäljProdukt(t.produkt)
     setÖppen(false)
     fältet.current?.blur()
@@ -149,7 +173,9 @@ export default function Sok({
         ref={fältet}
         type="search"
         value={fråga}
-        placeholder={produkter ? 'Sök öl, bryggeri, stil eller smakord' : 'Sök stil eller smakord'}
+        placeholder={
+          produkter ? 'Sök öl, bryggeri, stil, smakord eller mat' : 'Sök stil, smakord eller mat'
+        }
         onChange={(e) => {
           setFråga(e.target.value)
           setMarkerad(0)
@@ -169,9 +195,11 @@ export default function Sok({
                 ? 'S' + t.stil.namn
                 : t.typ === 'ord'
                   ? 'O' + t.ord
-                  : 'P' + t.produkt.id
+                  : t.typ === 'mat'
+                    ? 'M' + t.mat
+                    : 'P' + t.produkt.id
             const mörkhet =
-              t.typ === 'stil' ? t.stil.mörkhet : t.typ === 'ord' ? null : t.produkt.mörkhet
+              t.typ === 'stil' ? t.stil.mörkhet : t.typ === 'produkt' ? t.produkt.mörkhet : null
             return (
               <li key={nyckel}>
                 <button
@@ -186,6 +214,8 @@ export default function Sok({
                 >
                   {t.typ === 'ord' ? (
                     <span className="sok-ordprick">”</span>
+                  ) : t.typ === 'mat' ? (
+                    <span className="sok-ordprick">·</span>
                   ) : (
                     <span className="sok-prick" style={{ background: srm(mörkhet) }} />
                   )}
@@ -194,6 +224,12 @@ export default function Sok({
                       <span className="sok-namn">{t.ord}</span>
                       <span className="sok-stil">smakord</span>
                       <span className="sok-meta">{t.antal} öl beskrivs så</span>
+                    </>
+                  ) : t.typ === 'mat' ? (
+                    <>
+                      <span className="sok-namn">{t.mat.toLowerCase()}</span>
+                      <span className="sok-stil">mat</span>
+                      <span className="sok-meta">{t.antal} öl passar till</span>
                     </>
                   ) : t.typ === 'stil' ? (
                     <>

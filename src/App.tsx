@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Karta, { type KartHandtag } from './Karta'
 import Panel from './Panel'
-import Smakord from './Smakord'
+import Urval from './Urval'
 import Sok from './Sok'
 import Fangare from './Fangare'
 import stilarData from './data/stilar.json'
@@ -37,31 +37,6 @@ export default function App() {
     sättLäge(nytt)
   }, [])
 
-  /* Sortimentet är inte tillgängligt på samma sätt: sju av tio öl finns bara
-     lokalt eller på beställning. Filtret gäller överallt — sökning, listor,
-     liknande öl och prickarnas storlek — så att en rekommendation man inte
-     kan handla aldrig dyker upp. */
-  const synliga = useMemo(
-    () =>
-      produkter
-        ? läge.fast
-          ? produkter.filter((p) => p.sortiment === 'Fast sortiment')
-          : produkter
-        : null,
-    [produkter, läge.fast],
-  )
-
-  const antalPerStil = useMemo(() => {
-    if (!synliga || !läge.fast) return null
-    const c = new Map<string, number>()
-    for (const s of stilar) c.set(s.namn, 0)
-    for (const p of synliga) c.set(p.stil, (c.get(p.stil) ?? 0) + 1)
-    return c
-  }, [synliga, läge.fast])
-
-  /* Ölen slås upp i hela sortimentet, inte bland de filtrerade. En delad länk
-     ska fungera även för mottagaren som råkar ha filtret påslaget — filtret
-     styr vad man bläddrar bland, inte vad man får titta på. */
   const produkt = useMemo(
     () => (läge.öl && produkter ? (produkter.find((p) => p.id === läge.öl) ?? null) : null),
     [läge.öl, produkter],
@@ -73,29 +48,40 @@ export default function App() {
     return namn ? (stilPerNamn.get(namn) ?? null) : null
   }, [läge.stil, produkt])
 
+  /* Vad som ska ligga som ett moln av enskilda öl ovanpå stilarna. Ett
+     smakord och en maträtt utesluter stilen: de plockar ölen tvärs över
+     kartan, och att samtidigt lysa upp en stil vore två svar på en fråga. */
+  const urval: { sort: 'ord' | 'mat'; värde: string } | null = läge.ord
+    ? { sort: 'ord', värde: läge.ord }
+    : läge.mat
+      ? { sort: 'mat', värde: läge.mat }
+      : null
+
   const molnet = useMemo(() => {
-    if (!synliga) return []
-    if (läge.ord) return synliga.filter((p) => p.termer.includes(läge.ord!))
-    if (stil) return synliga.filter((p) => p.stil === stil.namn)
+    if (!produkter) return []
+    if (läge.ord) return produkter.filter((p) => p.termer.includes(läge.ord!))
+    if (läge.mat) return produkter.filter((p) => p.mat.includes(läge.mat!))
+    if (stil) return produkter.filter((p) => p.stil === stil.namn)
     return []
-  }, [synliga, läge.ord, stil])
+  }, [produkter, läge.ord, läge.mat, stil])
 
   /* Kartan äger sin zoom och position och tappar dem inte när man klickar sig
      runt. Sökningen är undantaget: där är förflyttningen hela poängen. */
-  const väljStil = (s: Stil) => gåTill({ ...läge, stil: s.namn, öl: undefined, ord: undefined })
+  const väljStil = (s: Stil) => gåTill({ stil: s.namn })
 
   /* Ett klick i "liknande öl" landar ofta i en annan stil — det är poängen med
      att räkna avstånd i smakrymden. Byter ölen stil flyger vyn dit; inom samma
      stil rör sig ingenting, för där finns inget nytt att visa. */
   const väljProdukt = (p: Produkt) => {
-    const bytteStil = !läge.ord && p.stil !== läge.stil
-    gåTill({ ...läge, stil: läge.ord ? undefined : p.stil, öl: p.id })
+    const bytteStil = !urval && p.stil !== läge.stil
+    gåTill({ ...läge, stil: urval ? undefined : p.stil, öl: p.id })
     if (bytteStil) karta.current?.flygTill(p.x, p.y)
   }
 
-  const väljOrd = (ord: string) => gåTill({ ...läge, ord, stil: undefined, öl: undefined })
+  const väljOrd = (ord: string) => gåTill({ ord })
+  const väljMat = (mat: string) => gåTill({ mat })
 
-  const stäng = () => gåTill({ fast: läge.fast })
+  const stäng = () => gåTill({})
 
   return (
     <main>
@@ -104,48 +90,38 @@ export default function App() {
           ref={karta}
           stilar={stilar}
           meta={meta}
-          vald={läge.ord ? null : (stil?.namn ?? null)}
+          vald={urval ? null : (stil?.namn ?? null)}
           molnet={molnet}
-          antalPerStil={antalPerStil}
           valdProdukt={produkt}
           onVälj={väljStil}
           onVäljProdukt={väljProdukt}
         />
 
-        <div className="reglage">
-          <Fangare namn="Sökrutan">
-            <Sok
-              produkter={synliga}
-              stilar={stilar}
-              ordfrekvens={meta.ordfrekvens}
-              onVäljProdukt={(p) => {
-                väljProdukt(p)
-                karta.current?.flygTill(p.x, p.y, 4.5)
-              }}
-              onVäljStil={(s) => {
-                väljStil(s)
-                karta.current?.flygTill(s.x, s.y, 2.4)
-              }}
-              onVäljOrd={väljOrd}
-            />
-          </Fangare>
+        <Fangare namn="Sökrutan">
+          <Sok
+            produkter={produkter}
+            stilar={stilar}
+            ordfrekvens={meta.ordfrekvens}
+            matfrekvens={meta.matfrekvens}
+            onVäljProdukt={(p) => {
+              väljProdukt(p)
+              karta.current?.flygTill(p.x, p.y, 4.5)
+            }}
+            onVäljStil={(s) => {
+              väljStil(s)
+              karta.current?.flygTill(s.x, s.y, 2.4)
+            }}
+            onVäljOrd={väljOrd}
+            onVäljMat={väljMat}
+          />
+        </Fangare>
 
-          <label className="filter">
-            <input
-              type="checkbox"
-              checked={läge.fast === true}
-              onChange={(e) => gåTill({ ...läge, fast: e.target.checked || undefined }, false)}
-            />
-            Bara fast sortiment
-            <span>{synliga ? synliga.length.toLocaleString('sv-SE') + ' öl' : '…'}</span>
-          </label>
-        </div>
-
-        {läge.ord && synliga && (
-          <Fangare namn="Smakordsvyn">
-            <Smakord
-              ord={läge.ord}
-              produkter={synliga}
+        {urval && produkter && (
+          <Fangare namn="Urvalsvyn">
+            <Urval
+              sort={urval.sort}
+              värde={urval.värde}
+              produkter={produkter}
               vald={produkt}
               onVäljProdukt={väljProdukt}
               onStäng={stäng}
@@ -153,17 +129,18 @@ export default function App() {
           </Fangare>
         )}
 
-        {!läge.ord && stil && (
+        {!urval && stil && (
           <Fangare namn="Panelen">
             <Panel
               stil={stil}
               stilar={stilar}
-              produkter={synliga}
+              produkter={produkter}
               fel={fel}
               vald={produkt}
               ordfrekvens={meta.ordfrekvens}
               onVäljStil={väljStil}
               onVäljProdukt={väljProdukt}
+              onVäljMat={väljMat}
               onTillbaka={() => gåTill({ ...läge, öl: undefined }, false)}
               onStäng={stäng}
               onVisaMolnet={() => {

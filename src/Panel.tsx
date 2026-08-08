@@ -9,6 +9,7 @@ import {
   närmasteStilar,
   produkterIStil,
   sortimentetsMedian,
+  typiskMat,
 } from './lib/urval'
 import { srm, srmStapel } from './lib/färg'
 import Panelram from './Panelram'
@@ -23,6 +24,7 @@ type Props = {
   ordfrekvens: Ordfrekvens
   onVäljStil: (s: Stil) => void
   onVäljProdukt: (p: Produkt) => void
+  onVäljMat: (mat: string) => void
   onTillbaka: () => void
   onStäng: () => void
   onVisaMolnet: () => void
@@ -84,6 +86,7 @@ export default function Panel({
   ordfrekvens,
   onVäljStil,
   onVäljProdukt,
+  onVäljMat,
   onTillbaka,
   onStäng,
   onVisaMolnet,
@@ -98,6 +101,7 @@ export default function Panel({
     () => (produkter && vald ? liknande(vald, produkter, ordfrekvens, 6) : []),
     [produkter, vald, ordfrekvens],
   )
+  const maten = useMemo(() => (produkter ? typiskMat(lista, produkter) : []), [lista, produkter])
   const färg = srmStapel(stil.mörkhet)
 
   const stilVärden = { beska: stil.beska, fyllighet: stil.fyllighet, sötma: stil.sötma }
@@ -169,6 +173,23 @@ export default function Panel({
             ))}
           </ul>
 
+          {vald.mat.length > 0 && (
+            <>
+              <h3>
+                Passar till <span className="not">enligt Systembolaget</span>
+              </h3>
+              <ul className="termer">
+                {vald.mat.map((m) => (
+                  <li key={m}>
+                    <button className="term-knapp" onClick={() => onVäljMat(m)}>
+                      {m.toLowerCase()}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           <h3>
             Liknande öl <span className="not">och hur de skiljer sig</span>
           </h3>
@@ -215,6 +236,23 @@ export default function Panel({
               <ul className="termer">
                 {stil.kännetecken.map((t) => (
                   <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {maten.length > 0 && (
+            <>
+              <h3>
+                Passar oftare än andra till <span className="not">enligt Systembolaget</span>
+              </h3>
+              <ul className="termer">
+                {maten.map((m) => (
+                  <li key={m}>
+                    <button className="term-knapp" onClick={() => onVäljMat(m)}>
+                      {m.toLowerCase()}
+                    </button>
+                  </li>
                 ))}
               </ul>
             </>

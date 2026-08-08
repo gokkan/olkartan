@@ -35,6 +35,8 @@ export type Produkt = {
   sötma: number
   syra: number
   fatlagrad: boolean
+  /** Systembolagets matmatchning. Utanför kartan — se byggskriptet. */
+  mat: string[]
   mörkhet: number | null
   smaktext: string
   termer: string[]
@@ -53,4 +55,5 @@ export type Meta = {
   axlar: { komponent: number; negativ: string[]; positiv: string[] }[]
   rattar: Record<string, number>
   ordfrekvens: Record<string, number>
+  matfrekvens: Record<string, number>
 }

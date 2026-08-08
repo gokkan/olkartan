@@ -43,6 +43,31 @@ export function närmasteStilar(stilar: Stil[], stil: Stil, antal = 5): Stil[] {
     .map(({ s }) => s)
 }
 
+/**
+ * Vilka maträtter som är typiska för en stil.
+ *
+ * Inte de vanligaste — då står det "sällskapsdryck" på alla 57 stilarna, för
+ * nio av tio öl är märkta så. Det som räknas är övervikten mot sortimentet i
+ * stort, med ett golv så att en rätt som bara ett par öl bär inte klättrar
+ * upp på grund av att den är ovanlig överallt.
+ */
+export function typiskMat(iStilen: Produkt[], alla: Produkt[], antal = 4): string[] {
+  if (iStilen.length < 3) return []
+  const räkna = (ps: Produkt[]) => {
+    const c = new Map<string, number>()
+    for (const p of ps) for (const m of p.mat) c.set(m, (c.get(m) ?? 0) + 1)
+    return c
+  }
+  const här = räkna(iStilen)
+  const överallt = räkna(alla)
+  return [...här.entries()]
+    .filter(([, n]) => n / iStilen.length >= 0.25)
+    .map(([m, n]) => [m, n / iStilen.length / ((överallt.get(m) ?? 1) / alla.length)] as const)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, antal)
+    .map(([m]) => m)
+}
+
 /** Sortimentets median per axel, som referens att rita stilens profil emot. */
 export function sortimentetsMedian(produkter: Produkt[]): Record<string, number> {
   const ut: Record<string, number> = {}

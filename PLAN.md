@@ -195,11 +195,11 @@ Och smaktexten följer inte alltid mallen: 34 öl skriver "rostad **öl** med in
 
 Fyra punkter stod kvar. Tre av dem överlevde inte en ärlig genomgång.
 
-**Permalänk ✅ klar.** Stod inte i planen alls, men var den största luckan: en app vars syfte är att visa någon något var inte delbar. Hela urvalet ligger nu i adressfältet — stil, öl, smakord och filter — och hashen är sanningen, inte en spegling av ett separat tillstånd. Det gör bakåtknappen gratis. En länk till en öl behöver inte bära stilen med sig; den framgår av ölen. Och ölen slås upp i hela sortimentet, inte bland de filtrerade, så en delad länk fungerar även för mottagaren som råkar ha filtret påslaget.
+**Permalänk ✅ klar.** Stod inte i planen alls, men var den största luckan: en app vars syfte är att visa någon något var inte delbar. Hela urvalet ligger nu i adressfältet — stil, öl, smakord och mat — och hashen är sanningen, inte en spegling av ett separat tillstånd. Det gör bakåtknappen gratis. En länk till en öl behöver inte bära stilen med sig; den framgår av ölen.
 
 **Sök på smakord ✅ klar.** "Visa mig allt med kavring" ger 290 öl, koncentrerade i det mörka rostade hörnet: imperial porter 83, torr porter 68, brown ale 20, dunkel 15, schwarzbier 11. Kostade nästan ingenting att bygga — orden var redan utplockade för att kartan ska fungera.
 
-**Sortimentsfilter ✅ klar.** Inte en bekvämlighet utan en reparation. Sju av tio öl finns bara lokalt eller på beställning:
+**Sortimentsfilter ✅ klar — och senare struket, se nedan.** Tanken var en reparation, inte en bekvämlighet. Sju av tio öl finns bara lokalt eller på beställning:
 
 ```
 Lokalt & Småskaligt    2 596   71%
@@ -241,6 +241,32 @@ Den första versionen riktade mot ritytans geometriska mitt och landade i ett gl
 **Hovern släppte inte.** En stil lyste kvar när pekaren gled ut i tomma rutan, eftersom bara svg-elementet hade en lämna-hanterare. Prickarna har nu en egen, villkorad på att det är just den stilen som är hovrad — då spelar det ingen roll i vilken ordning händelserna kommer när man går från en prick till nästa.
 
 **Panoreringen hade inga gränser.** Man kunde dra ut i det svarta tills alla prickar försvann och inte hitta tillbaka. Nu får man dra 30 % av vyn förbi kartans kant, inte mer. Efter fem hårda drag i samma riktning finns 21 prickar kvar i bild.
+
+**Uppåtpilen låg under sökrutan.** Sökrutan är 340 px bred, alltså nästan skärmbred på telefon, och ligger i övre vänstra hörnet med `z-index: 5`. Axeletiketten "↑ örter" är centrerad 14 px från toppen och hamnade rakt under den. Den flyttas ned under sökrutan på smal skärm. Ett test i `testa-mobil.mjs` mäter numera att rutorna inte överlappar, för det var inget man såg i en skärmbild av kartan — bara i en skärmbild av telefonen.
+
+---
+
+## Mat, och ett filter som ströks
+
+**Sortimentsfiltret är borttaget.** Det byggdes för att sju av tio öl bara finns lokalt eller på beställning, och tanken var att slippa rekommendationer man inte kan handla. Efter dubblettsammanslagningen är "Fast sortiment" 365 öl av 3 375 — kryssar man i rutan försvinner nio av tio prickar och kartan blir en annan, glesare karta. Det är ett för stort ingrepp för en kryssruta, och fel avvägning för en app som beskriver snarare än säljer: det lokala sortimentet är just där de intressanta ölen finns. Hela `fast`-nyckeln är ute ur hashen och ur `Läge`.
+
+**Matmatchning ✅ klar.** `tasteSymbols` finns på 3 371 av 3 375 öl och är det enda fältet i katalogen som säger något om ölen som kartan inte redan vet — kartan bygger på smaktexten, det här på vad någon på Systembolaget tycker att ölen passar till.
+
+```
+Sällskapsdryck 3 158   Nöt      1 327   Vilt        191
+Fläsk          1 906   Grönsaker 1 206   Skaldjur    151
+Lamm           1 641   Fågel       907   Buffémat    137
+Fisk             597   Ost         110   Kryddstarkt 107
+Aperitif          67   Dessert      73   Asiatiskt    11
+```
+
+Den ligger **utanför** kartan med flit. Matchningen är grov — nio av tio öl är märkta "sällskapsdryck" — och att väga in den skulle dra ihop stilar som inte smakar lika. Smaktexterna är fortfarande enda grunden för avstånd.
+
+I gränssnittet är maten ett urval av samma slag som ett smakord: sökbar, klickbar från produktvyn, och den lyser upp sitt moln på kartan. Vyerna delar komponent (`Urval.tsx`) men inte påstående — noten i matvyn säger var siffrorna kommer ifrån, för matmolnet behöver inte följa kartan. "Fisk" råkar samla sig i det ljusa hörnet, "sällskapsdryck" ligger överallt.
+
+Stilvyn visar de rätter stilen passar till *oftare än sortimentet i stort*, inte de vanligaste — annars hade det stått "sällskapsdryck" på alla 60 stilarna.
+
+**Etikettbilder — inte byggda.** De finns: `product-cdn.systembolaget.se/productimages/<id>/<id>_100.png` (även `_200` och `_400`), 3 320 av 3 375 öl, ingen hotlänkspärr. Det skulle alltså vara att låta besökarnas webbläsare hämta bilderna direkt från Systembolagets server. Det är billigt att bygga men vi äger inte länken: ändrar de sökvägen slocknar bilderna tyst.
 
 ---
 

@@ -60,16 +60,13 @@ type Props = {
   /** Ölen som ska ritas ut som ett moln. En stils produkter, eller träffarna
    *  på ett smakord — kartan bryr sig inte om vilket. */
   molnet: Produkt[]
-  /** Antal öl per stil efter filtrering, för prickarnas storlek. Utelämnas
-   *  filtret används stilens fulla antal. */
-  antalPerStil: Map<string, number> | null
   valdProdukt: Produkt | null
   onVälj: (s: Stil) => void
   onVäljProdukt: (p: Produkt) => void
 }
 
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
-  { stilar, meta, vald, molnet, antalPerStil, valdProdukt, onVälj, onVäljProdukt },
+  { stilar, meta, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
   // Axelorden är långa — 'sirapslimpa, pomerans, choklad' tar halva bredden
@@ -193,18 +190,16 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
   }, [stilar])
 
   const punkter = useMemo(() => {
-    const antalet = (s: Stil) => antalPerStil?.get(s.namn) ?? s.antal
-    const maxAntal = Math.max(1, ...stilar.map(antalet))
+    const maxAntal = Math.max(1, ...stilar.map((s) => s.antal))
     return stilar.map((s) => ({
       stil: s,
       px: skala.px(s.x),
       py: skala.py(s.y),
-      // Kvadratrot, inte linjärt: annars äter IPA upp halva kartan. Filtreras
-      // sortimentet krymper prickarna med antalet som återstår.
-      r: 4 + 20 * Math.sqrt(antalet(s) / maxAntal),
-      tom: antalet(s) === 0,
+      // Kvadratrot, inte linjärt: annars äter IPA upp halva kartan.
+      r: 4 + 20 * Math.sqrt(s.antal / maxAntal),
+      tom: s.antal === 0,
     }))
-  }, [stilar, skala, antalPerStil])
+  }, [stilar, skala])
 
   /* De enskilda ölen i den valda stilen. Varje öl har en egen koordinat i
      samma rymd som stilarna — molnet visar hur brett stilen spretar, och att
