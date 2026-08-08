@@ -32,3 +32,32 @@ export function kant(mörkhet: number | null): string {
   const v = Math.min(1, Math.max(0, mörkhet ?? 0.3))
   return `rgb(255 255 255 / ${(0.08 + v * 0.28).toFixed(2)})`
 }
+
+/**
+ * Samma skala, men beskuren i den mörka änden.
+ *
+ * På kartan får en nästan svart prick en ljus kant som håller den synlig mot
+ * bakgrunden. En stapel har ingen kant att luta sig mot — en imperial stout
+ * ritad i sin äkta SRM-ton försvinner i sitt eget spår, kontrast 1,03 mot 1,0
+ * för ingen skillnad alls.
+ *
+ * Taket är satt där kontrasten når 3:1, riktlinjen för grafiska element. Det
+ * kostar nyans i den mörka änden: stout och amber får samma kopparton. Det är
+ * rätt pris, för stapelns färg är dekoration som knyter panelen till kartan —
+ * datan ligger i längden och talet bredvid.
+ */
+export const TAK_FÖR_STAPEL = 0.55
+
+export function srmStapel(mörkhet: number | null): string {
+  return srm(Math.min(TAK_FÖR_STAPEL, mörkhet ?? 0.3))
+}
+
+/**
+ * Ölmolnets prickar är bara ett par pixlar stora. En stor prick klarar sin
+ * äkta ton eftersom kanten bär den, men en liten nästan svart prick blir en
+ * ihålig ring — man ser konturen och inget innehåll. Taket ligger högre än
+ * staplarnas: här räcker det att fyllningen skiljer sig från bakgrunden.
+ */
+export function srmLitenPrick(mörkhet: number | null): string {
+  return srm(Math.min(0.84, mörkhet ?? 0.3))
+}

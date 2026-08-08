@@ -157,6 +157,22 @@ Två fel byggdes bort på vägen. Tre öl saknar bryggeri, och en null där tog 
 
 ---
 
+## Ölmolnet och rörelsen ✅ klar
+
+**Varje öl har en egen plats.** Byggskriptet projicerar produkterna på samma bas som stilarna, så koordinaterna fanns redan — de ritades bara inte ut. Väljer man en stil tonas dess cirkel ned till en ring och de enskilda ölen träder fram som småprickar, klickbara.
+
+Molnet visar två saker som stilkartan döljer. Spridningen inom en stil varierar kraftigt: Berliner weisse ligger på 0,25 spridningsenheter i median, "Smaksatt/kryddad öl" på 1,29 — den senare är ingen smakstil alls utan en restkategori. Och **85 % av alla öl ligger närmare någon annan stils mittpunkt än sin egen**, med överlapp precis där gränsen är administrativ snarare än sensorisk: IPA mot New England IPA, tysk pilsner mot tjeckisk, övrig syrlig öl mot berliner weisse.
+
+Det är argumentet för att fas 3 ska räkna likhet mellan öl och inte mellan stilar.
+
+**Rörelsen glider.** Hjulet flyttar bara ett mål; en animeringsslinga interpolerar vyn dit med exponentiell utjämning, tidskorrigerad så att glidet tar lika lång tid på 60 som på 144 hertz. Panorering går förbi utjämningen och följer fingret direkt — utjämnad panorering känns bara trög. En sökträff flyger in mot ölens egen koordinat, och en dragning avbryter inflygningen så att de inte slåss om vyn.
+
+**Tre saker som skärmbilden avslöjade.** En imperial stout ritad i sin äkta SRM-ton har kontrast 1,03 mot bakgrunden — den försvann helt i smakprofilens staplar. Stapelfärgen är nu beskuren där kontrasten når 3:1. Det kostar nyans i den mörka änden, men färgen är dekor: datan ligger i längden och talet.
+
+Molnets prickar hade samma problem av en annan orsak — en kant på 1,1 px runt en radie på 3,1 gör pricken till en ihålig ring oavsett fyllning. Geometrin är omvänd nu.
+
+Och smaktexten följer inte alltid mallen: 34 öl skriver "rostad **öl** med inslag av …" eller "humlearomatisk **doft** med …". Parsern delade bara på ordet "smak", så för dem blev hela meningen ett karaktärsord och skräp som "rostad öl med inslag av pumpernickel" hamnade i termrymden. Efter rättningen föll antalet unika termer från 412 till 305, och kartans fem kontroller ger samma värden som förut.
+
 ## Fas 4 — vidare
 
 Först när fas 3 sitter:

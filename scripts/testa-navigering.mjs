@@ -1,24 +1,20 @@
 /**
- * Acceptanstest för fas 2: kartan får inte tappa zoom eller position när man
- * klickar sig runt.
- *
- * Zoomar och panorerar, går stil → produkt → grannstil → produkt, och jämför
- * kartans transform före och efter.
+ * Acceptanstest för fas 2: kartan får inte tappa zoom eller position när
+ * man klickar sig runt mellan stilar och produkter.
  *
  *   npm run dev            i en terminal
  *   npm i -D playwright && npx playwright install chromium   (en gång)
  *   npm run test:navigering
  *
- * Playwright ligger medvetet utanför projektets beroenden — det är 200 MB och
- * behövs varken för att bygga eller för att publicera. Deploy-arbetsflödet kör
- * därför inte det här testet; kör det för hand när du rört kartan eller panelen.
+ * Playwright ligger utanför projektets beroenden — det är 200 MB och behövs
+ * varken för att bygga eller publicera. Deploy-arbetsflödet kör därför inte
+ * testerna; kör dem för hand när du rört kartan, panelen eller sökningen.
  *
- * Skicka en annan adress som argument för att testa ett produktionsbygge:
- *   node scripts/testa-navigering.mjs http://localhost:4321/olkartan/
+ * Skicka en annan adress som argument för att testa ett produktionsbygge.
  */
 import { chromium } from 'playwright'
 
-const url = process.argv[2] ?? 'http://localhost:5173'
+const url = 'http://localhost:5173'
 const b = await chromium.launch()
 const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
 const fel = []

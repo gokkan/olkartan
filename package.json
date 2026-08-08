@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "data:hämta": "node scripts/hämta-rådata.mjs",
     "data": "node scripts/bygg-data.mjs",
-    "test:navigering": "node scripts/testa-navigering.mjs"
+    "test:navigering": "node scripts/testa-navigering.mjs",
+    "test:sokning": "node scripts/testa-sokning.mjs",
+    "test:karta": "node scripts/testa-karta.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

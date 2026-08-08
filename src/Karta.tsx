@@ -1,29 +1,102 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import type { Meta, Stil } from './lib/typer'
-import { srm, kant } from './lib/färg'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import type { Meta, Produkt, Stil } from './lib/typer'
+import { srm, kant, srmLitenPrick } from './lib/färg'
 
 const W = 1000
 const H = 700
 const MARGINAL = 60
 
+const MIN_SKALA = 0.6
+const MAX_SKALA = 14
+/* Tidskonstant för glidet, i millisekunder. Lägre är snabbare och hårdare.
+   Runt 110 ms känns det som att vyn har vikt utan att släpa efter. */
+const TRÖGHET = 110
+
 type Vy = { k: number; tx: number; ty: number }
+
+export type KartHandtag = {
+  /** Centrera en punkt i datakoordinater, med mjuk inflygning. */
+  flygTill: (x: number, y: number, skala?: number) => void
+}
 
 type Props = {
   stilar: Stil[]
   meta: Meta
   vald: string | null
+  stilProdukter: Produkt[]
+  valdProdukt: Produkt | null
   onVälj: (s: Stil) => void
+  onVäljProdukt: (p: Produkt) => void
 }
 
-export default function Karta({ stilar, meta, vald, onVälj }: Props) {
+const Karta = forwardRef<KartHandtag, Props>(function Karta(
+  { stilar, meta, vald, stilProdukter, valdProdukt, onVälj, onVäljProdukt },
+  ref,
+) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [vy, setVy] = useState<Vy>({ k: 1, tx: 0, ty: 0 })
   const [hovrad, setHovrad] = useState<Stil | null>(null)
+  const [hovradProdukt, setHovradProdukt] = useState<Produkt | null>(null)
   const [pekare, setPekare] = useState({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number; tx: number; ty: number; rörd: boolean } | null>(null)
 
+  /* Vyn finns i tre exemplar med olika uppgifter: `vy` är den som ritas,
+     `vyNu` är samma värde läsbart utan att stänga in det i en callback, och
+     `mål` är dit vi är på väg. Glidet mellan de två sista är hela effekten. */
+  const vyNu = useRef(vy)
+  const mål = useRef(vy)
+  const bild = useRef<number | null>(null)
+  const sistaTid = useRef(0)
+
+  const sätt = useCallback((v: Vy) => {
+    vyNu.current = v
+    setVy(v)
+  }, [])
+
+  const animera = useCallback(() => {
+    if (bild.current !== null) return
+    sistaTid.current = performance.now()
+    const steg = (nu: number) => {
+      const dt = Math.min(64, nu - sistaTid.current)
+      sistaTid.current = nu
+      const v = vyNu.current
+      const m = mål.current
+      const dk = m.k - v.k
+      const dx = m.tx - v.tx
+      const dy = m.ty - v.ty
+      // Nära nog: snäpp till målet och sluta rita om.
+      if (Math.abs(dk) < 0.0004 && Math.abs(dx) < 0.25 && Math.abs(dy) < 0.25) {
+        bild.current = null
+        sätt(m)
+        return
+      }
+      // Exponentiell utjämning, korrigerad för bildfrekvens så att glidet tar
+      // lika lång tid på en 60- som på en 144-hertzskärm.
+      const f = 1 - Math.exp(-dt / TRÖGHET)
+      sätt({ k: v.k + dk * f, tx: v.tx + dx * f, ty: v.ty + dy * f })
+      bild.current = requestAnimationFrame(steg)
+    }
+    bild.current = requestAnimationFrame(steg)
+  }, [sätt])
+
+  useEffect(
+    () => () => {
+      if (bild.current !== null) cancelAnimationFrame(bild.current)
+    },
+    [],
+  )
+
   /* Datakoordinater → ritytan. Y vänds: PCA räknar uppåt, SVG nedåt. */
-  const punkter = useMemo(() => {
+  const skala = useMemo(() => {
     const xs = stilar.map((s) => s.x)
     const ys = stilar.map((s) => s.y)
     const x0 = Math.min(...xs)
@@ -32,15 +105,42 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
     const y1 = Math.max(...ys)
     const sx = (W - 2 * MARGINAL) / (x1 - x0)
     const sy = (H - 2 * MARGINAL) / (y1 - y0)
+    return {
+      px: (x: number) => MARGINAL + (x - x0) * sx,
+      py: (y: number) => H - MARGINAL - (y - y0) * sy,
+    }
+  }, [stilar])
+
+  const punkter = useMemo(() => {
     const maxAntal = Math.max(...stilar.map((s) => s.antal))
     return stilar.map((s) => ({
       stil: s,
-      px: MARGINAL + (s.x - x0) * sx,
-      py: H - MARGINAL - (s.y - y0) * sy,
+      px: skala.px(s.x),
+      py: skala.py(s.y),
       // Kvadratrot, inte linjärt: annars äter IPA upp halva kartan.
       r: 4 + 20 * Math.sqrt(s.antal / maxAntal),
     }))
-  }, [stilar])
+  }, [stilar, skala])
+
+  /* De enskilda ölen i den valda stilen. Varje öl har en egen koordinat i
+     samma rymd som stilarna — molnet visar hur brett stilen spretar, och att
+     den överlappar sina grannar. */
+  const ölpunkter = useMemo(
+    () => stilProdukter.map((p) => ({ produkt: p, px: skala.px(p.x), py: skala.py(p.y) })),
+    [stilProdukter, skala],
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flygTill(x, y, önskad) {
+        const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, önskad ?? Math.max(vyNu.current.k, 3)))
+        mål.current = { k, tx: W / 2 - skala.px(x) * k, ty: H / 2 - skala.py(y) * k }
+        animera()
+      },
+    }),
+    [skala, animera],
+  )
 
   /* Etiketter placeras girigt, störst stil först. En etikett måste vara fri
    * från både andra etiketter och alla prickar — annars hoppas den över och
@@ -90,35 +190,43 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
     return valda
   }, [punkter, vy.k])
 
-  function tillSvg(e: { clientX: number; clientY: number }) {
+  const tillSvg = useCallback((e: { clientX: number; clientY: number }) => {
     const ctm = svgRef.current?.getScreenCTM()
     if (!ctm) return { x: 0, y: 0 }
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse())
     return { x: p.x, y: p.y }
-  }
+  }, [])
 
   /* React kopplar sina hjul-lyssnare som passiva, och då tystas
      preventDefault. Zoomen måste därför kopplas för hand för att inte
-     samtidigt rulla sidan. */
+     samtidigt rulla sidan. Hjulet flyttar bara målet; glidet dit sköter
+     animeringen, så ett ryck på hjulet blir en mjuk rörelse i stället för
+     ett hopp. */
   useEffect(() => {
     const el = svgRef.current
     if (!el) return
     function hjul(e: globalThis.WheelEvent) {
       e.preventDefault()
       const { x, y } = tillSvg(e)
-      setVy((v) => {
-        const k = Math.min(12, Math.max(0.6, v.k * Math.exp(-e.deltaY * 0.0016)))
-        // Håll punkten under pekaren stilla medan skalan ändras.
-        return { k, tx: x - ((x - v.tx) * k) / v.k, ty: y - ((y - v.ty) * k) / v.k }
-      })
+      const m = mål.current
+      const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, m.k * Math.exp(-e.deltaY * 0.0022)))
+      // Håll punkten under pekaren stilla medan skalan ändras.
+      mål.current = { k, tx: x - ((x - m.tx) * k) / m.k, ty: y - ((y - m.ty) * k) / m.k }
+      animera()
     }
     el.addEventListener('wheel', hjul, { passive: false })
     return () => el.removeEventListener('wheel', hjul)
-  }, [])
+  }, [tillSvg, animera])
 
   function nedPekare(e: ReactPointerEvent<SVGSVGElement>) {
     const { x, y } = tillSvg(e)
-    drag.current = { x, y, tx: vy.tx, ty: vy.ty, rörd: false }
+    // En dragning avbryter en pågående inflygning — annars slåss de om vyn.
+    if (bild.current !== null) {
+      cancelAnimationFrame(bild.current)
+      bild.current = null
+      mål.current = vyNu.current
+    }
+    drag.current = { x, y, tx: vyNu.current.tx, ty: vyNu.current.ty, rörd: false }
   }
 
   function rörPekare(e: ReactPointerEvent<SVGSVGElement>) {
@@ -127,25 +235,30 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
     if (!d) return
     const { x, y } = tillSvg(e)
     // Några pixlars darr när man klickar ska inte räknas som en dragning.
-    if (!d.rörd && Math.hypot(x - d.x, y - d.y) > 3 / vy.k) {
+    if (!d.rörd && Math.hypot(x - d.x, y - d.y) > 3 / vyNu.current.k) {
       d.rörd = true
       // Pekaren fångas först när en dragning faktiskt börjat. Fångar man redan
       // vid pointerdown omdirigeras click-händelsen till svg-elementet, och då
       // går prickarna inte att klicka på över huvud taget.
       e.currentTarget.setPointerCapture(e.pointerId)
     }
-    setVy((v) => ({ ...v, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) }))
+    // Panorering följer fingret direkt. Utjämning här skulle bara kännas trögt.
+    const ny = { k: vyNu.current.k, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) }
+    mål.current = ny
+    sätt(ny)
   }
 
   const släpp = () => (drag.current = null)
 
   /* Ett klick som avslutar en panorering ska inte välja stilen under fingret. */
-  function klicka(s: Stil) {
-    if (drag.current?.rörd) return
-    onVälj(s)
-  }
+  const drog = () => drag.current?.rörd === true
 
   const [xAxel, yAxel] = meta.axlar
+  const knappnål = hovradProdukt
+    ? { rubrik: hovradProdukt.namn, under: hovradProdukt.stil }
+    : hovrad
+      ? { rubrik: hovrad.namn, under: `${hovrad.antal} öl` }
+      : null
 
   return (
     <div className="karta">
@@ -159,6 +272,7 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
         onPointerLeave={() => {
           släpp()
           setHovrad(null)
+          setHovradProdukt(null)
         }}
       >
         <g transform={`translate(${vy.tx} ${vy.ty}) scale(${vy.k})`}>
@@ -175,13 +289,39 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
                 cy={p.py}
                 r={p.r / vy.k}
                 fill={srm(p.stil.mörkhet)}
+                // Den valda stilen tonas ned till en ring så att ölmolnet
+                // inuti syns igenom.
+                fillOpacity={utvald && ölpunkter.length ? 0.28 : 1}
                 stroke={utvald || aktiv ? 'rgb(255 255 255 / 0.85)' : kant(p.stil.mörkhet)}
                 strokeWidth={(utvald ? 2.5 : aktiv ? 2 : 1) / vy.k}
                 onPointerEnter={() => setHovrad(p.stil)}
-                onClick={() => klicka(p.stil)}
+                onClick={() => !drog() && onVälj(p.stil)}
               />
             )
           })}
+
+          {/* Ölen i den valda stilen. Ritas efter stilprickarna så att molnet
+              ligger ovanpå, och före etiketterna så att namnen syns. */}
+          {ölpunkter.map((ö) => {
+            const utvald = valdProdukt?.id === ö.produkt.id
+            return (
+              <circle
+                key={ö.produkt.id}
+                data-ol={ö.produkt.id}
+                className="olprick"
+                cx={ö.px}
+                cy={ö.py}
+                r={(utvald ? 5.5 : 3.6) / vy.k}
+                fill={srmLitenPrick(ö.produkt.mörkhet)}
+                stroke={utvald ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.45)'}
+                strokeWidth={(utvald ? 2 : 0.6) / vy.k}
+                onPointerEnter={() => setHovradProdukt(ö.produkt)}
+                onPointerLeave={() => setHovradProdukt(null)}
+                onClick={() => !drog() && onVäljProdukt(ö.produkt)}
+              />
+            )
+          })}
+
           {punkter.map((p) => {
             const aktiv = hovrad?.namn === p.stil.namn
             const utvald = vald === p.stil.namn
@@ -211,12 +351,14 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
       <div className="axel upp">↑ {yAxel.positiv.slice(0, 3).join(', ')}</div>
       <div className="axel ned">↓ {yAxel.negativ.slice(0, 3).join(', ')}</div>
 
-      {hovrad && (
+      {knappnål && (
         <div className="knappnål" style={{ left: pekare.x + 14, top: pekare.y + 14 }}>
-          <strong>{hovrad.namn}</strong>
-          <span>{hovrad.antal} öl</span>
+          <strong>{knappnål.rubrik}</strong>
+          <span>{knappnål.under}</span>
         </div>
       )}
     </div>
   )
-}
+})
+
+export default Karta

@@ -119,20 +119,36 @@ const projicera = (M, komponenter) =>
  *   "<karaktär>, <karaktär> smak med <styrka>, inslag av <A>, <B> och <C>."
  * Båda halvorna är värda att plocka ut. Karaktärsorden ("rostad", "syrlig")
  * säger vad ölen är; inslagen ("kaffe", "grapefrukt") säger vad den smakar av.
+ *
+ * Huvudordet är dock inte alltid "smak". 34 öl skriver "rostad öl med inslag
+ * av …" eller "humlearomatisk doft med …". Delar man bara på ordet "smak"
+ * blir hela meningen ett enda karaktärsord, och skräp som "rostad öl med
+ * inslag av pumpernickel" hamnar i termrymden som kartan byggs av.
  */
+const HUVUDORD = /^(.*?)\s+(?:smak|öl|doft)\b/i
 const LEDNING = /^(något|tydligt|mycket|lite|aningen|påtagligt|smakrik)\s+/
 
 function termer(text) {
   const ut = new Set()
-  const huvud = text.split(/\s+smak/)[0] ?? ''
+  // Allt före huvudordet är karaktärsord. Saknas huvudordet helt får " med "
+  // agera gräns, och i sista hand hela texten.
+  const huvud = (text.match(HUVUDORD)?.[1] ?? text.split(/\s+med\s+/)[0] ?? '').trim()
   for (const bit of huvud.split(/,|\soch\s/)) {
     const t = bit.trim().toLowerCase().replace(LEDNING, '')
-    if (t.length > 2) ut.add('K:' + t)
+    // Ett karaktärsord är ett ord, på sin höjd två. Blir det längre har
+    // uppdelningen gått fel och biten ska inte in i rymden.
+    if (t.length > 2 && t.split(/\s+/).length <= 2) ut.add('K:' + t)
   }
   const m = text.match(/inslag av (.+?)\./i)
   if (m) {
     for (const bit of m[1].split(/,|\soch\s/)) {
-      const t = bit.trim().toLowerCase()
+      // Enstaka texter upprepar "inslag av" mitt i uppräkningen. Det är
+      // stavfel i källan, men de ska inte synas som smakord i gränssnittet.
+      const t = bit
+        .trim()
+        .toLowerCase()
+        .replace(/^inslag av /, '')
+        .replace(/\.$/, '')
       if (t.length > 2) ut.add('D:' + t)
     }
   }

@@ -10,7 +10,7 @@ import {
   produkterIStil,
   sortimentetsMedian,
 } from './lib/urval'
-import { srm } from './lib/färg'
+import { srm, srmStapel } from './lib/färg'
 
 type Props = {
   stil: Stil
@@ -83,7 +83,7 @@ export default function Panel({
   const median = useMemo(() => (produkter ? sortimentetsMedian(produkter) : null), [produkter])
   const lista = useMemo(() => (produkter ? produkterIStil(produkter, stil) : []), [produkter, stil])
   const grannar = useMemo(() => närmasteStilar(stilar, stil), [stilar, stil])
-  const färg = srm(stil.mörkhet)
+  const färg = srmStapel(stil.mörkhet)
 
   const stilVärden = { beska: stil.beska, fyllighet: stil.fyllighet, sötma: stil.sötma }
 
@@ -140,7 +140,7 @@ export default function Panel({
                 värden={{ beska: vald.beska, fyllighet: vald.fyllighet, sötma: vald.sötma }}
                 referens={median}
                 jämför={stilVärden}
-                färg={srm(vald.mörkhet)}
+                färg={srmStapel(vald.mörkhet)}
               />
               <p className="teckenförklaring">
                 <span className="prick median" /> sortimentets median
