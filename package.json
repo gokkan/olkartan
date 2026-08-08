@@ -12,7 +12,10 @@
     "data": "node scripts/bygg-data.mjs",
     "test:navigering": "node scripts/testa-navigering.mjs",
     "test:sokning": "node scripts/testa-sokning.mjs",
-    "test:karta": "node scripts/testa-karta.mjs"
+    "test:karta": "node scripts/testa-karta.mjs",
+    "test": "vitest run",
+    "test:bevaka": "vitest",
+    "test:likhet": "node scripts/testa-likhet.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -25,6 +28,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

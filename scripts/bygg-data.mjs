@@ -373,6 +373,13 @@ const produkter = öl.map((p, i) => ({
   // efter att de kapats kan samma ord förekomma två gånger — 'kaffe' kan vara
   // både karaktär och inslag. Unika värden ut.
   termer: [...new Set([...termerPer[i]].map((t) => t.slice(2)))].sort(),
+  // Inslagen för sig. Karaktärsorden är adjektiv ("rostad", "knäckig") och
+  // inslagen substantiv ("kaffe", "kavring"); de kan inte stå i samma
+  // uppräkning på svenska. Likhetsmotorn bygger sina meningar av inslagen.
+  smakord: [...termerPer[i]]
+    .filter((t) => t.startsWith('D:'))
+    .map((t) => t.slice(2))
+    .sort(),
   vektor: V[i].map((v) => +v.toFixed(4)),
   x: +prodKoord[i][0].toFixed(4),
   y: +prodKoord[i][1].toFixed(4),
@@ -411,6 +418,17 @@ const stilar = stilNamn.map((namn, i) => {
   }
 })
 
+/* Hur många öl varje smakord förekommer hos. Likhetsmotorn använder det för
+ * att välja vilka ord som är värda att nämna: "delar kaffe och kavring" säger
+ * något om två öl, "delar frukt och kryddor" säger ingenting — de orden finns
+ * hos halva sortimentet. Prefixet kapas här, så K:kaffe och D:kaffe slås ihop
+ * till ett tal. */
+const ordfrekvens = {}
+for (const [term, n] of df) {
+  const ord = term.slice(2)
+  ordfrekvens[ord] = (ordfrekvens[ord] ?? 0) + n
+}
+
 const meta = {
   byggd: new Date().toISOString().slice(0, 10),
   antalProdukter: produkter.length,
@@ -418,6 +436,7 @@ const meta = {
   varians: varians.map((v) => +(v / variansSum).toFixed(3)),
   axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
   rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_SYRA },
+  ordfrekvens,
 }
 
 // Stilarna är små och behövs direkt — de byggs in. Produkterna är 2,3 MB och

@@ -38,6 +38,8 @@ export type Produkt = {
   mörkhet: number | null
   smaktext: string
   termer: string[]
+  /** Bara inslagen, utan karaktärsorden. Se byggskriptet. */
+  smakord: string[]
   vektor: number[]
   x: number
   y: number
@@ -50,4 +52,5 @@ export type Meta = {
   varians: number[]
   axlar: { komponent: number; negativ: string[]; positiv: string[] }[]
   rattar: Record<string, number>
+  ordfrekvens: Record<string, number>
 }

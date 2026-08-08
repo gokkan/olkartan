@@ -34,10 +34,16 @@ export default function App() {
     setProdukt(null)
   }
 
+  /* Ett klick i "liknande öl" landar ofta i en annan stil — det är poängen
+     med att räkna avstånd i hela smakrymden i stället för på kartan. Byter
+     ölen stil flyger vyn dit, så att man ser var i rymden man hamnade. Håller
+     man sig inom samma stil rör sig ingenting; där finns inget att visa. */
   function väljProdukt(p: Produkt) {
     const s = stilPerNamn.get(p.stil)
+    const bytteStil = s && s.namn !== stil?.namn
     if (s) setStil(s)
     setProdukt(p)
+    if (bytteStil) karta.current?.flygTill(p.x, p.y)
   }
 
   function sökStil(s: Stil) {
@@ -79,8 +85,10 @@ export default function App() {
               produkter={produkter}
               fel={fel}
               vald={produkt}
+              ordfrekvens={meta.ordfrekvens}
               onVäljStil={väljStil}
-              onVäljProdukt={setProdukt}
+              onVäljProdukt={väljProdukt}
+              onTillbaka={() => setProdukt(null)}
               onStäng={() => {
                 setStil(null)
                 setProdukt(null)

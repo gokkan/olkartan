@@ -34,6 +34,10 @@ jobs:
 
       - run: npm ci
 
+      # Enhetstesterna för likhetsmotorn tar en halv sekund och behöver ingen
+      # webbläsare. Går de sönder ska bygget stanna, inte publiceras.
+      - run: npm test
+
       # Råfilen är 100 MB och hämtas från en privatpersons server. Cachen har
       # veckonumret i nyckeln, så en vanlig push återanvänder den och bara det
       # schemalagda söndagsjobbet hämtar på nytt.

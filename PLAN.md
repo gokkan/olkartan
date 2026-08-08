@@ -113,7 +113,7 @@ Två saker som testet fångade och som inte hade märkts av att bara läsa koden
 
 ---
 
-## Fas 3 — likhet med förklaring
+## Fas 3 — likhet med förklaring ✅ klar
 
 Appens kärna. Bygg den noggrant.
 
@@ -140,6 +140,24 @@ Om både klockor och termer ligger nära: *"Nästan identisk smakprofil."*
 Lägg det i en ren funktion i `src/lib/likhet.ts` med enhetstester (vitest). Ingen LLM, inget nätverksanrop — deterministiskt och möjligt att lita på.
 
 **Acceptanskriterium:** testerna täcker identisk profil, skillnad på en axel, skillnad på alla axlar, produkt som saknar klockvärde, och produkt utan gemensamma termer. Slå sedan upp tre öl du känner till och läs förklaringarna högt. Om någon låter fel är trösklarna fel.
+
+**Utfall:** 20 enhetstester, som körs i deployen — de tar en halv sekund och behöver ingen webbläsare, så ett trasigt `likhet.ts` kan aldrig publiceras.
+
+Uppläsningen gav godkänt på grannarna: Duvel ger trippels och Chimay vit, Erdinger Dunkel ger Schwarzbier och Dunkel, Brooklyn Lager ger amber ale och extra special bitter. Trösklarna satt från början.
+
+Men den avslöjade ett språkfel som inga tal hade fångat. Karaktärsorden är adjektiv och inslagen substantiv, och de kan inte stå i samma uppräkning: *"Delar mörk choklad och rostad"*, *"men mer knäckig och torkade aprikoser"*. Byggskriptet skiljer dem nu åt i två fält, och förklaringen byggs bara av inslagen. Karaktären bärs ändå av klockorna och av platsen på kartan.
+
+Två liknande fall i uppräkningen: leden binds med "och" när det läser bättre — *"mer choklad och mindre lakrits"* — men med komma när ett led redan innehåller ett "och", annars blir det *"mer tallbarr och grapefrukt och mindre kavring och kaffe"*.
+
+Ett klick i "liknande öl" flyger kartan dit **bara om ölen byter stil**. Håller man sig inom samma stil finns inget att visa, och då ska vyn ligga still.
+
+Så här låter det, med Guinness Draught som utgångspunkt:
+
+> **Stoodley Stout** — Samma fyllighet, något mindre beska. Delar pumpernickel och lakrits, men mer nötter, mindre charkuterier och tobak.
+>
+> **Mick & Jack Winter Lager** *(Dunkel)* — Samma fyllighet, något mindre beska, något mer sötma. Delar mörk choklad och kaffe, men mer katrinplommon och kavring, mindre charkuterier och pumpernickel.
+
+Den andra träffen ligger i en annan stil än den man utgick från. Det är hela poängen med att räkna avstånd i smakrymden i stället för i taxonomin.
 
 Exponera det på två ställen: i produktvyn ("liknande öl") och som egen ingång ("jag gillade den här — vad mer?") med sökfält över hela katalogen.
 

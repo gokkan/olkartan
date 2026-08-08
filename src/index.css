@@ -590,3 +590,59 @@ footer span:last-child {
 .olprick {
   cursor: pointer;
 }
+
+/* --------------------------------------------------------- liknande öl -- */
+
+.liknande {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.liknande button {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 2px 8px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--linje);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.liknande button:hover {
+  background: var(--botten);
+}
+
+.l-prick {
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.l-namn {
+  font-size: 13px;
+}
+
+.l-stil {
+  font-size: 11px;
+  color: var(--svag);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Förklaringen är det appen finns till för. Den får ta plats och egen ton. */
+.l-förklaring {
+  grid-column: 2 / 4;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  opacity: 0.82;
+  margin-top: 2px;
+}

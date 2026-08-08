@@ -11,6 +11,7 @@ import {
   sortimentetsMedian,
 } from './lib/urval'
 import { srm, srmStapel } from './lib/färg'
+import { liknande, type Ordfrekvens } from './lib/likhet'
 
 type Props = {
   stil: Stil
@@ -18,8 +19,10 @@ type Props = {
   produkter: Produkt[] | null
   fel: string | null
   vald: Produkt | null
+  ordfrekvens: Ordfrekvens
   onVäljStil: (s: Stil) => void
-  onVäljProdukt: (p: Produkt | null) => void
+  onVäljProdukt: (p: Produkt) => void
+  onTillbaka: () => void
   onStäng: () => void
 }
 
@@ -76,13 +79,22 @@ export default function Panel({
   produkter,
   fel,
   vald,
+  ordfrekvens,
   onVäljStil,
   onVäljProdukt,
+  onTillbaka,
   onStäng,
 }: Props) {
   const median = useMemo(() => (produkter ? sortimentetsMedian(produkter) : null), [produkter])
   const lista = useMemo(() => (produkter ? produkterIStil(produkter, stil) : []), [produkter, stil])
   const grannar = useMemo(() => närmasteStilar(stilar, stil), [stilar, stil])
+  /* Appens kärna. Avståndet räknas i hela smakrymden, inte på kartans två
+     dimensioner — därför hamnar träffarna ofta i en annan stil än den man
+     utgick från, vilket är själva poängen. */
+  const liknandeÖl = useMemo(
+    () => (produkter && vald ? liknande(vald, produkter, ordfrekvens, 6) : []),
+    [produkter, vald, ordfrekvens],
+  )
   const färg = srmStapel(stil.mörkhet)
 
   const stilVärden = { beska: stil.beska, fyllighet: stil.fyllighet, sötma: stil.sötma }
@@ -96,7 +108,7 @@ export default function Panel({
       {vald ? (
         /* ------------------------------------------------------ produktvy -- */
         <>
-          <button className="tillbaka" onClick={() => onVäljProdukt(null)}>
+          <button className="tillbaka" onClick={onTillbaka}>
             ← {stil.namn}
           </button>
           <h2>{heltNamn(vald)}</h2>
@@ -155,6 +167,23 @@ export default function Panel({
           <ul className="termer">
             {vald.termer.map((t) => (
               <li key={t}>{t}</li>
+            ))}
+          </ul>
+
+          <h3>
+            Liknande öl <span className="not">och hur de skiljer sig</span>
+          </h3>
+          {!produkter && !fel && <p className="laddar">hämtar produkter …</p>}
+          <ul className="liknande">
+            {liknandeÖl.map((t) => (
+              <li key={t.produkt.id}>
+                <button onClick={() => onVäljProdukt(t.produkt)}>
+                  <span className="l-prick" style={{ background: srm(t.produkt.mörkhet) }} />
+                  <span className="l-namn">{heltNamn(t.produkt)}</span>
+                  <span className="l-stil">{t.produkt.stil}</span>
+                  <span className="l-förklaring">{t.förklaring}</span>
+                </button>
+              </li>
             ))}
           </ul>
         </>

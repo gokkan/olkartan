@@ -25,11 +25,13 @@ npm run dev
 | `npm run build` | produktionsbygge till `dist/` |
 | `npm run data:hämta` | hämtar sortimentet. `-- --tvinga` hämtar även om filen är färsk |
 | `npm run data` | bygger `stilar.json`, `meta.json`, `produkter.json` och kör kontrollerna |
+| `npm test` | enhetstester för likhetsmotorn |
 | `npm run test:navigering` | kartan behåller zoom och position när man klickar sig runt |
 | `npm run test:sokning` | sökrutans träffar, tangentbord och markering på kartan |
 | `npm run test:karta` | mjuk zoom, inflygning och ölmolnet |
+| `npm run test:likhet` | "liknande öl" i produktvyn |
 
-Testerna kräver att `npm run dev` kör i en annan terminal, och att Playwright är installerat: `npm i -D playwright && npx playwright install chromium`. De körs inte i deployen — Playwright är 200 MB och behövs varken för att bygga eller publicera.
+`npm test` körs i deployen. Gränssnittstesterna gör det inte — de kräver att `npm run dev` kör i en annan terminal och att Playwright är installerat (`npm i -D playwright && npx playwright install chromium`), och 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.
 
 ## Datan
 
