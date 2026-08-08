@@ -58,7 +58,11 @@ export default function Karta({ stilar, meta, vald, onVälj }: Props) {
     const krockar = (a: Ruta, egen: string) =>
       upptaget.some(
         (q) =>
-          q.ägare !== egen && a.x < q.x + q.w && a.x + a.w > q.x && a.y < q.y + q.h && a.y + a.h > q.y,
+          q.ägare !== egen &&
+          a.x < q.x + q.w &&
+          a.x + a.w > q.x &&
+          a.y < q.y + q.h &&
+          a.y + a.h > q.y,
       )
 
     const höjd = 12 / vy.k

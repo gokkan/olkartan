@@ -53,13 +53,17 @@ console.log('vald stil:', await p.locator('.panel h2').textContent())
 await p.waitForSelector('.produkter button', { timeout: 15000 })
 const antalProdukter = await p.locator('.produkter button').count()
 console.log('produkter i listan:', antalProdukter)
-console.log('kännetecken:', (await p.locator('.termer li').allTextContents()).slice(0, 6).join(', '))
+console.log(
+  'kännetecken:',
+  (await p.locator('.termer li').allTextContents()).slice(0, 6).join(', '),
+)
 await p.screenshot({ path: 'fas2-stil.png' })
 const efterStil = await transform()
 
 // 3. Klicka på den mest typiska produkten.
 console.log('\ntopp 3 mest typiska:')
-for (const t of (await p.locator('.produkter .p-namn').allTextContents()).slice(0, 3)) console.log('  ' + t)
+for (const t of (await p.locator('.produkter .p-namn').allTextContents()).slice(0, 3))
+  console.log('  ' + t)
 await p.locator('.produkter button').first().click()
 await p.waitForSelector('.tillbaka')
 console.log('vald produkt:', await p.locator('.panel h2').textContent())

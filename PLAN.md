@@ -145,11 +145,22 @@ Exponera det på två ställen: i produktvyn ("liknande öl") och som egen ingå
 
 ---
 
+## Sökning ✅ klar
+
+Flyttad hit ur fas 4 efter att det visade sig vara det första man saknar när man använder appen på riktigt. Kartan är fin att titta på, men den förutsätter att man vet vilken stil man är ute efter — att slå upp en öl man redan gillar är den naturligaste ingången.
+
+Sökrutan täcker både öl och stilar. Stilar rankas först: den som skriver "porter" vill troligen se stilen, inte de tre ölen som råkar heta så. Jämförelsen är förlåtande — å, ä och ö viks ihop med a och o, så "sot porter" hittar "Söt porter och stout". En träff på en öl öppnar dess produktvy och markerar samtidigt dess stil på kartan.
+
+Allt sker i klienten mot data som redan är laddad. Ingen sökserver, inget index att underhålla.
+
+Två fel byggdes bort på vägen. Tre öl saknar bryggeri, och en null där tog ner **hela sidan** — inte bara sökrutan, utan kartan med. Panelen och sökningen ligger nu var för sig innanför en felgräns, så kartan överlever att något runt omkring går sönder. Och termerna prefixas i pipelinen för att skilja karaktärsord från inslag; när prefixet kapades kolliderade de två sorternas "kaffe" och gav dubbletter.
+
+---
+
 ## Fas 4 — vidare
 
-Först när fas 1–3 sitter:
+Först när fas 3 sitter:
 
-- fritextsökning över produkter och stilar
 - filter på kartan: land, prisintervall, ABV, sortimentstyp — prickarna krymper efter hur många produkter som återstår
 - "var ska jag börja"-läge: fem frågor som placerar användaren i rymden och föreslår närmaste stilar
 - jämför två öl sida vid sida

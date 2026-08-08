@@ -10,7 +10,12 @@
   --svag: #8b8a86;
 
   color-scheme: dark;
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -41,6 +46,7 @@ main {
 /* Kartan och panelen sida vid sida. Kartan krymper, den försvinner inte —
    man ska se var man är medan man läser om stilen. */
 .scen {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -468,4 +474,114 @@ footer span:last-child {
     border-left: 0;
     border-top: 1px solid var(--linje);
   }
+}
+
+/* ------------------------------------------------------------------- sök -- */
+
+/* Ligger som ett lager över kartans övre vänstra hörn. Kartan är fortfarande
+   sidans tes; sökrutan ska finnas till hands utan att ta över. */
+.sok {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: min(340px, calc(100% - 28px));
+  z-index: 5;
+}
+
+.sok input {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--linje);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.sok input::placeholder {
+  color: var(--svag);
+}
+
+.sok input:focus {
+  outline: none;
+  border-color: var(--svag);
+  background: var(--yta);
+}
+
+.sok input:disabled {
+  cursor: progress;
+}
+
+.sok-traffar {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--yta);
+  border: 1px solid var(--linje);
+  border-radius: 5px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+.sok-traffar button {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 2px 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sok-traffar button.markerad {
+  background: var(--botten);
+}
+
+.sok-prick {
+  grid-row: 1 / 3;
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.sok-namn {
+  font-size: 13px;
+}
+
+.sok-stil,
+.sok-meta {
+  font-size: 11px;
+  color: var(--svag);
+}
+
+.sok-stil {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sok-meta {
+  grid-column: 2 / 4;
+}
+
+.sok-tomt {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--svag);
+}
+
+.krasch {
+  padding: 14px;
+  font-size: 12px;
+  color: var(--svag);
 }

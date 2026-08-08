@@ -41,7 +41,7 @@ const MIN_PRODUKTER_STIL = 3 // färre än så flaggas som liten, men kastas int
 function slumpTal(frö) {
   // LCG. Vi vill bara ha en reproducerbar startvektor, inte bra slump.
   let s = frö
-  return () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff - 0.5)
+  return () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff - 0.5
 }
 
 function kovarians(M) {
@@ -246,7 +246,11 @@ TX = TX.map((r) => r.map((v, i) => v / txSd[i]))
 /* --- numeriska axlar --------------------------------------------------- */
 // Klockorna har olika maxvärden för öl: beska 10, fyllighet 12, sötma 11.
 const syraAv = (p) =>
-  p.categoryLevel2 === 'Syrlig öl' ? 1 : /syrlig|sur\b/.test(p.taste.slice(0, 40).toLowerCase()) ? 0.7 : 0
+  p.categoryLevel2 === 'Syrlig öl'
+    ? 1
+    : /syrlig|sur\b/.test(p.taste.slice(0, 40).toLowerCase())
+      ? 0.7
+      : 0
 
 const NUM = öl.map((p) => [
   p.tasteClockBitter / 10,
@@ -263,10 +267,7 @@ const numSd = numMedel.map((m, i) => {
 const NUMz = NUM.map((r) => r.map((v, i) => (v - numMedel[i]) / numSd[i]))
 
 /* --- gemensam smakvektor ------------------------------------------------ */
-const V = TX.map((t, i) => [
-  ...t,
-  ...NUMz[i].map((v, j) => v * (j === 4 ? VIKT_SYRA : VIKT_NUM)),
-])
+const V = TX.map((t, i) => [...t, ...NUMz[i].map((v, j) => v * (j === 4 ? VIKT_SYRA : VIKT_NUM))])
 
 /* --- stilar ------------------------------------------------------------- */
 const perStil = new Map()
@@ -352,7 +353,10 @@ const produkter = öl.map((p, i) => ({
   fatlagrad: (p.tasteClockCasque ?? 0) > 1,
   mörkhet: mörkhet(p.color),
   smaktext: p.taste,
-  termer: [...termerPer[i]].map((t) => t.slice(2)).sort(),
+  // Prefixen K: och D: skiljer karaktärsord från inslag i termrymden, men
+  // efter att de kapats kan samma ord förekomma två gånger — 'kaffe' kan vara
+  // både karaktär och inslag. Unika värden ut.
+  termer: [...new Set([...termerPer[i]].map((t) => t.slice(2)))].sort(),
   vektor: V[i].map((v) => +v.toFixed(4)),
   x: +prodKoord[i][0].toFixed(4),
   y: +prodKoord[i][1].toFixed(4),
@@ -366,11 +370,11 @@ const stilar = stilNamn.map((namn, i) => {
   const lokal = new Map()
   for (const j of idx) for (const t of termerPer[j]) lokal.set(t, (lokal.get(t) ?? 0) + 1)
   const kännetecken = [...lokal.entries()]
-    .map(([t, n]) => [t, (n / idx.length) / (df.get(t) / öl.length)])
+    .map(([t, n]) => [t, n / idx.length / (df.get(t) / öl.length)])
     .filter(([t]) => df.get(t) >= MIN_DF)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
     .map(([t]) => t.slice(2))
+  const unika = [...new Set(kännetecken)].slice(0, 6)
 
   return {
     namn,
@@ -386,7 +390,7 @@ const stilar = stilNamn.map((namn, i) => {
     abv: +median(ps.map((p) => p.alcoholPercentage ?? 0)).toFixed(1),
     prisPerLiter: +median(ps.map(prisPerLiter).filter(Boolean)).toFixed(0),
     mörkhet: mörk.length ? +median(mörk).toFixed(2) : null,
-    kännetecken,
+    kännetecken: unika,
     vektor: [...stilMedel[i]].map((v) => +v.toFixed(4)),
   }
 })
@@ -458,9 +462,19 @@ const avstånd = (a, b) => {
 }
 
 const kontroller = [
-  ['mörkt rostat skilt från humlebeskt', 'Torr porter och stout', 'India pale ale (IPA)', (d) => d > 0.8],
+  [
+    'mörkt rostat skilt från humlebeskt',
+    'Torr porter och stout',
+    'India pale ale (IPA)',
+    (d) => d > 0.8,
+  ],
   ['ljusa lager ligger ihop', 'Pilsner - tysk stil', 'Dortmunder och helles', (d) => d < 0.5],
-  ['stout-släktet håller ihop', 'Torr porter och stout', 'Imperial porter och stout', (d) => d < 1.5],
+  [
+    'stout-släktet håller ihop',
+    'Torr porter och stout',
+    'Imperial porter och stout',
+    (d) => d < 1.5,
+  ],
   ['veteölen ligger ihop', 'Hefeweizen', 'Witbier', (d) => d < 0.6],
   ['suröl långt från ljus lager', 'Gueuze', 'Pilsner - tysk stil', (d) => d > 1.5],
 ]

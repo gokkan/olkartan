@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Karta from './Karta'
 import Panel from './Panel'
+import Sok from './Sok'
+import Fangare from './Fangare'
 import stilarData from './data/stilar.json'
 import metaData from './data/meta.json'
 import { useProdukter } from './lib/hämtaProdukter'
@@ -22,24 +24,44 @@ export default function App() {
     setProdukt(null)
   }
 
+  const stilPerNamn = useMemo(() => new Map(stilar.map((s) => [s.namn, s])), [])
+
+  /* En sökträff öppnar ölens egen vy och markerar samtidigt dess stil på
+     kartan, så att man ser var i smakrymden man hamnade. */
+  function väljProdukt(p: Produkt) {
+    const s = stilPerNamn.get(p.stil)
+    if (s) setStil(s)
+    setProdukt(p)
+  }
+
   return (
     <main className={stil ? 'med-panel' : undefined}>
       <div className="scen">
         <Karta stilar={stilar} meta={meta} vald={stil?.namn ?? null} onVälj={väljStil} />
-        {stil && (
-          <Panel
-            stil={stil}
-            stilar={stilar}
+        <Fangare namn="Sökrutan">
+          <Sok
             produkter={produkter}
-            fel={fel}
-            vald={produkt}
+            stilar={stilar}
+            onVäljProdukt={väljProdukt}
             onVäljStil={väljStil}
-            onVäljProdukt={setProdukt}
-            onStäng={() => {
-              setStil(null)
-              setProdukt(null)
-            }}
           />
+        </Fangare>
+        {stil && (
+          <Fangare namn="Panelen">
+            <Panel
+              stil={stil}
+              stilar={stilar}
+              produkter={produkter}
+              fel={fel}
+              vald={produkt}
+              onVäljStil={väljStil}
+              onVäljProdukt={setProdukt}
+              onStäng={() => {
+                setStil(null)
+                setProdukt(null)
+              }}
+            />
+          </Fangare>
         )}
       </div>
       <footer>

@@ -1,6 +1,6 @@
 # Ölkartan
 
-En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet.
+En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet. Sök på öl, bryggeri eller stil, eller klicka dig runt på kartan.
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 

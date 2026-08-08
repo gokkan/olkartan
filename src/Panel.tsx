@@ -1,6 +1,15 @@
 import { useMemo } from 'react'
 import type { Produkt, Stil } from './lib/typer'
-import { AXLAR, bryggeriRad, heltNamn, kr, kronor, närmasteStilar, produkterIStil, sortimentetsMedian } from './lib/urval'
+import {
+  AXLAR,
+  bryggeriRad,
+  heltNamn,
+  kr,
+  kronor,
+  närmasteStilar,
+  produkterIStil,
+  sortimentetsMedian,
+} from './lib/urval'
 import { srm } from './lib/färg'
 
 type Props = {
@@ -38,10 +47,19 @@ function Staplar({
           <div key={nyckel} className="stapel">
             <span className="stapel-namn">{etikett}</span>
             <div className="stapel-spår">
-              <div className="stapel-fyll" style={{ width: `${(v / max) * 100}%`, background: färg }} />
-              <div className="stapel-median" style={{ left: `${(referens[nyckel] / max) * 100}%` }} />
+              <div
+                className="stapel-fyll"
+                style={{ width: `${(v / max) * 100}%`, background: färg }}
+              />
+              <div
+                className="stapel-median"
+                style={{ left: `${(referens[nyckel] / max) * 100}%` }}
+              />
               {jämför !== undefined && (
-                <div className="stapel-jämför" style={{ left: `${(jämför[nyckel] / max) * 100}%` }} />
+                <div
+                  className="stapel-jämför"
+                  style={{ left: `${(jämför[nyckel] / max) * 100}%` }}
+                />
               )}
             </div>
             <span className="stapel-tal">{v}</span>

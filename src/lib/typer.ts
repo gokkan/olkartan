@@ -20,7 +20,8 @@ export type Produkt = {
   id: string
   namn: string
   undertitel: string | null
-  bryggeri: string
+  // Saknas för ett fåtal produkter i sortimentet.
+  bryggeri: string | null
   land: string
   stil: string
   förälder: string

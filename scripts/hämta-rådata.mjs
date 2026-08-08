@@ -43,4 +43,6 @@ if (!Array.isArray(data) || data.length < 1000) {
 
 mkdirSync(dirname(MÅL), { recursive: true })
 writeFileSync(MÅL, text)
-console.log(`skrev ${data.length} produkter (${(text.length / 1e6).toFixed(0)} MB) till data/rå/products.json`)
+console.log(
+  `skrev ${data.length} produkter (${(text.length / 1e6).toFixed(0)} MB) till data/rå/products.json`,
+)
