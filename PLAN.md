@@ -228,7 +228,7 @@ För en smakkarta är enheten "en öl", inte "en artikel". Byggskriptet slår ih
 
 **Nypzoom.** Fanns inte alls — bara hjulet var inkopplat. Två fingrars avstånd ger skalan och punkten under mittpunkten hålls kvar, så att zoom och tvåfingerpanorering blir samma rörelse.
 
-Testet av den är värt en anteckning: hemmasnickrade  gav falskt negativt, eftersom de tar en annan väg genom webbläsaren än riktig beröring. Med CDP:s , som Chromium gör om till pointer events precis som en telefon gör, fungerade det direkt. Buggen låg i testet, inte i appen.
+Testet av den är värt en anteckning: hemmasnickrade `PointerEvent` gav falskt negativt, eftersom de tar en annan väg genom webbläsaren än riktig beröring. Med CDP:s `Input.dispatchTouchEvent`, som Chromium gör om till pointer events precis som en telefon gör, fungerade det direkt. Buggen låg i testet, inte i appen.
 
 **Kartan fyllde inte skärmen.** Ritytan är liggande 10:7, telefonen stående 1:2 — hela kartan rymdes i bredd och blev ett smalt band mitt på en svart skärm, med två tredjedelar av telefonen oanvänd. Nu zoomas den vid start så att höjden fylls, och man panorerar i sidled.
 
