@@ -1,67 +1,42 @@
 # Ölkartan
 
-En karta över Systembolagets ölsortiment där avstånd betyder smaklikhet. Sök på öl, bryggeri, stil, smakord eller mat, eller klicka dig runt på kartan. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
+Systembolagets ölsortiment som en karta, där avstånd betyder smaklikhet. Positionen räknas fram ur Systembolagets egna smakbeskrivningar — 3 375 öl i 60 stilar. Sök på en öl du gillar och se vad som ligger bredvid, eller klicka dig runt. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
-Projektets bakgrund, beslut och faser finns i [PLAN.md](PLAN.md). Det här dokumentet handlar bara om att köra och publicera.
+Hur kartan räknas fram, och varför den ser ut som den gör, står i [PLAN.md](PLAN.md).
+
+## Tack
+
+Datan kommer från [susbolaget.emrik.org](https://susbolaget.emrik.org/v1/products), en communityspegel av Systembolagets öppna sortimentsdata som uppdateras varje natt. Den drivs och betalas av en privatperson. Utan den hade det här projektet börjat med att skrapa en webbsida — tack.
+
+Det medför en skyldighet: hämta sällan. `npm run data:hämta` hoppar över hämtningen om den lokala filen är yngre än sju dygn, veckojobbet cachar råfilen på veckonummer, och råfilen ligger inte i repot.
 
 ## Kom igång
 
 ```bash
 npm install
-npm run data:hämta    # ~100 MB råsortiment till data/rå/ (hoppas över om filen är färsk)
-npm run data          # bygger datan och kör kartans kontroller
+npm run data:hämta   # ~100 MB råsortiment till data/rå/  (-- --tvinga hämtar ändå)
+npm run data         # bygger datan och kör kartans kontroller
 npm run dev
 ```
 
-`npm run data` måste köras minst en gång innan produktpanelen fungerar — `public/data/produkter.json` är 2,3 MB och ligger därför inte i repot.
+`npm run data` måste köras minst en gång innan produktpanelen fungerar — `public/data/produkter.json` är 2,3 MB och ligger inte i repot.
 
 ## Kommandon
 
 | | |
-|---|---|
-| `npm run dev` | utvecklingsserver |
+| --- | --- |
 | `npm run build` | produktionsbygge till `dist/` |
-| `npm run data:hämta` | hämtar sortimentet. `-- --tvinga` hämtar även om filen är färsk |
-| `npm run data` | bygger `stilar.json`, `meta.json`, `produkter.json` och kör kontrollerna |
-| `npm test` | enhetstester för likhetsmotorn |
-| `npm run test:navigering` | kartan behåller zoom och position när man klickar sig runt |
-| `npm run test:sokning` | sökrutans träffar, tangentbord och markering på kartan |
-| `npm run test:karta` | mjuk zoom, inflygning och ölmolnet |
-| `npm run test:likhet` | "liknande öl" i produktvyn |
-| `npm run test:lankar` | permalänk, smakord, matvyn och etikettbilderna |
-| `npm run test:mobil` | nypzoom, textstorlek, axelord och kortets två lägen |
-| `npm run test:interaktion` | hover, panoreringsgränser och kortets svep |
+| `npm run data` | bygger om `stilar.json`, `meta.json` och `produkter.json` |
+| `npm test` | enhetstester för likhetsmotorn, körs i deployen |
+| `npm run test:karta` m.fl. | gränssnittstester, se `package.json` |
 
-`npm test` körs i deployen. Gränssnittstesterna gör det inte — de kräver att `npm run dev` kör i en annan terminal och att Playwright är installerat (`npm i --no-save playwright && npx playwright install chromium` — den hör inte hemma i `package.json`, deployen ska inte dra ned den), och 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.
-
-## Datan
-
-Källan är [susbolaget.emrik.org](https://susbolaget.emrik.org/v1/products), en communityspegel av Systembolagets öppna sortimentsdata som uppdateras dagligen 03:00. Den drivs av en privatperson — hämta sällan, och committa aldrig råfilen.
-
-Byggskriptet kör fem kontroller som verifierar att kartan stämmer med hur öl faktiskt smakar: att stout hamnar skilt från IPA, att pilsner och helles ligger ihop, och så vidare. Går någon sönder säger skriptet till direkt.
-
-Kartan är stabil mellan sortimentsuppdateringar. Ett test där 4 % av ölen togs bort flyttade stilarna 0,015 spridningsenheter i median, och kartans ytterkanter var oförändrade. Datan kan alltså uppdateras utan att kartan hoppar omkring för den som lärt sig den.
+Gränssnittstesterna kräver att `npm run dev` kör i en annan terminal, plus Playwright (`npm i --no-save playwright && npx playwright install chromium`). Den ligger med flit utanför `package.json` — 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.
 
 ## Publicering
 
-Appen publiceras till GitHub Pages av [arbetsflödet](.github/workflows/publicera.yml), som körs vid varje push till `main` och söndagar. Det hämtar sortimentet, bygger datan, bygger appen och publicerar — inget behöver committas.
-
-Råfilen cachas med veckonumret som nyckel, så en vanlig push återanvänder den och bara söndagsjobbet hämtar på nytt.
-
-### Sätta upp det första gången
-
-```bash
-gh auth login
-gh repo create olkartan --public --source . --push
-```
-
-Slå sedan på Pages i repots inställningar: **Settings → Pages → Source: GitHub Actions**.
-
-Repot är publikt eftersom GitHub Pages kräver Pro eller Team för att publicera från ett privat repo. Det gör ingen skada här: koden innehåller inga hemligheter, och datan är Systembolagets öppna sortiment.
-
-Arbetsflödet sätter `BASE` till `/<reponamn>/` eftersom ett projektsite ligger under en underkatalog. Byter du reponamn eller flyttar till en egen domän följer bygget med automatiskt.
+GitHub Pages, via [arbetsflödet](.github/workflows/publicera.yml) vid varje push till `main` och söndagar 04:10. Det hämtar sortimentet, bygger datan, bygger appen och publicerar — inget behöver committas. Slå på **Settings → Pages → Source: GitHub Actions** en gång, så sköter det sig själv.
 
 ## Juridik
 
