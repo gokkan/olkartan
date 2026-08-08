@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { Meta, Produkt, Stil } from './lib/typer'
 import { srm, kant, srmLitenPrick, srmRing } from './lib/färg'
+import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
 const H = 700
@@ -22,6 +23,28 @@ const MAX_SKALA = 14
 const TRÖGHET = 110
 
 type Vy = { k: number; tx: number; ty: number }
+
+/* Hur långt förbi kartans kant man får dra, som andel av vyn. Utan gräns kan
+   man panorera ut i det svarta tills prickarna försvinner helt och det inte
+   längre går att hitta tillbaka. Lite slack behövs ändå — en prick i kanten
+   ska gå att få fri från panelen. */
+const SLACK = 0.3
+
+function begränsa(v: Vy): Vy {
+  const spann = (vyLängd: number, innehåll: number) => {
+    const slack = vyLängd * SLACK
+    const a = vyLängd - innehåll - slack
+    const b = slack
+    return [Math.min(a, b), Math.max(a, b)] as const
+  }
+  const [minX, maxX] = spann(W, W * v.k)
+  const [minY, maxY] = spann(H, H * v.k)
+  return {
+    k: v.k,
+    tx: Math.min(Math.max(v.tx, minX), maxX),
+    ty: Math.min(Math.max(v.ty, minY), maxY),
+  }
+}
 
 export type KartHandtag = {
   /** Centrera en punkt i datakoordinater, med mjuk inflygning. */
@@ -45,25 +68,13 @@ type Props = {
   onVäljProdukt: (p: Produkt) => void
 }
 
-/* Axelorden är långa — "sirapslimpa, pomerans, choklad" tar halva bredden på
-   en telefon. På smal skärm räcker det tyngsta ordet åt varje håll. */
-function useSmalSkärm() {
-  const fråga = '(max-width: 700px)'
-  const [smal, setSmal] = useState(() => matchMedia(fråga).matches)
-  useEffect(() => {
-    const m = matchMedia(fråga)
-    const vid = () => setSmal(m.matches)
-    m.addEventListener('change', vid)
-    return () => m.removeEventListener('change', vid)
-  }, [])
-  return smal
-}
-
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
   { stilar, meta, vald, molnet, antalPerStil, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
-  const smal = useSmalSkärm()
+  // Axelorden är långa — 'sirapslimpa, pomerans, choklad' tar halva bredden
+  // på en telefon. På smal skärm räcker det tyngsta ordet åt varje håll.
+  const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
   const [vy, setVy] = useState<Vy>({ k: 1, tx: 0, ty: 0 })
   const [hovrad, setHovrad] = useState<Stil | null>(null)
@@ -157,7 +168,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       cx = W / 2
       cy = H / 2
     }
-    const start = { k, tx: W / 2 - cx * k, ty: H / 2 - cy * k }
+    const start = begränsa({ k, tx: W / 2 - cx * k, ty: H / 2 - cy * k })
     mål.current = start
     sätt(start)
     // Punkterna behövs bara vid första ritningen; vyn ska inte hoppa om
@@ -208,7 +219,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     () => ({
       flygTill(x, y, önskad) {
         const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, önskad ?? Math.max(vyNu.current.k, 3)))
-        mål.current = { k, tx: W / 2 - skala.px(x) * k, ty: H / 2 - skala.py(y) * k }
+        mål.current = begränsa({ k, tx: W / 2 - skala.px(x) * k, ty: H / 2 - skala.py(y) * k })
         animera()
       },
       rymPunkter(punkter) {
@@ -224,7 +235,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
         )
         const mx = (Math.min(...xs) + Math.max(...xs)) / 2
         const my = (Math.min(...ys) + Math.max(...ys)) / 2
-        mål.current = { k, tx: W / 2 - mx * k, ty: H / 2 - my * k }
+        mål.current = begränsa({ k, tx: W / 2 - mx * k, ty: H / 2 - my * k })
         animera()
       },
     }),
@@ -300,7 +311,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       const m = mål.current
       const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, m.k * Math.exp(-e.deltaY * 0.0022)))
       // Håll punkten under pekaren stilla medan skalan ändras.
-      mål.current = { k, tx: x - ((x - m.tx) * k) / m.k, ty: y - ((y - m.ty) * k) / m.k }
+      mål.current = begränsa({ k, tx: x - ((x - m.tx) * k) / m.k, ty: y - ((y - m.ty) * k) / m.k })
       animera()
     }
     el.addEventListener('wheel', hjul, { passive: false })
@@ -356,7 +367,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       const avstånd = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y))
       const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, (n.k * avstånd) / n.avstånd))
       const mitt = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-      const ny = { k, tx: mitt.x - n.innehåll.x * k, ty: mitt.y - n.innehåll.y * k }
+      const ny = begränsa({ k, tx: mitt.x - n.innehåll.x * k, ty: mitt.y - n.innehåll.y * k })
       mål.current = ny
       sätt(ny)
       return
@@ -373,7 +384,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       e.currentTarget.setPointerCapture(e.pointerId)
     }
     // Panorering följer fingret direkt. Utjämning här skulle bara kännas trögt.
-    const ny = { k: vyNu.current.k, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) }
+    const ny = begränsa({ k: vyNu.current.k, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) })
     mål.current = ny
     sätt(ny)
   }
@@ -453,6 +464,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 strokeWidth={(utvald ? 2 : aktiv ? 2 : 1) / vy.k}
                 opacity={p.tom ? 0.12 : nedtonad ? (aktiv ? 0.6 : 0.22) : 1}
                 onPointerEnter={() => setHovrad(p.stil)}
+                // Utan detta lyser stilen kvar när pekaren glider ut i tomma
+                // rutan. Villkoret gör det ofarligt att lämna en prick och
+                // gå in i nästa, oavsett i vilken ordning händelserna kommer.
+                onPointerLeave={() => setHovrad((h) => (h?.namn === p.stil.namn ? null : h))}
                 onClick={() => !drog() && onVälj(p.stil)}
               />
             )

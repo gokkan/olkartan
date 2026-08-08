@@ -11,6 +11,7 @@ import {
   sortimentetsMedian,
 } from './lib/urval'
 import { srm, srmStapel } from './lib/färg'
+import Panelram from './Panelram'
 import { liknande, type Ordfrekvens } from './lib/likhet'
 
 type Props = {
@@ -102,11 +103,7 @@ export default function Panel({
   const stilVärden = { beska: stil.beska, fyllighet: stil.fyllighet, sötma: stil.sötma }
 
   return (
-    <aside className="panel">
-      <button className="stäng" onClick={onStäng} aria-label="Stäng panelen">
-        ×
-      </button>
-
+    <Panelram onStäng={onStäng}>
       {vald ? (
         /* ------------------------------------------------------ produktvy -- */
         <>
@@ -256,6 +253,6 @@ export default function Panel({
           </ul>
         </>
       )}
-    </aside>
+    </Panelram>
   )
 }

@@ -236,6 +236,12 @@ Den första versionen riktade mot ritytans geometriska mitt och landade i ett gl
 
 **Axelorden** kortas till ett ord på smal skärm. "sirapslimpa, pomerans, choklad" tog halva bredden; nu tar det bredaste 15 %.
 
+**Kortet på telefon** glider upp underifrån och går att svepa ned igen. Svepet startar bara från greppet högst upp — tar man tag var som helst i kortet slåss svepet med rullningen, och då blir listan omöjlig att läsa.
+
+**Hovern släppte inte.** En stil lyste kvar när pekaren gled ut i tomma rutan, eftersom bara svg-elementet hade en lämna-hanterare. Prickarna har nu en egen, villkorad på att det är just den stilen som är hovrad — då spelar det ingen roll i vilken ordning händelserna kommer när man går från en prick till nästa.
+
+**Panoreringen hade inga gränser.** Man kunde dra ut i det svarta tills alla prickar försvann och inte hitta tillbaka. Nu får man dra 30 % av vyn förbi kartans kant, inte mer. Efter fem hårda drag i samma riktning finns 21 prickar kvar i bild.
+
 ---
 
 ## Formgivning

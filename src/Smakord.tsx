@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { Produkt } from './lib/typer'
 import { bryggeriRad, heltNamn, kr } from './lib/urval'
 import { srm } from './lib/färg'
+import Panelram from './Panelram'
 
 /**
  * Alla öl som beskrivs med ett visst smakord.
@@ -35,11 +36,7 @@ export default function Smakord({
   }, [träffar])
 
   return (
-    <aside className="panel">
-      <button className="stäng" onClick={onStäng} aria-label="Stäng panelen">
-        ×
-      </button>
-
+    <Panelram onStäng={onStäng}>
       <p className="meta">smakord</p>
       <h2>{ord}</h2>
       <p className="undertitel">{träffar.length} öl beskrivs med det ordet</p>
@@ -77,6 +74,6 @@ export default function Smakord({
           </li>
         ))}
       </ol>
-    </aside>
+    </Panelram>
   )
 }

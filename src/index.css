@@ -772,3 +772,68 @@ footer span:last-child {
     display: none;
   }
 }
+
+/* -------------------------------------------------------------- kortet -- */
+
+.panel.drar {
+  transition: none;
+  cursor: grabbing;
+}
+
+.grepp {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* Panelen är ett kort som kommer underifrån. Rörelsen säger var det kom
+     ifrån och därmed vart det tar vägen om man sveper ned. */
+  .panel {
+    border-radius: 12px 12px 0 0;
+    animation: glidUpp 260ms cubic-bezier(0.22, 0.9, 0.3, 1);
+    transition: transform 200ms cubic-bezier(0.22, 0.9, 0.3, 1);
+    will-change: transform;
+  }
+
+  @keyframes glidUpp {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  .grepp {
+    display: flex;
+    position: sticky;
+    top: -22px;
+    z-index: 2;
+    justify-content: center;
+    align-items: center;
+    height: 26px;
+    margin: -22px -24px 4px;
+    background: var(--yta);
+    border-radius: 12px 12px 0 0;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .grepp span {
+    width: 36px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--linje);
+  }
+
+  .grepp:active span {
+    background: var(--svag);
+  }
+
+  .stäng {
+    top: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+    transition: none;
+  }
+}
