@@ -264,6 +264,8 @@ Den ligger **utanför** kartan med flit. Matchningen är grov — nio av tio öl
 
 I gränssnittet är maten ett urval av samma slag som ett smakord: sökbar, klickbar från produktvyn, och den lyser upp sitt moln på kartan. Vyerna delar komponent (`Urval.tsx`) men inte påstående — noten i matvyn säger var siffrorna kommer ifrån, för matmolnet behöver inte följa kartan. "Fisk" råkar samla sig i det ljusa hörnet, "sällskapsdryck" ligger överallt.
 
+Ett urval är en ram runt bläddrandet, inte en återvändsgränd. Klickar man på en öl i listan tar ölen över panelen, men `mat=Fisk` ligger kvar i adressen: molnet på kartan fortsätter visa fiskölen, den valda pricken lyser, och tillbakalänken heter "← fisk". Följer man därifrån en liknande öl behålls ramen så länge ölen också är märkt för fisk. Är den inte det har man lämnat urvalet, och då byter panelen till ölens stil — att stå kvar i "fisk" med en öl som inte hör dit vore en lögn om vad man tittar på.
+
 Stilvyn visar de rätter stilen passar till *oftare än sortimentet i stort*, inte de vanligaste — annars hade det stått "sällskapsdryck" på alla 60 stilarna.
 
 **Etikettbilder ✅ klara.** `product-cdn.systembolaget.se/productimages/<id>/<id>_200.png` — även `_100` och `_400`; utan storlekssuffix svarar servern 404. Adressen räknas ut ur artikelnumret, så ingenting behöver lagras utom en flagga för de 55 öl som saknar bild.

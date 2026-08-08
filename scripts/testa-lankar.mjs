@@ -84,6 +84,18 @@ console.log('  ' + (await p.locator('.panel .undertitel').textContent()))
 console.log('  moln på kartan: ' + (await p.locator('circle[data-ol]').count()))
 console.log(`  hamnar i hashen: ${decodeURIComponent(p.url()).includes('mat=Fisk') ? '✓' : '✗'}`)
 
+/* Listan ska gå att klicka sig in i, och urvalet ligga kvar runt omkring. */
+const förstaÖlet = await p.locator('.produkter button .p-namn').first().textContent()
+await p.locator('.produkter button').first().click()
+await p.waitForTimeout(400)
+console.log(`  klick på "${förstaÖlet.trim()}" → ${await p.locator('.panel h2').textContent()}`)
+console.log(`  tillbakalänk: ${await p.locator('.tillbaka').textContent()}`)
+console.log(`  urvalet kvar i hashen: ${decodeURIComponent(p.url()).includes('mat=Fisk') ? '✓' : '✗'}`)
+console.log(`  molnet kvar på kartan: ${await p.locator('circle[data-ol]').count()}`)
+await p.locator('.tillbaka').click()
+await p.waitForTimeout(400)
+console.log(`  tillbaka → ${await p.locator('.panel h2').textContent()}`)
+
 /* Och tillbaka in i en produkt, där matchipsen ska gå att klicka på. */
 await p.goto(bas + '#%C3%B6l=507849', { waitUntil: 'networkidle' })
 await klar()

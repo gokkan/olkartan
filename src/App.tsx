@@ -69,12 +69,26 @@ export default function App() {
      runt. Sökningen är undantaget: där är förflyttningen hela poängen. */
   const väljStil = (s: Stil) => gåTill({ stil: s.namn })
 
+  /** Hör ölen hemma i det urval man just nu tittar på? */
+  const iUrvalet = (p: Produkt) =>
+    läge.ord ? p.termer.includes(läge.ord) : läge.mat ? p.mat.includes(läge.mat) : false
+
   /* Ett klick i "liknande öl" landar ofta i en annan stil — det är poängen med
      att räkna avstånd i smakrymden. Byter ölen stil flyger vyn dit; inom samma
-     stil rör sig ingenting, för där finns inget nytt att visa. */
+     stil rör sig ingenting, för där finns inget nytt att visa.
+
+     Kommer man från ett smakord eller en maträtt behålls det urvalet så länge
+     ölen ingår i det: molnet på kartan ska fortsätta visa "fisk" medan man
+     bläddrar bland fiskölen, och tillbakalänken peka dit. Följer man därifrån
+     en liknande öl som inte är märkt för fisk har man lämnat urvalet, och då
+     är stilen den ärliga ramen. */
   const väljProdukt = (p: Produkt) => {
-    const bytteStil = !urval && p.stil !== läge.stil
-    gåTill({ ...läge, stil: urval ? undefined : p.stil, öl: p.id })
+    if (urval && iUrvalet(p)) {
+      gåTill({ ...läge, öl: p.id })
+      return
+    }
+    const bytteStil = p.stil !== läge.stil
+    gåTill({ stil: p.stil, öl: p.id })
     if (bytteStil) karta.current?.flygTill(p.x, p.y)
   }
 
@@ -116,20 +130,22 @@ export default function App() {
           />
         </Fangare>
 
-        {urval && produkter && (
+        {/* Ölen tar över panelen även när man kom via ett smakord eller en
+            maträtt — annars går listan inte att klicka sig in i. Urvalet
+            ligger kvar i adressen, och tillbakalänken går dit. */}
+        {urval && produkter && !produkt && (
           <Fangare namn="Urvalsvyn">
             <Urval
               sort={urval.sort}
               värde={urval.värde}
               produkter={produkter}
-              vald={produkt}
               onVäljProdukt={väljProdukt}
               onStäng={stäng}
             />
           </Fangare>
         )}
 
-        {!urval && stil && (
+        {stil && (produkt || !urval) && (
           <Fangare namn="Panelen">
             <Panel
               stil={stil}
@@ -138,6 +154,7 @@ export default function App() {
               fel={fel}
               vald={produkt}
               ordfrekvens={meta.ordfrekvens}
+              tillbaka={urval ? urval.värde.toLowerCase() : stil.namn}
               onVäljStil={väljStil}
               onVäljProdukt={väljProdukt}
               onVäljMat={väljMat}

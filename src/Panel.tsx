@@ -23,6 +23,9 @@ type Props = {
   fel: string | null
   vald: Produkt | null
   ordfrekvens: Ordfrekvens
+  /** Vad tillbakalänken i produktvyn heter. Stilens namn i vanliga fall, men
+   *  smakordet eller maträtten om det är därifrån man kom. */
+  tillbaka: string
   onVäljStil: (s: Stil) => void
   onVäljProdukt: (p: Produkt) => void
   onVäljMat: (mat: string) => void
@@ -85,6 +88,7 @@ export default function Panel({
   fel,
   vald,
   ordfrekvens,
+  tillbaka,
   onVäljStil,
   onVäljProdukt,
   onVäljMat,
@@ -113,7 +117,7 @@ export default function Panel({
         /* ------------------------------------------------------ produktvy -- */
         <>
           <button className="tillbaka" onClick={onTillbaka}>
-            ← {stil.namn}
+            ← {tillbaka}
           </button>
           {/* data-kik: så långt kortet öppnas på telefon vid första trycket. */}
           <div className="produkthuvud" data-kik>

@@ -9,18 +9,16 @@ import { srm } from './lib/färg'
  */
 export default function Produktlista({
   produkter,
-  vald,
   onVälj,
 }: {
   produkter: Produkt[]
-  vald: Produkt | null
   onVälj: (p: Produkt) => void
 }) {
   return (
     <ol className="produkter">
       {produkter.map((p) => (
         <li key={p.id}>
-          <button onClick={() => onVälj(p)} className={vald?.id === p.id ? 'markerad' : undefined}>
+          <button onClick={() => onVälj(p)}>
             <span className="p-namn">
               <span className="p-prick" style={{ background: srm(p.mörkhet) }} />
               {heltNamn(p)}

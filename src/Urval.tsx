@@ -21,14 +21,12 @@ export default function Urval({
   sort,
   värde,
   produkter,
-  vald,
   onVäljProdukt,
   onStäng,
 }: {
   sort: Sort
   värde: string
   produkter: Produkt[]
-  vald: Produkt | null
   onVäljProdukt: (p: Produkt) => void
   onStäng: () => void
 }) {
@@ -76,7 +74,7 @@ export default function Urval({
       )}
 
       <h3>Ölen</h3>
-      <Produktlista produkter={träffar} vald={vald} onVälj={onVäljProdukt} />
+      <Produktlista produkter={träffar} onVälj={onVäljProdukt} />
     </Panelram>
   )
 }
