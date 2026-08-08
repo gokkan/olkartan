@@ -646,3 +646,18 @@ footer span:last-child {
   opacity: 0.82;
   margin-top: 2px;
 }
+
+/* Nedtoningen när en stil väljs ska glida på samma sätt som zoomen, inte
+   klippa. Bara opaciteten animeras — radie och kantbredd räknas om vid varje
+   bild när man zoomar, och en övergång på dem skulle släpa efter musen. */
+.karta circle,
+.karta .etikett {
+  transition: opacity 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karta circle,
+  .karta .etikett {
+    transition: none;
+  }
+}

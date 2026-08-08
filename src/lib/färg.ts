@@ -61,3 +61,16 @@ export function srmStapel(mörkhet: number | null): string {
 export function srmLitenPrick(mörkhet: number | null): string {
   return srm(Math.min(0.84, mörkhet ?? 0.3))
 }
+
+/**
+ * Ringen runt den valda stilen.
+ *
+ * När en stil är vald slutar dess cirkel vara en prick och blir en behållare
+ * för ölen inuti. Den ritas som en kontur, och konturen måste synas även för
+ * en imperial stout — därför är taket lägre än någon annanstans. Kulören
+ * stannar ändå i SRM-familjen, så en stout får en varm brun ring och en
+ * pilsner en gyllene.
+ */
+export function srmRing(mörkhet: number | null): string {
+  return srm(Math.min(0.55, mörkhet ?? 0.3))
+}

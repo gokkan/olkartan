@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Meta, Produkt, Stil } from './lib/typer'
-import { srm, kant, srmLitenPrick } from './lib/färg'
+import { srm, kant, srmLitenPrick, srmRing } from './lib/färg'
 
 const W = 1000
 const H = 700
@@ -281,6 +281,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
           {punkter.map((p) => {
             const aktiv = hovrad?.namn === p.stil.namn
             const utvald = vald === p.stil.namn
+            // Är en stil vald träder den fram genom att grannarna viker undan,
+            // inte genom att den själv skriker. Kartan behåller sin form —
+            // man ska fortfarande se var i rymden man befinner sig.
+            const nedtonad = vald !== null && !utvald
             return (
               <circle
                 key={p.stil.namn}
@@ -288,12 +292,19 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 cx={p.px}
                 cy={p.py}
                 r={p.r / vy.k}
-                fill={srm(p.stil.mörkhet)}
-                // Den valda stilen tonas ned till en ring så att ölmolnet
-                // inuti syns igenom.
-                fillOpacity={utvald && ölpunkter.length ? 0.28 : 1}
-                stroke={utvald || aktiv ? 'rgb(255 255 255 / 0.85)' : kant(p.stil.mörkhet)}
-                strokeWidth={(utvald ? 2.5 : aktiv ? 2 : 1) / vy.k}
+                // Den valda stilen är inte längre en prick utan behållaren
+                // runt sina öl, och ritas därför som en kontur.
+                fill={utvald && ölpunkter.length ? srmRing(p.stil.mörkhet) : srm(p.stil.mörkhet)}
+                fillOpacity={utvald && ölpunkter.length ? 0.14 : 1}
+                stroke={
+                  utvald
+                    ? srmRing(p.stil.mörkhet)
+                    : aktiv
+                      ? 'rgb(255 255 255 / 0.85)'
+                      : kant(p.stil.mörkhet)
+                }
+                strokeWidth={(utvald ? 2 : aktiv ? 2 : 1) / vy.k}
+                opacity={nedtonad ? (aktiv ? 0.6 : 0.22) : 1}
                 onPointerEnter={() => setHovrad(p.stil)}
                 onClick={() => !drog() && onVälj(p.stil)}
               />
@@ -336,6 +347,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 textAnchor="middle"
                 fontSize={11 / vy.k}
                 className={aktiv || utvald ? 'etikett aktiv' : 'etikett'}
+                opacity={vald !== null && !utvald && !aktiv ? 0.3 : 1}
               >
                 {p.stil.namn}
               </text>
