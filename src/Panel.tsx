@@ -13,6 +13,7 @@ import {
 } from './lib/urval'
 import { srm, srmStapel } from './lib/färg'
 import Panelram from './Panelram'
+import Etikett from './Etikett'
 import { liknande, type Ordfrekvens } from './lib/likhet'
 
 type Props = {
@@ -114,8 +115,14 @@ export default function Panel({
           <button className="tillbaka" onClick={onTillbaka}>
             ← {stil.namn}
           </button>
-          <h2>{heltNamn(vald)}</h2>
-          <p className="meta">{bryggeriRad(vald)}</p>
+          {/* data-kik: så långt kortet öppnas på telefon vid första trycket. */}
+          <div className="produkthuvud" data-kik>
+            <div>
+              <h2>{heltNamn(vald)}</h2>
+              <p className="meta">{bryggeriRad(vald)}</p>
+            </div>
+            <Etikett produkt={vald} />
+          </div>
 
           <dl className="fakta">
             <div>
@@ -212,7 +219,7 @@ export default function Panel({
         <>
           <p className="meta">{stil.förälder}</p>
           <h2>{stil.namn}</h2>
-          <p className="undertitel">
+          <p className="undertitel" data-kik>
             {lista.length} öl · {stil.abv} % · {kr(stil.prisPerLiter)}
           </p>
           {lista.length > 1 && (

@@ -90,12 +90,69 @@ console.log(
     (krock.krockar ? '✗ ligger under sökrutan' : '✓ fri'),
 )
 
-/* Panelen ska gå att öppna med ett finger. */
-await p.touchscreen.tap(skärm.width / 2, 200)
-await p.waitForTimeout(400)
-const panel = await p.locator('.panel h2').count()
-console.log(`\npanelen öppnas vid tryck: ${panel ? '✓' : '— ingen prick där, hoppar över'}`)
+/* Texten på kartan ska gå att läsa. Under elva punkter går den inte att läsa
+   på en telefon, hur fin kartan än är. */
+const textstorlek = await p.locator('text.etikett').first().evaluate((e) => {
+  const r = e.getBoundingClientRect()
+  // Höjden på rutan är den utritade texten i skärmpunkter.
+  return { px: +r.height.toFixed(1), antal: document.querySelectorAll('text.etikett').length }
+})
+console.log(
+  `\netiketter: ${textstorlek.antal} st, ${textstorlek.px} px  ` +
+    (textstorlek.px >= 11 ? '✓ läsbara' : '✗ för små'),
+)
+
+/* --- kortets två lägen --------------------------------------------------- */
+console.log('\nkortet:')
+await p.locator('circle[data-stil="India pale ale (IPA)"]').tap()
+await p.waitForTimeout(500)
+
+const kortet = () =>
+  p.evaluate(() => {
+    const a = document.querySelector('.panel')
+    if (!a) return null
+    const r = a.getBoundingClientRect()
+    return { topp: Math.round(r.top), synligt: Math.round(innerHeight - r.top), kikar: a.classList.contains('kikar') }
+  })
+
+let k = await kortet()
+console.log(`  vid tryck: ${k.synligt} px synligt, kikläge ${k.kikar ? '✓' : '✗'}`)
+console.log(`  rubrik: ${await p.locator('.panel h2').textContent()}`)
+const kartaKvar = await p.evaluate((topp) => {
+  const c = [...document.querySelectorAll('svg circle')]
+  return c.filter((e) => e.getBoundingClientRect().bottom < topp).length
+}, k.topp)
+console.log(`  prickar kvar ovanför kortet: ${kartaKvar}  ${kartaKvar > 20 ? '✓' : '✗ kortet täcker kartan'}`)
+
+/* Dra i greppet med riktig beröring. Syntetiska pointer events tar en annan
+   väg genom webbläsaren och ger falskt negativt. */
+async function svep(längd) {
+  const g = await p.locator('.grepp').boundingBox()
+  const x = Math.round(g.x + g.width / 2)
+  const y = Math.round(g.y + g.height / 2)
+  const punkt = (dy) => [{ x, y: y + dy, id: 1, radiusX: 5, radiusY: 5, force: 1 }]
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: punkt(0) })
+  for (let i = 1; i <= 8; i++)
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: punkt((längd * i) / 8),
+    })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await p.waitForTimeout(450)
+}
+
+await svep(-260)
+k = await kortet()
+console.log(`  dragen uppåt: ${k.synligt} px synligt, kikläge ${k.kikar ? '✗' : '✓ borta'}`)
+
+await svep(200)
+k = await kortet()
+console.log(`  dragen nedåt: ${k.synligt} px synligt, tillbaka till kik ${k.kikar ? '✓' : '✗'}`)
 await p.screenshot({ path: 'mobil.png' })
+
+await svep(200)
+k = await kortet()
+console.log(`  dragen nedåt igen: ${k === null ? '✓ stängt' : '✗ ligger kvar'}`)
 
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

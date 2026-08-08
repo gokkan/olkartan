@@ -1,16 +1,35 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import { useSmalSkärm } from './lib/skarm'
 
-/** Så långt ned man måste dra innan kortet stängs. */
-const STÄNGGRÄNS = 90
+/** Hur långt man måste dra innan kortet byter läge. */
+const GRÄNS = 60
+/** Om inget `data-kik` hittas: så högt kortet öppnas ändå. */
+const KIK_RESERV = 150
 
 /**
- * Ramen runt panelen — samma för stilvyn och smakordsvyn.
+ * Ramen runt panelen — samma för stilvyn, produktvyn och urvalsvyn.
  *
- * På telefon är panelen ett kort som glider upp underifrån och går att svepa
- * ned igen. Svepet startar bara från greppet högst upp: tar man tag var som
- * helst i kortet slåss svepet med rullningen, och då blir listan omöjlig att
- * läsa.
+ * På telefon är panelen ett kort med två lägen. Vid första trycket kommer det
+ * upp bara så mycket att rubriken syns, resten av skärmen är fortfarande karta
+ * — man ska kunna trycka sig runt bland prickarna utan att kortet står i
+ * vägen. Vill man läsa drar man upp det, och drar man ned från kiket stängs
+ * det.
+ *
+ * Kikhöjden mäts fram ur innehållet i stället för att gissas: vyerna märker
+ * ut sin sista rubrikrad med `data-kik`, och kortet öppnas precis så långt.
+ * Ett ölnamn som går i två rader får då mer plats än ett som går i en, och
+ * bilden i produktvyn räknas med.
+ *
+ * Svepet startar bara från greppet högst upp. Tar man tag var som helst i
+ * kortet slåss svepet med rullningen, och då blir listan omöjlig att läsa.
  */
 export default function Panelram({
   children,
@@ -20,9 +39,52 @@ export default function Panelram({
   onStäng: () => void
 }) {
   const smal = useSmalSkärm()
+  const ramen = useRef<HTMLElement>(null)
+  const [öppet, setÖppet] = useState(false)
+  const [mått, setMått] = useState({ höjd: 0, kik: KIK_RESERV })
   const [dy, setDy] = useState(0)
   const [drar, setDrar] = useState(false)
+  /* Kortet ritas första gången nedanför skärmkanten och glider upp till sitt
+     läge. Utan det steget står det bara där. */
+  const [inne, setInne] = useState(false)
   const start = useRef(0)
+
+  const mät = useCallback(() => {
+    const el = ramen.current
+    if (!el) return
+    const höjd = el.offsetHeight
+    const märke = el.querySelector('[data-kik]')
+    const kik = märke
+      ? märke.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 14
+      : KIK_RESERV
+    // Samma värden ut ska inte ge en ny rendering: mätningen körs om varje
+    // gång innehållet byts, och ett nytt objekt varje gång vore en snurra.
+    setMått((f) => (f.höjd === höjd && f.kik === kik ? f : { höjd, kik: Math.min(höjd, kik) }))
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!smal) return
+    mät()
+    const el = ramen.current
+    if (!el) return
+    const ro = new ResizeObserver(mät)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [smal, mät, children])
+
+  useEffect(() => {
+    if (!smal) return
+    const id = requestAnimationFrame(() => setInne(true))
+    return () => cancelAnimationFrame(id)
+  }, [smal])
+
+  /* Var kortet vilar: nere vid kiket, eller uppe. Under ett drag läggs
+     fingrets förflyttning ovanpå, begränsad till mellan helt uppe och helt
+     nere. */
+  const vila = öppet ? 0 : Math.max(0, mått.höjd - mått.kik)
+  const förskjutning = inne
+    ? Math.min(mått.höjd, Math.max(0, vila + dy))
+    : Math.max(mått.höjd, 1000)
 
   function ned(e: ReactPointerEvent<HTMLDivElement>) {
     start.current = e.clientY
@@ -38,21 +100,32 @@ export default function Panelram({
 
   function rör(e: ReactPointerEvent<HTMLDivElement>) {
     if (!drar) return
-    // Bara nedåt. Att dra kortet uppåt över sin egen kant ser trasigt ut.
-    setDy(Math.max(0, e.clientY - start.current))
+    setDy(e.clientY - start.current)
   }
 
   function upp() {
     if (!drar) return
     setDrar(false)
-    if (dy > STÄNGGRÄNS) onStäng()
+    const rörelse = dy
     setDy(0)
+    // Ett tryck utan rörelse är en växling: det är den enda gest som finns
+    // för den som inte förstår att kortet går att dra.
+    if (Math.abs(rörelse) < 6) {
+      setÖppet((v) => !v)
+      return
+    }
+    if (rörelse < -GRÄNS) setÖppet(true)
+    else if (rörelse > GRÄNS) {
+      if (öppet) setÖppet(false)
+      else onStäng()
+    }
   }
 
   return (
     <aside
-      className={`panel${drar ? ' drar' : ''}`}
-      style={dy ? { transform: `translateY(${dy}px)` } : undefined}
+      ref={ramen}
+      className={`panel${drar ? ' drar' : ''}${smal && !öppet ? ' kikar' : ''}`}
+      style={smal ? { transform: `translateY(${förskjutning}px)` } : undefined}
     >
       {smal && (
         <div
@@ -63,8 +136,9 @@ export default function Panelram({
           onPointerCancel={upp}
           role="button"
           tabIndex={0}
-          aria-label="Dra ned för att stänga"
-          onKeyDown={(e) => e.key === 'Enter' && onStäng()}
+          aria-expanded={öppet}
+          aria-label={öppet ? 'Dra ned för att fälla ihop' : 'Dra upp för att läsa mer'}
+          onKeyDown={(e) => e.key === 'Enter' && setÖppet((v) => !v)}
         >
           <span />
         </div>

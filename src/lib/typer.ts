@@ -37,6 +37,8 @@ export type Produkt = {
   fatlagrad: boolean
   /** Systembolagets matmatchning. Utanför kartan — se byggskriptet. */
   mat: string[]
+  /** Om Systembolaget har en etikettbild för ölen. Adressen räknas ut ur id:t. */
+  bild: boolean
   mörkhet: number | null
   smaktext: string
   termer: string[]

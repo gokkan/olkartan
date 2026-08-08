@@ -30,6 +30,26 @@ type Vy = { k: number; tx: number; ty: number }
    ska gå att få fri från panelen. */
 const SLACK = 0.3
 
+/* Ritytan är 1000×700 och skalas in i elementet med `meet`, alltså efter den
+   knappaste sidan. Bredvid en öppen panel på en 1440-skärm blir en ritenhet
+   1,06 skärmpunkter — på en telefon 0,41, eftersom bredden är 412 punkter.
+   Allt som anges i ritenheter ritades därför ut i en tredjedels storlek på
+   telefonen: elva punkters text blev fyra, och gick inte att läsa.
+
+   `lupp` räknar upp de mått som ska hålla sin storlek på skärmen oavsett var
+   de visas. Referensen är skrivbordsläget, så där blir faktorn ett och
+   ingenting ändras. */
+const REFERENSFAKTOR = 1.06
+const MAX_LUPP = 3
+
+/* Prickarna behöver inte växa lika mycket som texten. En text under elva
+   punkter går inte att läsa; en prick på tio går utmärkt att träffa. Följde de
+   luppen fullt ut skulle de äta upp telefonskärmen — kartan blev en samling
+   bollar. Golvet finns för motsatta skälet: en stil med tre öl ritas som fyra
+   ritenheter, vilket är ett par punkter, och det går inte att peka på. */
+const PRICKANDEL = 0.6
+const MINSTA_PRICK_PUNKTER = 7
+
 function begränsa(v: Vy): Vy {
   const spann = (vyLängd: number, innehåll: number) => {
     const slack = vyLängd * SLACK
@@ -73,6 +93,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
   // på en telefon. På smal skärm räcker det tyngsta ordet åt varje håll.
   const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
+  const [ritfaktor, setRitfaktor] = useState(REFERENSFAKTOR)
   const [vy, setVy] = useState<Vy>({ k: 1, tx: 0, ty: 0 })
   const [hovrad, setHovrad] = useState<Stil | null>(null)
   const [hovradProdukt, setHovradProdukt] = useState<Produkt | null>(null)
@@ -93,6 +114,22 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
   const mål = useRef(vy)
   const bild = useRef<number | null>(null)
   const sistaTid = useRef(0)
+
+  const lupp = Math.min(MAX_LUPP, Math.max(1, REFERENSFAKTOR / ritfaktor))
+  const luppPrick = 1 + (lupp - 1) * PRICKANDEL
+  const prickgolv = lupp > 1.4 ? MINSTA_PRICK_PUNKTER / ritfaktor : 0
+
+  /** Ett mått i skärmpunkter, uttryckt i ritenheter vid nuvarande zoom. */
+  const sk = useCallback((n: number) => (n * lupp) / vy.k, [lupp, vy.k])
+  /** Detsamma för prickarnas radie, som växer försiktigare. */
+  const skPrick = (r: number) => (r * luppPrick) / vy.k
+  /** Stilprickarna har dessutom ett golv, så att en stil med tre öl går att
+   *  peka på. Molnets prickar får inte det — fyrahundra öl med fingerstora
+   *  prickar blir en enda klump. */
+  const skStil = useCallback(
+    (r: number) => Math.max(r * luppPrick, prickgolv) / vy.k,
+    [luppPrick, prickgolv, vy.k],
+  )
 
   const sätt = useCallback((v: Vy) => {
     vyNu.current = v
@@ -131,6 +168,23 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     },
     [],
   )
+
+  /* Luppen följer elementets storlek, inte en mediefråga: det som avgör hur
+     smått allt blir är hur många skärmpunkter ritytan får, och den krymper
+     också när panelen tar plats bredvid. */
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const mät = () => {
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height) return
+      setRitfaktor(Math.min(r.width / W, r.height / H))
+    }
+    mät()
+    const ro = new ResizeObserver(mät)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   /* Kartan är liggande, telefonen stående. Ryms hela ritytan i bredd blir den
      ett smalt band mitt på en svart skärm — två tredjedelar av telefonen
@@ -244,10 +298,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
   const etiketter = useMemo(() => {
     type Ruta = { x: number; y: number; w: number; h: number; ägare?: string }
     const upptaget: Ruta[] = punkter.map((p) => ({
-      x: p.px - p.r / vy.k,
-      y: p.py - p.r / vy.k,
-      w: (2 * p.r) / vy.k,
-      h: (2 * p.r) / vy.k,
+      x: p.px - skStil(p.r),
+      y: p.py - skStil(p.r),
+      w: 2 * skStil(p.r),
+      h: 2 * skStil(p.r),
       ägare: p.stil.namn,
     }))
     const krockar = (a: Ruta, egen: string) =>
@@ -260,18 +314,18 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
           a.y + a.h > q.y,
       )
 
-    const höjd = 12 / vy.k
+    const höjd = sk(12)
     // Namn → baslinje för texten, så att ritningen använder exakt den plats
     // kollisionstestet godkände.
     const valda = new Map<string, number>()
     for (const p of [...punkter].sort((a, b) => b.stil.antal - a.stil.antal)) {
-      const bredd = (p.stil.namn.length * 5.6) / vy.k
+      const bredd = sk(p.stil.namn.length * 5.6)
       // Under pricken, ovanför, och sist tvärs över den egna pricken. Det
       // tredje läget räddar de största stilarna, som ligger tätast och annars
       // blir de enda utan namn. Texten har mörk kontur och tål underlaget.
       const kandidater = [
-        p.py + p.r / vy.k + 3 / vy.k,
-        p.py - p.r / vy.k - höjd - 3 / vy.k,
+        p.py + skStil(p.r) + sk(3),
+        p.py - skStil(p.r) - sk(3) - höjd,
         p.py - höjd / 2,
       ]
       for (const y of kandidater) {
@@ -283,7 +337,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       }
     }
     return valda
-  }, [punkter, vy.k])
+  }, [punkter, sk, skStil])
 
   const tillSvg = useCallback((e: { clientX: number; clientY: number }) => {
     const ctm = svgRef.current?.getScreenCTM()
@@ -444,7 +498,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 data-stil={p.stil.namn}
                 cx={p.px}
                 cy={p.py}
-                r={p.r / vy.k}
+                r={skStil(p.r)}
                 // Den valda stilen är inte längre en prick utan behållaren
                 // runt sina öl, och ritas därför som en kontur.
                 fill={utvald && ölpunkter.length ? srmRing(p.stil.mörkhet) : srm(p.stil.mörkhet)}
@@ -456,7 +510,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                       ? 'rgb(255 255 255 / 0.85)'
                       : kant(p.stil.mörkhet)
                 }
-                strokeWidth={(utvald ? 2 : aktiv ? 2 : 1) / vy.k}
+                strokeWidth={sk(utvald ? 2 : aktiv ? 2 : 1)}
                 opacity={p.tom ? 0.12 : nedtonad ? (aktiv ? 0.6 : 0.22) : 1}
                 onPointerEnter={() => setHovrad(p.stil)}
                 // Utan detta lyser stilen kvar när pekaren glider ut i tomma
@@ -479,10 +533,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 className="olprick"
                 cx={ö.px}
                 cy={ö.py}
-                r={(utvald ? 5.5 : 3.6) / vy.k}
+                r={skPrick(utvald ? 5.5 : 3.6)}
                 fill={srmLitenPrick(ö.produkt.mörkhet)}
                 stroke={utvald ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.45)'}
-                strokeWidth={(utvald ? 2 : 0.6) / vy.k}
+                strokeWidth={sk(utvald ? 2 : 0.6)}
                 onPointerEnter={() => setHovradProdukt(ö.produkt)}
                 onPointerLeave={() => setHovradProdukt(null)}
                 onClick={() => !drog() && onVäljProdukt(ö.produkt)}
@@ -500,9 +554,9 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
               <text
                 key={p.stil.namn}
                 x={p.px}
-                y={y ?? p.py + p.r / vy.k + 12 / vy.k}
+                y={y ?? p.py + skStil(p.r) + sk(12)}
                 textAnchor="middle"
-                fontSize={11 / vy.k}
+                fontSize={sk(11)}
                 className={aktiv || utvald ? 'etikett aktiv' : 'etikett'}
                 opacity={molnAktivt && !utvald && !aktiv ? 0.3 : 1}
               >

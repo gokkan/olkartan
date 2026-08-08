@@ -96,7 +96,49 @@ if (await chips.count()) {
   console.log('  klick på chips → ' + (await p.locator('.panel h2').textContent()))
 }
 
-/* --- 6. Rama in molnet --------------------------------------------------- */
+/* --- 6. Etikettbilden får aldrig lämna ett hål --------------------------- */
+console.log('\nbilder:')
+const bildanrop = []
+p.on('response', (r) => r.url().includes('productimages') && bildanrop.push(r.status()))
+
+await p.goto(bas + '#%C3%B6l=507849', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.panel h2')
+await p.waitForTimeout(900)
+const laddad = await p
+  .locator('.etikettbild')
+  .evaluate((e) => e.complete && e.naturalWidth > 0)
+  .catch(() => false)
+console.log(`  Guinness: bilden syns ${laddad ? '✓' : '✗'}`)
+
+/* Ett öl som saknar bild i katalogen ska inte ens fråga efter en. */
+bildanrop.length = 0
+await p.goto(bas + '#%C3%B6l=62855970', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.panel h2')
+await p.waitForTimeout(700)
+console.log(
+  `  öl utan bild: ${await p.locator('.etikettbild').count()} img-element, ` +
+    `${bildanrop.length} anrop  ${bildanrop.length === 0 ? '✓' : '✗ frågar i onödan'}`,
+)
+
+/* Och om Systembolaget flyttar sökvägen ska panelen se ut som förut. */
+await p.route('**/productimages/**', (r) => r.fulfill({ status: 404, body: '' }))
+await p.goto(bas + '#%C3%B6l=507849', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.panel h2')
+await p.waitForTimeout(1000)
+const kvar = await p.locator('.etikettbild').count()
+console.log(
+  `  bruten länk: ${kvar} img-element kvar, rubriken syns ` +
+    `${await p.locator('.panel h2').isVisible()}  ${kvar === 0 ? '✓ inget hål' : '✗'}`,
+)
+await p.unroute('**/productimages/**')
+// Den brutna bilden loggar ett 404 i konsolen. Det är webbläsaren som säger
+// det, inte appen, och det är inte något att larma om längre ned.
+fel.length = 0
+
+/* --- 7. Rama in molnet --------------------------------------------------- */
 await p.goto(bas + '#stil=' + encodeURIComponent('India pale ale (IPA)'), {
   waitUntil: 'networkidle',
 })

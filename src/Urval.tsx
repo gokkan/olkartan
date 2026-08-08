@@ -50,7 +50,7 @@ export default function Urval({
     <Panelram onStäng={onStäng}>
       <p className="meta">{sort === 'ord' ? 'smakord' : 'passar till'}</p>
       <h2>{sort === 'ord' ? värde : värde.toLowerCase()}</h2>
-      <p className="undertitel">
+      <p className="undertitel" data-kik>
         {sort === 'ord'
           ? `${träffar.length} öl beskrivs med det ordet`
           : `${träffar.length} öl är märkta för det`}

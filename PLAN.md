@@ -266,7 +266,25 @@ I gränssnittet är maten ett urval av samma slag som ett smakord: sökbar, klic
 
 Stilvyn visar de rätter stilen passar till *oftare än sortimentet i stort*, inte de vanligaste — annars hade det stått "sällskapsdryck" på alla 60 stilarna.
 
-**Etikettbilder — inte byggda.** De finns: `product-cdn.systembolaget.se/productimages/<id>/<id>_100.png` (även `_200` och `_400`), 3 320 av 3 375 öl, ingen hotlänkspärr. Det skulle alltså vara att låta besökarnas webbläsare hämta bilderna direkt från Systembolagets server. Det är billigt att bygga men vi äger inte länken: ändrar de sökvägen slocknar bilderna tyst.
+**Etikettbilder ✅ klara.** `product-cdn.systembolaget.se/productimages/<id>/<id>_200.png` — även `_100` och `_400`; utan storlekssuffix svarar servern 404. Adressen räknas ut ur artikelnumret, så ingenting behöver lagras utom en flagga för de 55 öl som saknar bild.
+
+Bilden är en bonus, aldrig en del av panelens form. Vi äger inte länken: ändrar Systembolaget sökvägen slocknar bilderna, och då ska panelen se ut precis som den gjorde innan de fanns. Två spärrar ser till det — `bild`-flaggan ur katalogen slipper anropet helt, och `onError` plockar bort elementet om det ändå går fel. Ingen platshållarruta, ingen bruten bildikon. Ett test i `testa-lankar.mjs` svarar 404 på alla bildanrop och kontrollerar att panelen är hel.
+
+---
+
+## Kartan på telefon
+
+**Texten gick inte att läsa.** Ritytan är 1000×700 och skalas in med `meet`, efter den knappaste sidan. Bredvid en öppen panel på en 1440-skärm blir en ritenhet 1,06 skärmpunkter — på en 412 punkter bred telefon 0,41. Elva punkters text ritades alltså ut som fyra.
+
+`lupp` räknar upp de mått som ska hålla sin storlek på skärmen. Referensen är skrivbordsläget, så där blir faktorn ett och ingenting ändras; på telefon blir den tre. Faktorn följer elementets storlek via en `ResizeObserver`, inte en mediefråga — det som avgör hur smått allt blir är hur många punkter ritytan får, och den krymper också när panelen tar plats bredvid.
+
+Prickarna följer luppen bara till 60 %. Full uppräkning gav en karta som var en samling bollar: en text under elva punkter går inte att läsa, men en prick på tio går utmärkt att träffa. Stilprickarna har dessutom ett golv på sju punkter, så att en stil med tre öl går att peka på; molnets prickar får inte det, för fyrahundra öl med fingerstora prickar blir en enda klump.
+
+Resultatet är att telefonen visar samma sak som skrivbordet i samma storlek — alltså en mindre bit av kartan, med 30–40 läsbara namn i stället för 60 oläsliga. Det är avvägningen: en 412 punkter bred skärm rymmer inte sextio utsatta stilar, och då är panorering ett ärligare svar än att krympa texten.
+
+**Kortet täckte skärmen.** Panelen delade höjden med kartan och tog 55 %. Nu ligger den ovanpå kartan i stället, i två lägen: vid första trycket kommer den upp precis så långt att rubriken syns — 146 punkter, och 459 prickar ligger kvar ovanför — och drar man i greppet fälls resten upp. Drar man ned från kikläget stängs den. Ett tryck på greppet växlar, för den som inte förstår att kortet går att dra.
+
+Kikhöjden mäts fram ur innehållet i stället för att gissas: vyerna märker ut sin sista rubrikrad med `data-kik`, och kortet öppnas precis så långt. Ett ölnamn i två rader får då mer plats än ett i en, och flaskbilden räknas med.
 
 ---
 

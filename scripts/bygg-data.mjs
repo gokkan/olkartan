@@ -411,6 +411,10 @@ const produkter = öl.map((p, i) => ({
   // Ligger utanför kartan med flit: matchningen är grov och skulle dra ihop
   // stilar som inte smakar lika.
   mat: [...new Set(p.tasteSymbols ?? [])].sort(),
+  // Bara om det finns en bild att hämta. Adressen går att räkna ut ur id:t, så
+  // den behöver inte lagras — men att veta i förväg vilka 55 öl som saknar
+  // bild sparar lika många misslyckade anrop mot Systembolagets server.
+  bild: (p.images?.length ?? 0) > 0,
   mörkhet: mörkhet(p.color),
   smaktext: p.taste,
   // Prefixen K: och D: skiljer karaktärsord från inslag i termrymden, men
@@ -513,6 +517,7 @@ skrev
   stilar.json        ${r(stilar.length)}   varav små (<${MIN_PRODUKTER_STIL}): ${stilar.filter((s) => s.liten).length}
   färg satt på       ${r(produkter.filter((p) => p.mörkhet !== null).length)} produkter
   mat satt på        ${r(produkter.filter((p) => p.mat.length).length)} produkter
+  bild finns för     ${r(produkter.filter((p) => p.bild).length)} produkter
 
 kartans varians    PC1 ${(meta.varians[0] * 100).toFixed(0)}%   PC2 ${(meta.varians[1] * 100).toFixed(0)}%   tillsammans ${((meta.varians[0] + meta.varians[1]) * 100).toFixed(0)}%
   vänster  ${axlar[0].negativ.join(', ')}

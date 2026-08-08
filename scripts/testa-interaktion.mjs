@@ -80,15 +80,20 @@ m.on('console', (e) => e.type() === 'error' && fel.push(e.text()))
 await m.goto(bas, { waitUntil: 'networkidle' })
 await m.waitForSelector('svg circle')
 
-const animation = await m.evaluate(() => {
+// Kortet ska glida upp underifrån, inte bara stå där. Rörelsen ligger i en
+// övergång på transform, så det som mäts är att den finns.
+const övergång = await m.evaluate(() => {
   const s = document.createElement('div')
   s.className = 'panel'
   document.body.append(s)
-  const namn = getComputedStyle(s).animationName
+  const cs = getComputedStyle(s)
+  const svar = `${cs.transitionProperty} ${cs.transitionDuration}`
   s.remove()
-  return namn
+  return svar
 })
-console.log(`\nkortets animation: ${animation}  ${animation === 'glidUpp' ? '✓' : '✗'}`)
+console.log(
+  `\nkortets övergång: ${övergång}  ${övergång.startsWith('transform') && övergång !== 'transform 0s' ? '✓' : '✗'}`,
+)
 
 // välj en prick som faktiskt syns i den inzoomade mobilvyn
 const synligStil = await m.locator('svg circle[data-stil]').evaluateAll((els) => {
