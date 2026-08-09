@@ -38,20 +38,48 @@ jobs:
       # webbläsare. Går de sönder ska bygget stanna, inte publiceras.
       - run: npm test
 
-      # Råfilen är 100 MB och hämtas från en privatpersons server. Cachen har
-      # veckonumret i nyckeln, så en vanlig push återanvänder den och bara det
-      # schemalagda söndagsjobbet hämtar på nytt.
-      - name: Veckonummer
-        id: vecka
-        run: echo "v=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      # Råfilen är 100 MB och hämtas från en privatpersons server, så bara ett
+      # jobb i veckan hämtar den. Pushar återanvänder veckans cache.
+      #
+      # Cachen läses inte alls av det schemalagda jobbet — det är hela dess
+      # uppgift att hämta nytt. Första söndagskörningen gjorde inte det:
+      # isoveckor börjar på måndag, så söndagen är veckans sista dag och delade
+      # nyckel med varje push sedan måndagen. Jobbet fick träff, hoppade över
+      # hämtningen och publicerade gårdagens data. Nyckeln som sparas är därför
+      # *nästa* veckas — den vecka pushar kommer att fråga efter.
+      #
+      # Manuell körning räknas som schemalagd. Trycker man på knappen vill man
+      # ha färsk data, annars hade man pushat.
+      - name: Cachenycklar
+        id: cache
+        run: |
+          echo "las=sortiment-$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = push ]; then
+            echo "skriv=sortiment-$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+          else
+            echo "skriv=sortiment-$(date -u -d tomorrow +%G-%V)" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: actions/cache@v4
+      - name: Läs cachen
+        id: las
+        if: github.event_name == 'push'
+        uses: actions/cache/restore@v4
         with:
           path: data/rå
-          key: sortiment-${{ steps.vecka.outputs.v }}
+          key: ${{ steps.cache.outputs.las }}
+          # Faller tillbaka på förra veckans fil hellre än att hämta 100 MB en
+          # gång per push. Är den äldre än sju dygn hämtar skriptet ändå.
+          restore-keys: sortiment-
 
       - name: Hämta sortimentet
         run: npm run data:hämta
+
+      - name: Spara cachen
+        if: github.event_name != 'push' || steps.las.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/rå
+          key: ${{ steps.cache.outputs.skriv }}
 
       - name: Bygg datan
         # Råfilen är 100 MB JSON. Heapen räcker med standardinställningen på en

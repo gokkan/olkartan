@@ -358,6 +358,12 @@ Ligger på **[gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**.
 
 Publiceras till GitHub Pages av `.github/workflows/publicera.yml`, som körs vid varje push till `main` och söndagar 04:10. Arbetsflödet hämtar sortimentet, bygger datan, bygger appen och publicerar — ingen data behöver committas. Råfilen cachas med veckonumret som nyckel, så bara söndagsjobbet belastar källservern.
 
+**Första söndagskörningen hämtade ingenting.** Den lyckades, publicerade och såg riktig ut — men loggen sa `Cache hit for: sortiment-2026-32` och `kör med --tvinga för att hämta ändå`, alltså exakt samma data som gårdagens pushar. Isoveckor börjar på måndag, så söndagen är veckans *sista* dag och delar nyckel med varje push sedan måndagen. Ett schemalagt jobb vars enda uppgift är att hämta nytt satt alltså och läste sin egen veckas cache.
+
+Nu läser det schemalagda jobbet inte cachen alls, och sparar under *nästa* veckas nyckel — den vecka pushar kommer att fråga efter. Pushar läser med `restore-keys` som fallback, så en miss kostar en gammal fil i stället för 100 MB. Manuell körning räknas som schemalagd: trycker man på knappen vill man ha färsk data, annars hade man pushat.
+
+Sensmoralen är värd att skriva ned: ett grönt bygge betyder att stegen gick igenom, inte att de gjorde vad de var till för. Det syntes bara i loggen.
+
 **Kartan tål att datan uppdateras.** Det var den verkliga risken med ett schemalagt bygge: PCA är deterministisk för samma indata, men när sortimentet ändras kan komponenterna rotera eller byta tecken, och då hoppar stilarna omkring för någon som lärt sig kartan. Testat genom att bygga om med 4 % av ölen borttagna:
 
 ```
