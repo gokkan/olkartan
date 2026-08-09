@@ -35,10 +35,15 @@
   "byggd": "2026-08-09",
   "antalProdukter": 3395,
   "antalGrupper": 60,
+  "antalTermer": 152,
   "varians": [
    0.383,
    0.209
   ],
+  "synligAndel": {
+   "grupp": 0.725,
+   "produkt": 0.424
+  },
   "axlar": [
    {
     "komponent": 1,
@@ -2794,10 +2799,15 @@
   "byggd": "2026-08-09",
   "antalProdukter": 1445,
   "antalGrupper": 52,
+  "antalTermer": 100,
   "varians": [
    0.28,
    0.173
   ],
+  "synligAndel": {
+   "grupp": 0.667,
+   "produkt": 0.472
+  },
   "axlar": [
    {
     "komponent": 1,
@@ -5037,10 +5047,15 @@
   "byggd": "2026-08-09",
   "antalProdukter": 967,
   "antalGrupper": 39,
+  "antalTermer": 95,
   "varians": [
    0.377,
    0.182
   ],
+  "synligAndel": {
+   "grupp": 0.67,
+   "produkt": 0.455
+  },
   "axlar": [
    {
     "komponent": 1,

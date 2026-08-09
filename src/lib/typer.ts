@@ -71,7 +71,14 @@ export type Karta = {
   byggd: string
   antalProdukter: number
   antalGrupper: number
+  /** Termer i smakrymden — de som är vanliga nog att räknas, inte alla ord. */
+  antalTermer: number
   varians: number[]
+  /** Hur stor andel av det verkliga smakavståndet som syns på kartan. Kartans
+   *  två axlar är ortonormala, så kartavståndet är exakt den del av det fulla
+   *  avståndet som ligger i planet — kvoten är alltså mätt, inte uppskattad.
+   *  Grupperna klarar sig bra; enskilda produkter visar under hälften. */
+  synligAndel: { grupp: number; produkt: number }
   axlar: { komponent: number; negativ: string[]; positiv: string[] }[]
   rattar: Record<string, number>
   ordfrekvens: Record<string, number>

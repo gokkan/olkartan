@@ -230,7 +230,61 @@ for (const [karta, hash] of [
   )
 }
 
-/* --- 9. Rama in molnet --------------------------------------------------- */
+/* --- 9. Om-rutan -----------------------------------------------------------
+ * Talen i texten hämtas ur kartans metadata, inte ur texten själv. Testet
+ * kollar att de faktiskt landar — en tom lucka mitt i en mening är svår att
+ * få syn på, och sortimentet byter varje vecka. */
+console.log('\nom-rutan:')
+await p.goto(bas, { waitUntil: 'networkidle' })
+await klar()
+await p.locator('.om-knapp').click()
+await p.waitForSelector('.panel h2')
+await p.waitForTimeout(400)
+const omText = (await p.locator('.panel').textContent()).replace(/\s+/g, ' ')
+console.log(
+  `  öppnar: "${await p.locator('.panel h2').textContent()}", hash ${new URL(p.url()).hash}`,
+)
+/* kartor.json buntas in i bygget och går inte att hämta, så talen kollas där
+   de ska stå: i meningarna. En tom lucka mitt i en mening är lätt att missa
+   med ögat, och uppstår så fort ett fält byter namn i byggskriptet. */
+const utfall = [
+  ['termer', /De (\d+) ord som är vanliga/],
+  ['grupper', /de (\d+) mittpunkterna/],
+  ['vikt', /vägda till ([\d,]+) mot textens/],
+  ['grupp%', /syns (\d+ %) på kartan/],
+  ['produkt%', /syns bara (\d+ %)/],
+  ['byggd', /byggdes senast (\d{4}-\d{2}-\d{2})/],
+  ['antal', /innehåller ([\d\s]+?) öl i (\d+) stilar/],
+].map(([namn, re]) => {
+  const m = omText.match(re)
+  return `${namn} ${m ? m.slice(1).join('/').trim() : '✗SAKNAS'}`
+})
+console.log(`  ${utfall.join(' · ')}  ${utfall.some((u) => u.includes('SAKNAS')) ? '✗' : '✓'}`)
+console.log(`  axelrader: ${await p.locator('.axelfakta li').count()} st`)
+
+/* Byte av karta ska hålla rutan öppen och byta innehåll. */
+await p.locator('.kartval button', { hasText: 'rött' }).click()
+await p.waitForTimeout(700)
+console.log(
+  `  efter kartbyte: "${await p.locator('.panel .meta').first().textContent()}" ` +
+    `${(await p.locator('.panel h2').count()) === 1 ? '✓ kvar' : '✗ stängdes'}`,
+)
+
+/* Och det man tittade på ska komma tillbaka när rutan stängs. */
+await p.goto(bas + '#grupp=' + encodeURIComponent('Hefeweizen'), { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.panel h2')
+await p.locator('.om-knapp').click()
+await p.waitForTimeout(400)
+const övertog = await p.locator('.panel h2').textContent()
+await p.locator('.stäng').click()
+await p.waitForTimeout(400)
+const åter = await p.locator('.panel h2').textContent()
+console.log(
+  `  ovanpå en stil: "${övertog}" → stäng → "${åter}"  ${åter === 'Hefeweizen' ? '✓' : '✗'}`,
+)
+
+/* --- 10. Rama in molnet -------------------------------------------------- */
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
 await p.goto(bas + '#grupp=' + encodeURIComponent('India pale ale (IPA)'), {

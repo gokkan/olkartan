@@ -468,6 +468,28 @@ function byggKarta(dryck) {
   const matfrekvens = {}
   for (const p of produkter) for (const m of p.mat) matfrekvens[m] = (matfrekvens[m] ?? 0) + 1
 
+  /* --- hur mycket kartan visar -------------------------------------------
+   * Kartaxlarna är två ortonormala egenvektorer, så avståndet mellan två
+   * prickar ÄR den del av det fulla avståndet som ligger i kartans plan.
+   * Kvoten säger alltså exakt hur stor andel av skillnaden man ser — och den
+   * skiljer sig mycket mellan grupperna, som kartan är anpassad till, och de
+   * enskilda produkterna, som bara projiceras in i samma plan. Talet står i
+   * om-rutan, och räknas fram här så att texten inte kan bli inaktuell.
+   */
+  function synligAndel(lista) {
+    const kvoter = []
+    for (let i = 0; i < 3000; i++) {
+      const a = lista[(i * 7919) % lista.length]
+      const b = lista[(i * 104729 + 13) % lista.length]
+      if (a === b) continue
+      let s = 0
+      for (let j = 0; j < a.vektor.length; j++) s += (a.vektor[j] - b.vektor[j]) ** 2
+      const helt = Math.sqrt(s)
+      if (helt > 1e-9) kvoter.push(Math.hypot(a.x - b.x, a.y - b.y) / helt)
+    }
+    return +median(kvoter).toFixed(3)
+  }
+
   /* Produkterna sträcker sig utanför gruppernas område — en grupp är ett
    * medelvärde, och det som bildar det ligger runt omkring. Kartan behöver
    * veta hur långt för att kunna panorera dit. */
@@ -490,7 +512,12 @@ function byggKarta(dryck) {
     byggd: new Date().toISOString().slice(0, 10),
     antalProdukter: produkter.length,
     antalGrupper: grupper.length,
+    /* Termerna som faktiskt spänner upp rymden, alltså de som klarat MIN_DF.
+       Inte samma sak som antalet nycklar i `ordfrekvens`, där varenda ord i
+       sortimentet finns med — även de som bara en produkt använder. */
+    antalTermer: vokabulär.length,
     varians: varians.map((v) => +(v / variansSum).toFixed(3)),
+    synligAndel: { grupp: synligAndel(grupper), produkt: synligAndel(produkter) },
     axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
     rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_EXTRA },
     ordfrekvens,
@@ -557,6 +584,7 @@ skrev
   textkomponenter: ${txRåSd.map((sd, i) => `PC${i + 1} ${((sd / txRåSd[0]) ** 2 * 100).toFixed(0)}%`).join('  ')}
 
 kartans varians    PC1 ${(karta.varians[0] * 100).toFixed(0)}%   PC2 ${(karta.varians[1] * 100).toFixed(0)}%   tillsammans ${((karta.varians[0] + karta.varians[1]) * 100).toFixed(0)}%
+syns på kartan     ${(karta.synligAndel.grupp * 100).toFixed(0)}% av skillnaden mellan två ${dryck.grupp.flera}, ${(karta.synligAndel.produkt * 100).toFixed(0)}% mellan två ${dryck.enhet.flera}
   vänster  ${karta.axlar[0].negativ.join(', ')}
   höger    ${karta.axlar[0].positiv.join(', ')}
   ned      ${karta.axlar[1].negativ.join(', ')}

@@ -4,6 +4,7 @@ import Panel from './Panel'
 import Urval from './Urval'
 import Sok from './Sok'
 import Kartval from './Kartval'
+import Om from './Om'
 import Fangare from './Fangare'
 import kartorData from './data/kartor.json'
 import { useProdukter } from './lib/hämtaProdukter'
@@ -107,7 +108,11 @@ export default function App() {
 
   const väljOrd = (ord: string) => gåTill({ ...bas(), ord })
   const väljMat = (mat: string) => gåTill({ ...bas(), mat })
-  const väljKarta = (id: string) => gåTill(id === kartor[0].id ? {} : { karta: id })
+  /* Om-rutan följer med vid kartbyte. Den beskriver kartan man tittar på, så
+     den som läser och byter vill se den andra kartans siffror — inte stänga
+     rutan och öppna den igen. */
+  const väljKarta = (id: string) =>
+    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om })
 
   const stäng = () => gåTill(bas())
 
@@ -141,13 +146,33 @@ export default function App() {
               onVäljMat={väljMat}
             />
           </Fangare>
-          <Kartval kartor={kartor} vald={karta} onVälj={väljKarta} />
+          <div className="reglage-rad">
+            <Kartval kartor={kartor} vald={karta} onVälj={väljKarta} />
+            <button
+              className={`om-knapp${läge.om ? ' aktiv' : ''}`}
+              onClick={() => gåTill(läge.om ? { ...läge, om: undefined } : { ...läge, om: '1' })}
+              aria-label="Om hur kartan räknas fram"
+              aria-pressed={!!läge.om}
+              title="Hur kartan räknas fram"
+            >
+              i
+            </button>
+          </div>
         </div>
+
+        {/* Om-rutan tar hela panelplatsen så länge den är öppen. Det man
+            tittade på ligger kvar i adressen och kommer tillbaka när man
+            stänger — panelen är en plats, inte ett tillstånd. */}
+        {läge.om && (
+          <Fangare namn="Om-rutan">
+            <Om karta={karta} onStäng={() => gåTill({ ...läge, om: undefined })} />
+          </Fangare>
+        )}
 
         {/* Produkten tar över panelen även när man kom via ett smakord eller en
             maträtt — annars går listan inte att klicka sig in i. Urvalet
             ligger kvar i adressen, och tillbakalänken går dit. */}
-        {urval && produkter && !produkt && (
+        {!läge.om && urval && produkter && !produkt && (
           <Fangare namn="Urvalsvyn">
             <Urval
               karta={karta}
@@ -160,7 +185,7 @@ export default function App() {
           </Fangare>
         )}
 
-        {(grupp || produkt) && (produkt || !urval) && (
+        {!läge.om && (grupp || produkt) && (produkt || !urval) && (
           <Fangare namn="Panelen">
             <Panel
               karta={karta}

@@ -17,9 +17,12 @@ export type Läge = {
   produkt?: string
   ord?: string
   mat?: string
+  /** Om-rutan. Ligger i hashen som allt annat, så att "läs hur den räknas"
+   *  går att skicka som länk och bakåtknappen stänger den. */
+  om?: string
 }
 
-const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat'] as const
+const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om'] as const
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))

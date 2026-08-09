@@ -12,6 +12,8 @@ Tre kartor och inte en: rött och vitt vin mäts med olika smakklockor — rött
 
 Grupperna är prickarna, men en dryck utan grupp finns ändå med. Var sjätte vin har tomt druvfält hos Systembolaget; det placeras på kartan ändå, för det är smaktexten som bestämmer platsen.
 
+I-knappen vid kartvalet förklarar hela kedjan, inklusive vad kartan inte visar: två dimensioner räcker till 73 % av skillnaden mellan två stilar men bara 42 % mellan två enskilda öl. Därför räknar "Liknande" på hela smakprofilen och inte på avståndet i bild.
+
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
 Hur kartorna räknas fram, och varför de ser ut som de gör, står i [PLAN.md](PLAN.md).

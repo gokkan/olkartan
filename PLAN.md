@@ -417,6 +417,41 @@ vitt      758 viner       967   varav 181 utan druva
 
 ---
 
+## Nära på kartan är inte samma sak som lika
+
+Frågan kom från användning: två prickar ligger ovanpå varandra — betyder det att de hamnar på varandras "Liknande"-listor? Nej, och mycket mer sällan än man tror.
+
+Listan räknar avstånd på **hela vektorn** — åtta textkomponenter, klockorna, alkoholhalten. Kartan visar två dimensioner. Eftersom kartaxlarna är ortonormala är kartavståndet exakt *den del* av det verkliga avståndet som ligger i planet, så andelen går att mäta rakt av i stället för att uppskattas:
+
+```
+             grupperna   enskilda produkter
+öl              73 %           42 %
+rött            67 %           47 %
+vitt            67 %           46 %
+```
+
+För 300 slumpade öl: den granne som ligger närmast **på kartan** har medianrang 395 av 3 395 i smakrymden, och finns i topp 6-listan i 8 % av fallen. Åt andra hållet har listans sex närmaste medianrang 90 på kartan.
+
+Värsta uppmätta paret:
+
+```
+kartavstånd 0,013   (ett typiskt par ligger 1,69 isär — 0,8 %)
+rang i smakrymden 3 390 av 3 395
+
+Götaälvdalens Gotha Elf Krabaten   Session IPA          6/6/2  5,2 %
+  "Fruktig smak med inslag av ananas, mango, örter, ljust bröd och grapefrukt."
+O/O Brewing Ekta Pils              Pilsner - tysk stil  6/5/1  5,2 %
+  "Maltig smak inslag av ljust knäckebröd, färska örter och citrusskal."
+```
+
+Samma punkt, och näst intill det mest olika ölet i sortimentet. Klockorna är nästan identiska, så de axlarna tar ut varandra, och kartans plan råkar ligga så att "fruktig humle" och "maltig bröd" gör detsamma. Deras skillnad är till 99,99 % vinkelrät mot skärmen. 75 av 300 öl hade en sådan granne närmare än 0,02.
+
+Det är inte en bugg utan priset för två dimensioner, och valet att räkna listan i hela rymden är rätt just därför. Men kartan lovade mer än den höll, så nu står det i appen — en i-knapp vid kartvalet öppnar `Om.tsx`, som förklarar hela kedjan från smaktext till plats och avslutar med vad kartan *inte* visar.
+
+Varje tal i den texten hämtas ur kartans metadata. `synligAndel` och `antalTermer` räknas fram i bygget just för det: en text som påstår "42 %" måste räknas om när rattarna ändras, annars ljuger den tyst. Gränssnittstestet läser talen ur meningarna och larmar om någon lucka blir tom.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.
