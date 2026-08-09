@@ -11,13 +11,15 @@
  */
 
 export type Läge = {
-  stil?: string
-  öl?: string
+  /** Vilken karta: öl, rött eller vitt. Utelämnad betyder den första. */
+  karta?: string
+  grupp?: string
+  produkt?: string
   ord?: string
   mat?: string
 }
 
-const NYCKLAR = ['stil', 'öl', 'ord', 'mat'] as const
+const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat'] as const
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))
@@ -26,6 +28,11 @@ export function läsLäge(hash = location.hash): Läge {
     const v = p.get(k)
     if (v) ut[k] = v
   }
+  // Äldre länkar delade innan kartorna blev flera. De pekar alltid på ölen.
+  const gammalStil = p.get('stil')
+  const gammalÖl = p.get('öl')
+  if (gammalStil && !ut.grupp) ut.grupp = gammalStil
+  if (gammalÖl && !ut.produkt) ut.produkt = gammalÖl
   return ut
 }
 

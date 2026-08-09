@@ -23,7 +23,7 @@ await p.goto(url, { waitUntil: 'networkidle' })
 await p.waitForSelector('.sok input')
 // Produkterna hämtas separat; sökrutans platshållare byter lydelse när de landat.
 await p.waitForFunction(
-  () => document.querySelector('.sok input')?.placeholder.includes('bryggeri'),
+  () => document.querySelector('.sok input')?.placeholder.includes('producent'),
   null,
   { timeout: 25000 },
 )

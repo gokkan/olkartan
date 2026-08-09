@@ -336,6 +336,62 @@ Och man behöver inte hitta handtaget: ett tryck var som helst på kortet fälle
 
 ---
 
+## Vin: samma pipeline, tre kartor
+
+Frågan var om grunden bär mer än öl. Den gör det — men inte utan tre beslut som inte går att kopiera rakt av.
+
+**Underlaget är bättre än ölens.** 4 109 viner har smaktext mot ölens 4 160, samma mall (98 % innehåller "smak", 100 % "inslag av"), rikare ordförråd: 351 unika termer mot 305, och 7,7 termer per vin mot 6. Att bara 26 % av vinerna har text är en missvisande siffra — täckningen är strukturerad, inte slumpmässig:
+
+```
+Fast sortiment        1 776 av 1 778   100 %
+Lokalt & Småskaligt     256 av   257   100 %
+Tillfälligt sortiment 1 063 av 2 239    47 %
+Ordervaror              989 av 11 189    9 %
+```
+
+Det handlagda sortimentet är fullständigt beskrivet. De 11 189 ordervarorna är den långa svansen av importviner som ingen har i hyllan.
+
+**Och klockorna fungerar.** Det som var ölets stora problem är vinets styrka: fruktsyra och strävhet, axlarna som ligger döda för öl, är levande här. Rött mäts på fyllighet, strävhet och fruktsyra; vitt på sötma, fyllighet och fruktsyra.
+
+**Därför två vinkartor, inte en.** Rött har strävhet där vitt har sötma. Det är inte samma axel, och att lägga dem i en gemensam rymd skulle kräva att den saknade räknas som noll — alltså påstå att alla röda viner är osöta. Det var precis felet i ölplanens första utkast, och det gör man inte om.
+
+**Druvan, inte kategorin.** Vinets `categoryLevel3` är redan en smakklassning: "Fruktigt & Smakrikt", "Kryddigt & Mustigt", "Torrt vitt". Att aggregera på den vore cirkulärt — smakhärledda positioner mot smakhärledda kategorier. Druvan är den ärliga enheten, och den finns på 73 % av vinerna.
+
+**Ett vin kan ha flera druvor.** En öl har en stil, men en Bordeaux är cabernet *och* merlot, och båda druvorna räknar vinet som sitt. Gruppen är därför en lista i datamodellen, inte ett värde. Det gjorde `stil: string` till `grupper: string[]` genom hela appen.
+
+**En druva med två viner är ingen druva på kartan** utan ett vin med en etikett, och dess mittpunkt är vinets egna egenheter. Öl klarar gränsen ett — tre av sextio stilar är små. Vin gör det inte: sextio av hundrafyrtio druvor har färre än fem viner. Gränsen är fem, och de viner vars alla druvor faller bort kastas: 245 röda och 130 vita.
+
+### Kontrollerna, och en som hade fel
+
+```
+RÖTT                                            VITT
+✓ shiraz och syrah är samma druva     0,29      ✓ vinho verde-druvorna ligger ihop     0,23
+✓ bordeauxparet ligger ihop           0,52      ✓ chardonnay skild från riesling       1,05
+✓ rhôneparet ligger ihop              0,55      ✓ chardonnay närmare chenin            0,33
+✓ burgund skild från cabernet         3,65      ✓ sauvignon blanc inte bland de fylliga 1,22
+✓ nebbiolos strävhet syns             2,73
+```
+
+Shiraz mot Syrah är den bästa kontrollen i hela projektet: det är samma druva under två namn, så hamnar de inte ihop är det kartan som är trasig och inte min uppfattning om vin.
+
+En kontroll föll och blev struken. Jag hade skrivit att sauvignon blanc och grüner veltliner skulle ligga ihop, för att båda är "gröna och syrliga". Kartan sa 1,28 och den har rätt: Systembolaget mäter grüner veltliner som fylligare och mindre syrlig, och kartans grannar till sauvignon blanc — alvarinho och loureiro, båda vinho verde-druvor — är mer övertygande än min tumregel. Kontrollen var fel, inte kartan.
+
+Kartorna klarar också ögat. Bordeauxfamiljen ligger samlad i ena hörnet, rhônefamiljen i det andra, hela den italienska familjen — nebbiolo, sangiovese, corvina, barbera, dolcetto — för sig, och pinot noir ensam längst upp med gamay som närmaste granne.
+
+### Vad som blev generellt
+
+Byggskriptet tar nu en dryckesdefinition ur `scripts/drycker.mjs` och kör samma pipeline en gång per karta. Det som är dryckspecifikt står samlat där: urvalet, vad en grupp är, vilka klockor som finns och deras maxvärden, färgorden, dubblettnyckeln, och kontrollerna. Resten — parsern, tf-idf, PCA, teckenkonventionen, dubblettsammanslagningen, luppen, panoreringsgränserna — är gemensam.
+
+Appen bytte `stil` mot `grupp` genomgående och läser klockaxlarna ur kartan i stället för att ha dem inbyggda. Grupperna för alla tre kartorna byggs in (100 kB), så kartan målas direkt oavsett vilken man öppnar; produktfilerna hämtas var för sig och bara den man tittar på.
+
+### En dubblett som gömde sig i ett NUL-tecken
+
+Ölen gick från 3 375 till 3 374 i omskrivningen, och det tog en stund att förstå varför. Den gamla dubblettnyckeln fogade ihop namnfälten med ett ` ` mellan sig — ett osynligt tecken som dessutom fick `grep` att kalla filen binär. Med NUL emellan är "Stigbergets" + "Amazing Haze IPA" och "Stigbergets Amazing Haze" + "IPA" två olika nycklar. Det är samma öl; Systembolaget har bara delat namnet olika i de två artiklarna. Nyckeln fogas nu ihop med mellanslag, vilket jämför det visade namnet i stället för fältuppdelningen, och dubbletten försvann.
+
+**Whisky — nej, inte som karta.** 467 med smaktext, en enda klocka (rökighet), och framför allt ingen nivå att aggregera på: `categoryLevel3` är maltwhisky 315, blended 95, bourbon 31 och sedan ensiffrigt. En karta med tre användbara prickar är ingen karta. Regionen räcker inte heller — 248 av 467 saknar den. Det whisky skulle kunna bli är ett moln utan stillager, en spridningsbild av 467 flaskor. Det är en annan produkt.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.

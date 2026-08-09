@@ -74,20 +74,20 @@ for (const a of axlar) console.log(`  "${a.text}"  ${(a.andel * 100).toFixed(0)}
 const värst = Math.max(...axlar.map((a) => a.andel))
 console.log(`  bredaste: ${(värst * 100).toFixed(0)}%  ${värst < 0.45 ? '✓' : '✗ för brett'}`)
 
-/* Sökrutan är nästan skärmbred på telefon och låg tidigare rakt över
-   uppåtpilen. Rutorna får inte överlappa. */
+/* Reglaget — sökrutan plus kartvalet — är nästan skärmbrett på telefon och låg
+   tidigare rakt över uppåtpilen. Rutorna får inte överlappa. */
 const krock = await p.evaluate(() => {
   const a = document.querySelector('.axel.upp').getBoundingClientRect()
-  const s = document.querySelector('.sok').getBoundingClientRect()
+  const s = document.querySelector('.reglage').getBoundingClientRect()
   return {
     upp: [Math.round(a.top), Math.round(a.bottom)],
-    sok: [Math.round(s.top), Math.round(s.bottom)],
+    reglage: [Math.round(s.top), Math.round(s.bottom)],
     krockar: a.top < s.bottom && a.bottom > s.top && a.left < s.right && a.right > s.left,
   }
 })
 console.log(
-  `\nuppåtpilen ${krock.upp.join('–')} px, sökrutan ${krock.sok.join('–')} px: ` +
-    (krock.krockar ? '✗ ligger under sökrutan' : '✓ fri'),
+  `\nuppåtpilen ${krock.upp.join('–')} px, reglaget ${krock.reglage.join('–')} px: ` +
+    (krock.krockar ? '✗ ligger under reglaget' : '✓ fri'),
 )
 
 /* Texten på kartan ska gå att läsa. Under elva punkter går den inte att läsa
@@ -104,7 +104,7 @@ console.log(
 
 /* --- kortets två lägen --------------------------------------------------- */
 console.log('\nkortet:')
-await p.locator('circle[data-stil="India pale ale (IPA)"]').tap()
+await p.locator('circle[data-grupp="India pale ale (IPA)"]').tap()
 await p.waitForTimeout(500)
 
 const kortet = () =>

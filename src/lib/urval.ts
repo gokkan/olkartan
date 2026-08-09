@@ -1,13 +1,4 @@
-import type { Produkt, Stil } from './typer'
-
-/** Klockornas maxvärden för öl. Samma tal som byggskriptet normaliserar med. */
-export const AXLAR = [
-  { nyckel: 'beska', etikett: 'beska', max: 10 },
-  { nyckel: 'fyllighet', etikett: 'fyllighet', max: 12 },
-  { nyckel: 'sötma', etikett: 'sötma', max: 11 },
-] as const
-
-export type Axel = (typeof AXLAR)[number]
+import type { Grupp, Karta, Produkt } from './typer'
 
 export function avstånd(a: number[], b: number[]): number {
   let s = 0
@@ -16,53 +7,53 @@ export function avstånd(a: number[], b: number[]): number {
 }
 
 /**
- * Produkterna i en stil, mest typiska först — alltså de som ligger närmast
- * stilens egen medelvektor. En "Torr porter och stout" som smakar precis som
+ * Produkterna i en grupp, mest typiska först — alltså de som ligger närmast
+ * gruppens egen medelvektor. En "Torr porter och stout" som smakar precis som
  * stilen hamnar överst, en udda fågel längst ned.
  */
-export function produkterIStil(produkter: Produkt[], stil: Stil): Produkt[] {
+export function produkterIGrupp(produkter: Produkt[], grupp: Grupp): Produkt[] {
   return produkter
-    .filter((p) => p.stil === stil.namn)
-    .map((p) => ({ p, d: avstånd(p.vektor, stil.vektor) }))
+    .filter((p) => p.grupper.includes(grupp.namn))
+    .map((p) => ({ p, d: avstånd(p.vektor, grupp.vektor) }))
     .sort((a, b) => a.d - b.d)
     .map(({ p }) => p)
 }
 
 /**
- * Grannstilar mäts på kartkoordinaterna, inte på hela vektorn. Det är en
- * medveten eftergift: kartan är en projektion och tappar en del information,
- * men en lista som säger "närmast" måste stämma med det man ser. Annars pekar
- * appen ut en granne som ligger synligt längre bort än en annan.
+ * Grannar mäts på kartkoordinaterna, inte på hela vektorn. Det är en medveten
+ * eftergift: kartan är en projektion och tappar en del information, men en
+ * lista som säger "närmast" måste stämma med det man ser. Annars pekar appen
+ * ut en granne som ligger synligt längre bort än en annan.
  */
-export function närmasteStilar(stilar: Stil[], stil: Stil, antal = 5): Stil[] {
-  return stilar
-    .filter((s) => s.namn !== stil.namn)
-    .map((s) => ({ s, d: Math.hypot(s.x - stil.x, s.y - stil.y) }))
+export function närmasteGrupper(alla: Grupp[], grupp: Grupp, antal = 5): Grupp[] {
+  return alla
+    .filter((g) => g.namn !== grupp.namn)
+    .map((g) => ({ g, d: Math.hypot(g.x - grupp.x, g.y - grupp.y) }))
     .sort((a, b) => a.d - b.d)
     .slice(0, antal)
-    .map(({ s }) => s)
+    .map(({ g }) => g)
 }
 
 /**
- * Vilka maträtter som är typiska för en stil.
+ * Vilka maträtter som är typiska för en grupp.
  *
- * Inte de vanligaste — då står det "sällskapsdryck" på alla 57 stilarna, för
+ * Inte de vanligaste — då står det "sällskapsdryck" på alla 60 ölstilarna, för
  * nio av tio öl är märkta så. Det som räknas är övervikten mot sortimentet i
- * stort, med ett golv så att en rätt som bara ett par öl bär inte klättrar
- * upp på grund av att den är ovanlig överallt.
+ * stort, med ett golv så att en rätt som bara ett par produkter bär inte
+ * klättrar upp på grund av att den är ovanlig överallt.
  */
-export function typiskMat(iStilen: Produkt[], alla: Produkt[], antal = 4): string[] {
-  if (iStilen.length < 3) return []
+export function typiskMat(iGruppen: Produkt[], alla: Produkt[], antal = 4): string[] {
+  if (iGruppen.length < 3) return []
   const räkna = (ps: Produkt[]) => {
     const c = new Map<string, number>()
     for (const p of ps) for (const m of p.mat) c.set(m, (c.get(m) ?? 0) + 1)
     return c
   }
-  const här = räkna(iStilen)
+  const här = räkna(iGruppen)
   const överallt = räkna(alla)
   return [...här.entries()]
-    .filter(([, n]) => n / iStilen.length >= 0.25)
-    .map(([m, n]) => [m, n / iStilen.length / ((överallt.get(m) ?? 1) / alla.length)] as const)
+    .filter(([, n]) => n / iGruppen.length >= 0.25)
+    .map(([m, n]) => [m, n / iGruppen.length / ((överallt.get(m) ?? 1) / alla.length)] as const)
     .sort((a, b) => b[1] - a[1])
     .slice(0, antal)
     .map(([m]) => m)
@@ -76,11 +67,18 @@ export const kronor = (n: number) =>
 
 /**
  * Systembolaget delar upp namnet i två fält: `productNameBold` är varumärket
- * och `productNameThin` själva ölen. Var för sig säger de sällan tillräckligt
- * — "Gotlands Bryggeri" respektive "Wisby Stout" — så de sätts ihop.
+ * och `productNameThin` själva produkten — "Gotlands Bryggeri" respektive
+ * "Wisby Stout". Var för sig säger de sällan tillräckligt, så de sätts ihop.
  */
 export const heltNamn = (p: Produkt) => [p.namn, p.undertitel].filter(Boolean).join(' ')
 
-/** Bryggeriet upprepas inte när det redan står i namnet. Det gäller 1 568 öl. */
-export const bryggeriRad = (p: Produkt) =>
+/** Producenten upprepas inte när den redan står i namnet. */
+export const producentRad = (p: Produkt) =>
   [p.bryggeri === p.namn ? null : p.bryggeri, p.land].filter(Boolean).join(' · ')
+
+/** Vad produkten hör till, som text. En stil, eller flera druvor. */
+export const grupprad = (p: Produkt) => p.grupper.join(' · ')
+
+/** Klockvärdena i kartans egen ordning, för staplarna. */
+export const klockvärden = (karta: Karta, klockor: Record<string, number>) =>
+  karta.klockor.map((k) => ({ ...k, värde: klockor[k.nyckel] ?? 0 }))

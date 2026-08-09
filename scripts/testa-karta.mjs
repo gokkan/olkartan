@@ -53,7 +53,7 @@ console.log(`  ${unika > 4 ? '✓ glider' : '✗ hackar (hoppar direkt till mål
 // 2. INFLYGNING VID SÖKNING
 console.log('\ninflygning från sökning:')
 await p.waitForFunction(
-  () => document.querySelector('.sok input')?.placeholder.includes('bryggeri'),
+  () => document.querySelector('.sok input')?.placeholder.includes('producent'),
   null,
   {
     timeout: 20000,
@@ -77,7 +77,7 @@ console.log(`  ${efter > före + 1 ? '✓ flög in' : '✗ flyttade sig inte'}`)
 
 // 3. ÖLMOLNET
 console.log('\nölmoln:')
-const antalÖl = await p.locator('circle[data-ol]').count()
+const antalÖl = await p.locator('circle[data-produkt]').count()
 console.log(`  prickar för enskilda öl: ${antalÖl}`)
 const valdStil = await p.locator('.panel h2').textContent()
 console.log(`  vald: ${valdStil}`)
@@ -86,16 +86,16 @@ await p.screenshot({ path: 'moln.png' })
 // klick på en ölprick i molnet ska öppna den ölen
 const innan = await p.locator('.panel h2').textContent()
 // välj en prick som faktiskt syns i vyn
-const synlig = await p.locator('circle[data-ol]').evaluateAll((els) => {
+const synlig = await p.locator('circle[data-produkt]').evaluateAll((els) => {
   for (const e of els) {
     const r = e.getBoundingClientRect()
     if (r.left > 60 && r.right < 1000 && r.top > 60 && r.bottom < 840)
-      return e.getAttribute('data-ol')
+      return e.getAttribute('data-produkt')
   }
   return null
 })
 console.log('  klickar på ölprick', synlig)
-await p.locator(`circle[data-ol="${synlig}"]`).click()
+await p.locator(`circle[data-produkt="${synlig}"]`).click()
 await p.waitForTimeout(300)
 const efterKlick = await p.locator('.panel h2').textContent()
 console.log(`  klick i molnet: "${innan}" → "${efterKlick}"`)
@@ -109,7 +109,7 @@ console.log(`  ${innan !== efterKlick ? '✓ öppnade en annan öl' : '✗ inget
  * här, så testet följer med när sortimentet ändras. */
 console.log('\nytterkanterna:')
 const ytterst = await p.evaluate(async (bas) => {
-  const alla = await (await fetch(bas + 'data/produkter.json')).json()
+  const alla = await (await fetch(bas + 'data/ol.json')).json()
   const ut = []
   for (const [namn, jämför] of [
     ['vänster', (a, b) => a.x - b.x],
@@ -129,7 +129,7 @@ for (const ö of ytterst) {
   await p.locator('.sok-traffar li button').last().click()
   await p.waitForTimeout(1300)
   const r = await p.evaluate(() => {
-    const vald = [...document.querySelectorAll('circle[data-ol]')].find((e) =>
+    const vald = [...document.querySelectorAll('circle[data-produkt]')].find((e) =>
       (e.getAttribute('stroke') || '').includes('0.95'),
     )
     if (!vald) return null

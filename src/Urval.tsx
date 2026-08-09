@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import type { Produkt } from './lib/typer'
+import type { Karta, Produkt } from './lib/typer'
 import Panelram from './Panelram'
 import Produktlista from './Produktlista'
 
 export type Sort = 'ord' | 'mat'
 
 /**
- * Alla öl som delar en egenskap som inte är stilen: ett smakord, eller en
+ * Allt som delar en egenskap som inte är gruppen: ett smakord, eller en
  * maträtt de är märkta för.
  *
  * De två är samma vy med olika urval, men de kommer från olika håll.
@@ -18,12 +18,14 @@ export type Sort = 'ord' | 'mat'
  * ut som ett fel.
  */
 export default function Urval({
+  karta,
   sort,
   värde,
   produkter,
   onVäljProdukt,
   onStäng,
 }: {
+  karta: Karta
   sort: Sort
   värde: string
   produkter: Produkt[]
@@ -35,12 +37,12 @@ export default function Urval({
     [produkter, sort, värde],
   )
 
-  /* Vilka stilar egenskapen hör hemma i. Ett ord som "kavring" samlas i porter
-     och stout; "grapefrukt" ligger i IPA-hörnet. Fördelningen säger något om
-     ordet i sig. */
-  const stilar = useMemo(() => {
+  /* Vilka grupper egenskapen hör hemma i. Ett ord som "kavring" samlas i
+     porter och stout; "grapefrukt" ligger i IPA-hörnet. Fördelningen säger
+     något om ordet i sig. */
+  const grupper = useMemo(() => {
     const c = new Map<string, number>()
-    for (const p of träffar) c.set(p.stil, (c.get(p.stil) ?? 0) + 1)
+    for (const p of träffar) for (const g of p.grupper) c.set(g, (c.get(g) ?? 0) + 1)
     return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
   }, [träffar])
 
@@ -50,8 +52,8 @@ export default function Urval({
       <h2>{sort === 'ord' ? värde : värde.toLowerCase()}</h2>
       <p className="undertitel" data-kik>
         {sort === 'ord'
-          ? `${träffar.length} öl beskrivs med det ordet`
-          : `${träffar.length} öl är märkta för det`}
+          ? `${träffar.length} beskrivs med det ordet`
+          : `${träffar.length} är märkta för det`}
       </p>
       {sort === 'mat' && (
         <p className="källnot">
@@ -60,11 +62,11 @@ export default function Urval({
         </p>
       )}
 
-      {stilar.length > 0 && (
+      {grupper.length > 0 && (
         <>
           <h3>Vanligast i</h3>
           <ul className="termer">
-            {stilar.map(([namn, n]) => (
+            {grupper.map(([namn, n]) => (
               <li key={namn}>
                 {namn} · {n}
               </li>
@@ -73,8 +75,8 @@ export default function Urval({
         </>
       )}
 
-      <h3>Ölen</h3>
-      <Produktlista produkter={träffar} onVälj={onVäljProdukt} />
+      <h3>Träffarna</h3>
+      <Produktlista karta={karta} produkter={träffar} onVälj={onVäljProdukt} />
     </Panelram>
   )
 }

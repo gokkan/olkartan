@@ -24,7 +24,7 @@ p.on('pageerror', (e) => fel.push(String(e)))
 await p.goto(url, { waitUntil: 'networkidle' })
 await p.waitForSelector('.sok input', { timeout: 20000 })
 await p.waitForFunction(
-  () => document.querySelector('.sok input')?.placeholder.includes('bryggeri'),
+  () => document.querySelector('.sok input')?.placeholder.includes('producent'),
   null,
   { timeout: 20000 },
 )
@@ -59,11 +59,11 @@ console.log('  panelens stil-tillbakalänk:', await p.locator('.tillbaka').textC
 // Markeringen är numera att grannarna tonas ned medan den valda står kvar
 // i full opacitet. Den vita konturen är borta.
 const markerad = await p
-  .locator('svg circle[data-stil]')
+  .locator('svg circle[data-grupp]')
   .evaluateAll((els) =>
     els
       .filter((e) => (e.getAttribute('opacity') ?? '1') === '1')
-      .map((e) => e.getAttribute('data-stil')),
+      .map((e) => e.getAttribute('data-grupp')),
   )
 console.log('  markerad stil på kartan:', markerad.join(', ') || 'ingen')
 await p.screenshot({ path: 'sok.png' })

@@ -39,7 +39,7 @@ console.log('vy efter zoom+pan:', efterZoom)
 
 // 2. Klicka på en stil. Välj en namngiven prick via dess etikett-position.
 async function klickaStil(namn) {
-  await p.locator(`circle[data-stil="${namn}"]`).click()
+  await p.locator(`circle[data-grupp="${namn}"]`).click()
   await p.waitForTimeout(250)
 }
 

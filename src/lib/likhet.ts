@@ -1,16 +1,16 @@
-import type { Produkt } from './typer'
+import type { Klockaxel, Produkt } from './typer'
 
 /**
- * Appens kärna: hitta öl som liknar en given öl, och säg i ord vad som
+ * Appens kärna: hitta produkter som liknar en given, och säg i ord vad som
  * skiljer dem åt.
  *
  * Ingen LLM, inget nätverksanrop. Samma två öl ger alltid samma mening, och
  * meningen går att härleda till tal man kan slå upp i datan.
  *
  * Förklaringen har två halvor eftersom klockorna ensamma inte räcker. Med
- * bara beska, fyllighet och sötma blir varje mening en variation på samma
- * tema. Smakorden ur Systembolagets egna beskrivningar är det som säger vad
- * ölen faktiskt smakar av.
+ * bara tre klocktal blir varje mening en variation på samma tema. Smakorden
+ * ur Systembolagets egna beskrivningar är det som säger vad drycken faktiskt
+ * smakar av.
  */
 
 /** Under så många klocksteg räknas två öl som lika på den axeln. */
@@ -18,15 +18,9 @@ export const TRÖSKEL_SAMMA = 0.8
 /** Över så många steg är skillnaden tydlig snarare än svag. */
 export const TRÖSKEL_TYDLIG = 2.0
 
-/** Ett smakord måste finnas hos så många öl för att vara värt att nämna.
+/** Ett smakord måste finnas hos så många produkter för att vara värt att nämna.
  *  Under det är det oftast ett stavfel i källan. */
 const MINSTA_FREKVENS = 3
-
-const AXLAR = [
-  { nyckel: 'beska', namn: 'beska' },
-  { nyckel: 'fyllighet', namn: 'fyllighet' },
-  { nyckel: 'sötma', namn: 'sötma' },
-] as const
 
 export type Ordfrekvens = Record<string, number>
 
@@ -54,7 +48,7 @@ const nyckla = (s: string) =>
 const heltNamn = (p: Produkt) => [p.namn, p.undertitel].filter(Boolean).join(' ')
 
 /**
- * Samma öl i en annan burkstorlek är ingen rekommendation. Två produkter
+ * Samma produkt i en annan förpackning är ingen rekommendation. Två produkter
  * räknas som samma när namnen är identiska, eller när bryggeriet är detsamma
  * och det ena namnet ryms i det andra ("Guinness Draught" mot "Guinness
  * Draught Nitro").
@@ -91,12 +85,12 @@ function mestSägande(ord: string[], frekvens: Ordfrekvens, antal: number): stri
 
 type Klockskillnad = { namn: string; diff: number; text: string }
 
-/** Axel för axel, för de axlar där båda ölen har ett värde. */
-export function klockskillnader(bas: Produkt, annan: Produkt): Klockskillnad[] {
+/** Axel för axel, för de axlar där båda produkterna har ett värde. */
+export function klockskillnader(bas: Produkt, annan: Produkt, axlar: Klockaxel[]): Klockskillnad[] {
   const ut: Klockskillnad[] = []
-  for (const { nyckel, namn } of AXLAR) {
-    const a = bas[nyckel]
-    const b = annan[nyckel]
+  for (const { nyckel, etikett: namn } of axlar) {
+    const a = bas.klockor[nyckel]
+    const b = annan.klockor[nyckel]
     // Saknar någon av dem värdet går axeln inte att jämföra. Den utelämnas
     // hellre än att räknas som noll skillnad.
     if (typeof a !== 'number' || typeof b !== 'number') continue
@@ -120,8 +114,13 @@ export function klockskillnader(bas: Produkt, annan: Produkt): Klockskillnad[] {
  * Första halvan kommer ur klockorna: den axel där de ligger närmast, följd av
  * de två där de skiljer sig mest. Andra halvan kommer ur smakorden.
  */
-export function förklara(bas: Produkt, annan: Produkt, frekvens: Ordfrekvens): string {
-  const skillnader = klockskillnader(bas, annan)
+export function förklara(
+  bas: Produkt,
+  annan: Produkt,
+  frekvens: Ordfrekvens,
+  axlar: Klockaxel[],
+): string {
+  const skillnader = klockskillnader(bas, annan, axlar)
   const olika = skillnader
     .filter((s) => Math.abs(s.diff) >= TRÖSKEL_SAMMA)
     .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
@@ -147,7 +146,7 @@ export function förklara(bas: Produkt, annan: Produkt, frekvens: Ordfrekvens): 
   const delar = olika.length
     ? [...lika.slice(0, 1).map((s) => s.text), ...olika.slice(0, 2).map((s) => s.text)]
     : skillnader.length
-      ? ['samma styrka i beska, fyllighet och sötma']
+      ? [`samma styrka i ${räknaUpp(axlar.map((a) => a.etikett))}`]
       : []
   if (delar.length) {
     const rad = delar.join(', ')
@@ -185,7 +184,13 @@ export function förklara(bas: Produkt, annan: Produkt, frekvens: Ordfrekvens): 
  * Avståndet räknas på hela vektorn — text och klockor tillsammans — inte på
  * kartans två dimensioner, som bara är en projektion av den.
  */
-export function liknande(bas: Produkt, alla: Produkt[], frekvens: Ordfrekvens, antal = 8): Träff[] {
+export function liknande(
+  bas: Produkt,
+  alla: Produkt[],
+  frekvens: Ordfrekvens,
+  axlar: Klockaxel[],
+  antal = 8,
+): Träff[] {
   return alla
     .filter((p) => !ärSammaÖl(bas, p))
     .map((p) => ({ produkt: p, d: avstånd(bas.vektor, p.vektor) }))
@@ -194,6 +199,6 @@ export function liknande(bas: Produkt, alla: Produkt[], frekvens: Ordfrekvens, a
     .map(({ produkt, d }) => ({
       produkt,
       avstånd: +d.toFixed(4),
-      förklaring: förklara(bas, produkt, frekvens),
+      förklaring: förklara(bas, produkt, frekvens, axlar),
     }))
 }

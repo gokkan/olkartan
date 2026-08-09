@@ -544,14 +544,68 @@ footer span:last-child {
 
 /* ------------------------------------------------------------------- sök -- */
 
-/* Ligger som ett lager över kartans övre vänstra hörn. Kartan är fortfarande
-   sidans tes; sökrutan ska finnas till hands utan att ta över. */
-.sok {
+/* Reglaget ligger som ett lager över kartans övre vänstra hörn: sökrutan och
+   under den valet av karta. Kartan är fortfarande sidans tes; de ska finnas
+   till hands utan att ta över.
+
+   Placeringen sitter på omslaget, inte på sökrutan. Låg den på sökrutan skulle
+   den behöva vara statisk här, och glömde man den regeln blev `.sok` 1440 px
+   bred och täckte hela kartan osynligt. */
+.reglage {
   position: absolute;
   top: 14px;
   left: 14px;
   width: min(340px, calc(100% - 28px));
   z-index: 5;
+}
+
+.sok {
+  position: static;
+  width: 100%;
+}
+
+/* Val av karta. Prickarna är respektive kartas färgskala tagen på mitten —
+   den kortaste möjliga förklaringen av vad man byter till. */
+.kartval {
+  display: flex;
+  gap: 4px;
+  margin-top: 7px;
+  padding: 3px;
+  width: fit-content;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--linje);
+}
+
+.kartval button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--svag);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.kartval button:hover {
+  color: var(--text);
+}
+
+.kartval button.aktiv {
+  background: var(--botten);
+  color: var(--text);
+}
+
+.kartval-prick {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.2);
 }
 
 .sok input {
@@ -787,10 +841,11 @@ footer span:last-child {
     right: 8px;
   }
 
-  /* Sökrutan är nästan skärmbred på telefon och låg annars rakt över
-     uppåtpilen. Etiketten flyttas ned under den i stället. */
+  /* Reglaget är nästan skärmbrett på telefon och låg annars rakt över
+     uppåtpilen. Etiketten flyttas ned under det i stället — under både
+     sökrutan och kartvalet. */
   .axel.upp {
-    top: 58px;
+    top: 96px;
   }
 }
 

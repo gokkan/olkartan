@@ -26,8 +26,8 @@ dist-ssr
 # rådata: stor och ersättlig, hämtas med npm run data:hämta
 data/rå/
 
-# genererad produktdata: 2,3 MB som skrivs om vid varje bygge
-public/data/produkter.json
+# genererad produktdata: flera megabyte per karta, skrivs om vid varje bygge
+public/data/
 
 # lokala Claude Code-inställningar, maskinspecifika
 .claude/settings.local.json

@@ -8,8 +8,8 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { Meta, Produkt, Stil } from './lib/typer'
-import { srm, kant, srmLitenPrick, srmRing } from './lib/färg'
+import type { Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
+import { palett } from './lib/färg'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -82,28 +82,29 @@ export type KartHandtag = {
 }
 
 type Props = {
-  stilar: Stil[]
-  meta: Meta
+  karta: KartaTyp
   vald: string | null
-  /** Ölen som ska ritas ut som ett moln. En stils produkter, eller träffarna
-   *  på ett smakord — kartan bryr sig inte om vilket. */
+  /** Produkterna som ska ritas ut som ett moln. En grupps produkter, eller
+   *  träffarna på ett smakord — kartan bryr sig inte om vilket. */
   molnet: Produkt[]
   valdProdukt: Produkt | null
-  onVälj: (s: Stil) => void
+  onVälj: (g: Grupp) => void
   onVäljProdukt: (p: Produkt) => void
 }
 
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
-  { stilar, meta, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
+  { karta, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
+  const grupper = karta.grupper
+  const kulör = palett(karta.färgskala)
   // Axelorden är långa — 'sirapslimpa, pomerans, choklad' tar halva bredden
   // på en telefon. På smal skärm räcker det tyngsta ordet åt varje håll.
   const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
   const [ritfaktor, setRitfaktor] = useState(REFERENSFAKTOR)
   const [vy, setVy] = useState<Vy>({ k: 1, tx: 0, ty: 0 })
-  const [hovrad, setHovrad] = useState<Stil | null>(null)
+  const [hovrad, setHovrad] = useState<Grupp | null>(null)
   const [hovradProdukt, setHovradProdukt] = useState<Produkt | null>(null)
   const [pekare, setPekare] = useState({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number; tx: number; ty: number; rörd: boolean } | null>(null)
@@ -215,7 +216,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     let cx = 0
     let cy = 0
     for (const punkt of punkter) {
-      const v = punkt.stil.antal
+      const v = punkt.grupp.antal
       vikt += v
       cx += punkt.px * v
       cy += punkt.py * v
@@ -237,8 +238,8 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
 
   /* Datakoordinater → ritytan. Y vänds: PCA räknar uppåt, SVG nedåt. */
   const skala = useMemo(() => {
-    const xs = stilar.map((s) => s.x)
-    const ys = stilar.map((s) => s.y)
+    const xs = grupper.map((g) => g.x)
+    const ys = grupper.map((g) => g.y)
     const x0 = Math.min(...xs)
     const x1 = Math.max(...xs)
     const y0 = Math.min(...ys)
@@ -249,36 +250,36 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       px: (x: number) => MARGINAL + (x - x0) * sx,
       py: (y: number) => H - MARGINAL - (y - y0) * sy,
     }
-  }, [stilar])
+  }, [grupper])
 
   /* Ytterkanterna som panoreringen mäts emot: ritytan, utvidgad med de öl som
      ligger utanför den. Y vänds på vägen — datans övre kant är ritytans nedre. */
   const gränser = useMemo<Ruta>(() => {
-    const u = meta.utbredning
+    const u = karta.utbredning
     return {
       x0: Math.min(0, skala.px(u.x0)),
       x1: Math.max(W, skala.px(u.x1)),
       y0: Math.min(0, skala.py(u.y1)),
       y1: Math.max(H, skala.py(u.y0)),
     }
-  }, [skala, meta])
+  }, [skala, karta])
 
   const punkter = useMemo(() => {
-    const maxAntal = Math.max(1, ...stilar.map((s) => s.antal))
-    return stilar.map((s) => ({
-      stil: s,
-      px: skala.px(s.x),
-      py: skala.py(s.y),
+    const maxAntal = Math.max(1, ...grupper.map((g) => g.antal))
+    return grupper.map((g) => ({
+      grupp: g,
+      px: skala.px(g.x),
+      py: skala.py(g.y),
       // Kvadratrot, inte linjärt: annars äter IPA upp halva kartan.
-      r: 4 + 20 * Math.sqrt(s.antal / maxAntal),
-      tom: s.antal === 0,
+      r: 4 + 20 * Math.sqrt(g.antal / maxAntal),
+      tom: g.antal === 0,
     }))
-  }, [stilar, skala])
+  }, [grupper, skala])
 
   /* De enskilda ölen i den valda stilen. Varje öl har en egen koordinat i
      samma rymd som stilarna — molnet visar hur brett stilen spretar, och att
      den överlappar sina grannar. */
-  const ölpunkter = useMemo(
+  const molnpunkter = useMemo(
     () => molnet.map((p) => ({ produkt: p, px: skala.px(p.x), py: skala.py(p.y) })),
     [molnet, skala],
   )
@@ -325,7 +326,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       y: p.py - skStil(p.r),
       w: 2 * skStil(p.r),
       h: 2 * skStil(p.r),
-      ägare: p.stil.namn,
+      ägare: p.grupp.namn,
     }))
     const krockar = (a: Ruta, egen: string) =>
       upptaget.some(
@@ -341,8 +342,8 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     // Namn → baslinje för texten, så att ritningen använder exakt den plats
     // kollisionstestet godkände.
     const valda = new Map<string, number>()
-    for (const p of [...punkter].sort((a, b) => b.stil.antal - a.stil.antal)) {
-      const bredd = sk(p.stil.namn.length * 5.6)
+    for (const p of [...punkter].sort((a, b) => b.grupp.antal - a.grupp.antal)) {
+      const bredd = sk(p.grupp.namn.length * 5.6)
       // Under pricken, ovanför, och sist tvärs över den egna pricken. Det
       // tredje läget räddar de största stilarna, som ligger tätast och annars
       // blir de enda utan namn. Texten har mörk kontur och tål underlaget.
@@ -352,10 +353,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
         p.py - höjd / 2,
       ]
       for (const y of kandidater) {
-        const ruta = { x: p.px - bredd / 2, y, w: bredd, h: höjd, ägare: p.stil.namn }
-        if (krockar(ruta, p.stil.namn)) continue
+        const ruta = { x: p.px - bredd / 2, y, w: bredd, h: höjd, ägare: p.grupp.namn }
+        if (krockar(ruta, p.grupp.namn)) continue
         upptaget.push(ruta)
-        valda.set(p.stil.namn, y + höjd * 0.8)
+        valda.set(p.grupp.namn, y + höjd * 0.8)
         break
       }
     }
@@ -486,13 +487,13 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
 
   /* Så snart ett moln visas — en stils öl eller träffarna på ett smakord —
      viker stilprickarna undan. Molnet är då det man tittar på. */
-  const molnAktivt = ölpunkter.length > 0
+  const molnAktivt = molnpunkter.length > 0
 
-  const [xAxel, yAxel] = meta.axlar
+  const [xAxel, yAxel] = karta.axlar
   const knappnål = hovradProdukt
-    ? { rubrik: hovradProdukt.namn, under: hovradProdukt.stil }
+    ? { rubrik: hovradProdukt.namn, under: hovradProdukt.grupper.join(' · ') }
     : hovrad
-      ? { rubrik: hovrad.namn, under: `${hovrad.antal} öl` }
+      ? { rubrik: hovrad.namn, under: `${hovrad.antal} st` }
       : null
 
   return (
@@ -515,55 +516,59 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
           {/* Prickarna först, etiketterna i eget lager ovanpå — annars målar
               en senare prick över en tidigare grannes namn. */}
           {punkter.map((p) => {
-            const aktiv = hovrad?.namn === p.stil.namn
-            const utvald = vald === p.stil.namn
-            // Är en stil vald träder den fram genom att grannarna viker undan,
+            const aktiv = hovrad?.namn === p.grupp.namn
+            const utvald = vald === p.grupp.namn
+            // Är en grupp vald träder den fram genom att grannarna viker undan,
             // inte genom att den själv skriker. Kartan behåller sin form —
             // man ska fortfarande se var i rymden man befinner sig.
             const nedtonad = p.tom || (molnAktivt && !utvald)
             return (
               <circle
-                key={p.stil.namn}
-                data-stil={p.stil.namn}
+                key={p.grupp.namn}
+                data-grupp={p.grupp.namn}
                 cx={p.px}
                 cy={p.py}
                 r={skStil(p.r)}
                 // Den valda stilen är inte längre en prick utan behållaren
                 // runt sina öl, och ritas därför som en kontur.
-                fill={utvald && ölpunkter.length ? srmRing(p.stil.mörkhet) : srm(p.stil.mörkhet)}
-                fillOpacity={utvald && ölpunkter.length ? 0.14 : 1}
+                fill={
+                  utvald && molnpunkter.length
+                    ? kulör.ring(p.grupp.mörkhet)
+                    : kulör.fyllning(p.grupp.mörkhet)
+                }
+                fillOpacity={utvald && molnpunkter.length ? 0.14 : 1}
                 stroke={
                   utvald
-                    ? srmRing(p.stil.mörkhet)
+                    ? kulör.ring(p.grupp.mörkhet)
                     : aktiv
                       ? 'rgb(255 255 255 / 0.85)'
-                      : kant(p.stil.mörkhet)
+                      : kulör.kant(p.grupp.mörkhet)
                 }
                 strokeWidth={sk(utvald ? 2 : aktiv ? 2 : 1)}
                 opacity={p.tom ? 0.12 : nedtonad ? (aktiv ? 0.6 : 0.22) : 1}
-                onPointerEnter={() => setHovrad(p.stil)}
+                onPointerEnter={() => setHovrad(p.grupp)}
                 // Utan detta lyser stilen kvar när pekaren glider ut i tomma
                 // rutan. Villkoret gör det ofarligt att lämna en prick och
                 // gå in i nästa, oavsett i vilken ordning händelserna kommer.
-                onPointerLeave={() => setHovrad((h) => (h?.namn === p.stil.namn ? null : h))}
-                onClick={() => !drog() && onVälj(p.stil)}
+                onPointerLeave={() => setHovrad((h) => (h?.namn === p.grupp.namn ? null : h))}
+                onClick={() => !drog() && onVälj(p.grupp)}
               />
             )
           })}
 
           {/* Ölen i den valda stilen. Ritas efter stilprickarna så att molnet
               ligger ovanpå, och före etiketterna så att namnen syns. */}
-          {ölpunkter.map((ö) => {
+          {molnpunkter.map((ö) => {
             const utvald = valdProdukt?.id === ö.produkt.id
             return (
               <circle
                 key={ö.produkt.id}
-                data-ol={ö.produkt.id}
+                data-produkt={ö.produkt.id}
                 className="olprick"
                 cx={ö.px}
                 cy={ö.py}
                 r={skPrick(utvald ? 5.5 : 3.6)}
-                fill={srmLitenPrick(ö.produkt.mörkhet)}
+                fill={kulör.litenPrick(ö.produkt.mörkhet)}
                 stroke={utvald ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.45)'}
                 strokeWidth={sk(utvald ? 2 : 0.6)}
                 onPointerEnter={() => setHovradProdukt(ö.produkt)}
@@ -574,14 +579,14 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
           })}
 
           {punkter.map((p) => {
-            const aktiv = hovrad?.namn === p.stil.namn
-            const utvald = vald === p.stil.namn
-            const y = etiketter.get(p.stil.namn)
-            // Hovrad och vald stil får alltid sitt namn, även utan ledig plats.
+            const aktiv = hovrad?.namn === p.grupp.namn
+            const utvald = vald === p.grupp.namn
+            const y = etiketter.get(p.grupp.namn)
+            // Hovrad och vald grupp får alltid sitt namn, även utan ledig plats.
             if (y === undefined && !aktiv && !utvald) return null
             return (
               <text
-                key={p.stil.namn}
+                key={p.grupp.namn}
                 x={p.px}
                 y={y ?? p.py + skStil(p.r) + sk(12)}
                 textAnchor="middle"
@@ -589,7 +594,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 className={aktiv || utvald ? 'etikett aktiv' : 'etikett'}
                 opacity={molnAktivt && !utvald && !aktiv ? 0.3 : 1}
               >
-                {p.stil.namn}
+                {p.grupp.namn}
               </text>
             )
           })}

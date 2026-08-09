@@ -1,15 +1,15 @@
 /**
- * Bygger src/data/*.json ur Systembolagets sortiment.
+ * Bygger kartornas data ur Systembolagets sortiment.
  *
  * Kör: npm run data
  * Kräver: data/rå/products.json  (npm run data:hämta)
  *
- * Pipelinen i korthet:
- *   1. filtrera fram säljbar öl med smakdata
+ * Pipelinen i korthet, en gång per dryck i scripts/drycker.mjs:
+ *   1. filtrera fram säljbara produkter med smakdata
  *   2. tolka smaktexten till en term-vektor (tf-idf)
- *   3. reducera termrymden till TEXT_KOMPONENTER via SVD
- *   4. slå ihop med klockorna + ABV + syra till en gemensam smakvektor
- *   5. aggregera per stil, PCA till 2D, skriv koordinater
+ *   3. reducera termrymden till TEXT_KOMPONENTER via PCA
+ *   4. slå ihop med klockorna + ABV + eventuella extraaxlar
+ *   5. aggregera per grupp — stil för öl, druva för vin — PCA till 2D
  *
  * Allt är deterministiskt: samma indata ger samma karta varje gång.
  */
@@ -17,22 +17,24 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DRYCKER, LEDNING } from './drycker.mjs'
 
 const ROT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // Går att peka om, vilket behövs för att jämföra två sortimentsversioner mot
 // varandra utan att skriva över den riktiga datan.
 const RÅFIL = process.env.RAFIL ? resolve(process.env.RAFIL) : resolve(ROT, 'data/rå/products.json')
 const UT = process.env.UT ? resolve(process.env.UT) : ROT
+// Bygg bara en karta: DRYCK=rott npm run data
+const BARA = process.env.DRYCK
 
 /* ---------------------------------------------------------------- rattar --
  * Ändra här, kör om, titta på kartan. Värdena är framtagna genom att svepa
- * dem mot tre kontroller som körs sist i skriptet — se kontrolleraKarta().
+ * dem mot kontrollerna som varje dryck definierar och som körs sist.
  */
-const MIN_DF = 5 // en term måste finnas hos så många öl för att räknas
+const MIN_DF = 5 // en term måste finnas hos så många produkter för att räknas
 const TEXT_KOMPONENTER = 8 // dimensioner att behålla ur termrymden
 const VIKT_NUM = 0.6 // klockornas tyngd mot texten. Högre suddar stout/IPA.
-const VIKT_SYRA = 0.6 // syrans tyngd. Högre skickar surölen ut i egen omloppsbana.
-const MIN_PRODUKTER_STIL = 3 // färre än så flaggas som liten, men kastas inte
+const VIKT_EXTRA = 0.6 // extraaxlarnas tyngd. För öl: syran.
 
 /* ------------------------------------------------------------ linjär algebra --
  * Egenvektorer via potensiteration med deflation. Ingen extern modul, och
@@ -115,10 +117,10 @@ const projicera = (M, komponenter) =>
   )
 
 /* ------------------------------------------------------------- smaktexten --
- * Systembolagets smaktexter följer en mall:
+ * Systembolagets smaktexter följer en mall, och samma mall för vin som för öl:
  *   "<karaktär>, <karaktär> smak med <styrka>, inslag av <A>, <B> och <C>."
  * Båda halvorna är värda att plocka ut. Karaktärsorden ("rostad", "syrlig")
- * säger vad ölen är; inslagen ("kaffe", "grapefrukt") säger vad den smakar av.
+ * säger vad drycken är; inslagen ("kaffe", "grapefrukt") vad den smakar av.
  *
  * Huvudordet är dock inte alltid "smak". 34 öl skriver "rostad öl med inslag
  * av …" eller "humlearomatisk doft med …". Delar man bara på ordet "smak"
@@ -126,7 +128,6 @@ const projicera = (M, komponenter) =>
  * inslag av pumpernickel" hamnar i termrymden som kartan byggs av.
  */
 const HUVUDORD = /^(.*?)\s+(?:smak|öl|doft)\b/i
-const LEDNING = /^(något|tydligt|mycket|lite|aningen|påtagligt|smakrik)\s+/
 
 function termer(text) {
   const ut = new Set()
@@ -155,31 +156,6 @@ function termer(text) {
   return ut
 }
 
-/* ------------------------------------------------------------------ färg --
- * Prickens kulör. Systembolagets fritextfält `color` har ett litet ordförråd
- * och gäller per produkt, vilket ger en riktigt mycket bättre färgskala än att
- * mappa hela kategorier till en ton. Ordningen är viktig: mest specifik först,
- * annars fångar "brun" upp "brunsvart".
- */
-const FÄRGORD = [
-  [/svart|brunsvart/, 1.0],
-  [/mörkbrun|mörk,? brun/, 0.85],
-  [/brunröd|rödbrun/, 0.68],
-  [/brun(?!gul)/, 0.6],
-  [/bärnsten|kopparf|brungul/, 0.45],
-  [/mörk,? gul|mörkgul|orange/, 0.3],
-  [/gyllen|guldgul/, 0.22],
-  [/gul/, 0.15],
-  [/ljus|halmg|blek/, 0.1],
-]
-
-function mörkhet(färgtext) {
-  if (!färgtext) return null
-  const t = färgtext.toLowerCase()
-  for (const [re, v] of FÄRGORD) if (re.test(t)) return v
-  return null
-}
-
 /* ------------------------------------------------------------------ kör --- */
 
 if (!existsSync(RÅFIL)) {
@@ -189,432 +165,403 @@ if (!existsSync(RÅFIL)) {
 
 console.log('läser råfil …')
 const alla = JSON.parse(readFileSync(RÅFIL, 'utf8'))
-
-const kastat = { ejÖl: 0, utgången: 0, slut: 0, ingenSmakdata: 0, ingenStil: 0 }
-const öl = []
-
-for (const p of alla) {
-  if (p.categoryLevel1 !== 'Öl') {
-    kastat.ejÖl++
-    continue
-  }
-  if (p.isDiscontinued) {
-    kastat.utgången++
-    continue
-  }
-  if (p.isCompletelyOutOfStock) {
-    kastat.slut++
-    continue
-  }
-  // Smaktexten och klockorna fylls i vid samma tillfälle: saknas den ena
-  // saknas i praktiken den andra. Kravet på bitter > 0 fångar båda.
-  if (!p.taste || !p.tasteClockBitter) {
-    kastat.ingenSmakdata++
-    continue
-  }
-  if (!p.categoryLevel3) {
-    kastat.ingenStil++
-    continue
-  }
-  öl.push(p)
-}
-
-/* --- samma öl två gånger ------------------------------------------------
- * Sortimentet innehåller samma öl under flera artikelnummer: burk och
- * flaska, två storlekar, och framför allt övergångar där Systembolaget byter
- * artikelnummer och båda ligger kvar ett tag. Pistonhead Kustom Lager finns
- * som artikel från 2011 och en från 2026, identiska i allt utom pantbeloppet.
- *
- * För en smakkarta är enheten "en öl", inte "en artikel". 183 av de 214
- * dubblettgrupperna har dessutom exakt samma smakdata, så sammanslagningen
- * kostar ingenting — den tar bara bort brus ur listorna och ur stilarnas
- * medelvärden.
- *
- * Representanten väljs i tur och ordning: den som går att få tag på, den som
- * finns i fast sortiment, den billigaste per liter, och sist lägsta id så att
- * utfallet blir detsamma vid varje körning.
- */
-const perLiter = (p) => (p.volume ? p.price / p.volume : Infinity)
-const bättre = (a, b) => {
-  if (!!a.isSupplierTemporaryNotAvailable !== !!b.isSupplierTemporaryNotAvailable)
-    return a.isSupplierTemporaryNotAvailable ? b : a
-  const fastA = a.assortmentText === 'Fast sortiment'
-  const fastB = b.assortmentText === 'Fast sortiment'
-  if (fastA !== fastB) return fastA ? a : b
-  if (perLiter(a) !== perLiter(b)) return perLiter(a) < perLiter(b) ? a : b
-  return a.productId <= b.productId ? a : b
-}
-
-const unika = new Map()
-for (const p of öl) {
-  const nyckel = [p.productNameBold, p.productNameThin ?? '', p.producerName ?? ''].join(' ')
-  const fanns = unika.get(nyckel)
-  unika.set(nyckel, fanns ? bättre(fanns, p) : p)
-}
-const dubbletter = öl.length - unika.size
-öl.length = 0
-öl.push(...unika.values())
-
-console.log(
-  `  ${alla.length} produkter in, ${öl.length} öl kvar (${dubbletter} dubbletter slogs ihop)\n`,
-)
-
-/* --- termrymd ---------------------------------------------------------- */
-const df = new Map()
-const termerPer = öl.map((p) => {
-  const t = termer(p.taste)
-  for (const x of t) df.set(x, (df.get(x) ?? 0) + 1)
-  return t
-})
-const vokabulär = [...df.entries()]
-  .filter(([, n]) => n >= MIN_DF)
-  .map(([t]) => t)
-  .sort()
-const termIndex = new Map(vokabulär.map((t, i) => [t, i]))
-
-const T = termerPer.map((ts) => {
-  const rad = new Float64Array(vokabulär.length)
-  for (const t of ts) {
-    const i = termIndex.get(t)
-    if (i !== undefined) rad[i] = Math.log(öl.length / df.get(t))
-  }
-  // L2-normalisera så att en öl med sju inslag inte väger tyngre än en med tre
-  const norm = Math.hypot(...rad) || 1
-  for (let i = 0; i < rad.length; i++) rad[i] /= norm
-  return rad
-})
-
-console.log(`termrymd: ${vokabulär.length} termer (av ${df.size} unika, tröskel ${MIN_DF})`)
-const Tm = kolumnMedel(T)
-const Tc = centrera(T, Tm)
-const textKomp = egenvektorer(kovarians(Tc), TEXT_KOMPONENTER)
-let TX = projicera(Tc, textKomp)
-
-/* Textkomponenterna skalas om innan de möter klockorna.
- *
- * Utan omskalning bestämmer PC1 nästan allt. Med full vitning — varje
- * komponent till standardavvikelse 1 — får PC8 samma tyngd som PC1, och PC8
- * av en 152-dimensionell ordrymd är till stor del brus. Båda ytterligheterna
- * är fel; VIKTNING=egenvarde bygger den andra varianten för jämförelse.
- */
-const txRåSd = TX[0].map((_, i) => {
-  const m = TX.reduce((s, r) => s + r[i], 0) / TX.length
-  return Math.sqrt(TX.reduce((s, r) => s + (r[i] - m) ** 2, 0) / TX.length) || 1
-})
-console.log(
-  `textkomponenter: ${txRåSd.map((sd, i) => `PC${i + 1} ${((sd / txRåSd[0]) ** 2 * 100).toFixed(0)}%`).join('  ')}  (varians relativt PC1)`,
-)
-
-// Behåll komponenternas inbördes tyngd, men ge blocket samma totala varians
-// som vitningen ger, så att VIKT_NUM betyder samma sak i båda varianterna.
-const txSd =
-  process.env.VIKTNING === 'egenvarde'
-    ? (() => {
-        const total = txRåSd.reduce((s, sd) => s + sd * sd, 0)
-        const k = Math.sqrt(total / TEXT_KOMPONENTER)
-        return txRåSd.map(() => k)
-      })()
-    : txRåSd
-TX = TX.map((r) => r.map((v, i) => v / txSd[i]))
-
-/* --- numeriska axlar --------------------------------------------------- */
-// Klockorna har olika maxvärden för öl: beska 10, fyllighet 12, sötma 11.
-const syraAv = (p) =>
-  p.categoryLevel2 === 'Syrlig öl'
-    ? 1
-    : /syrlig|sur\b/.test(p.taste.slice(0, 40).toLowerCase())
-      ? 0.7
-      : 0
-
-const NUM = öl.map((p) => [
-  p.tasteClockBitter / 10,
-  p.tasteClockBody / 12,
-  p.tasteClockSweetness / 11,
-  Math.min(p.alcoholPercentage ?? 0, 15) / 15,
-  syraAv(p),
-])
-const numMedel = kolumnMedel(NUM)
-const numSd = numMedel.map((m, i) => {
-  const v = NUM.reduce((s, r) => s + (r[i] - m) ** 2, 0) / NUM.length
-  return Math.sqrt(v) || 1
-})
-const NUMz = NUM.map((r) => r.map((v, i) => (v - numMedel[i]) / numSd[i]))
-
-/* --- gemensam smakvektor ------------------------------------------------ */
-const V = TX.map((t, i) => [...t, ...NUMz[i].map((v, j) => v * (j === 4 ? VIKT_SYRA : VIKT_NUM))])
-
-/* --- stilar ------------------------------------------------------------- */
-const perStil = new Map()
-öl.forEach((p, i) => {
-  const s = p.categoryLevel3
-  if (!perStil.has(s)) perStil.set(s, [])
-  perStil.get(s).push(i)
-})
-
-const stilNamn = [...perStil.keys()].sort()
-const stilMedel = stilNamn.map((s) => {
-  const idx = perStil.get(s)
-  const m = new Float64Array(V[0].length)
-  for (const i of idx) for (let j = 0; j < m.length; j++) m[j] += V[i][j]
-  for (let j = 0; j < m.length; j++) m[j] /= idx.length
-  return m
-})
-
-const sm = kolumnMedel(stilMedel)
-const sc = centrera(stilMedel, sm)
-const kartKomp = egenvektorer(kovarians(sc), 2)
-const koord = projicera(sc, kartKomp)
-const varians = kartKomp.map((k) => k.egenvärde)
-const variansSum = sc[0]
-  .map((_, i) => {
-    let s = 0
-    for (const r of sc) s += r[i] * r[i]
-    return s / (sc.length - 1)
-  })
-  .reduce((a, b) => a + b, 0)
-
-// Produkternas egna koordinater i samma bas, så att en enskild öl kan placeras
-// på kartan bredvid sin stil.
-const prodKoord = projicera(
-  V.map((r) => Float64Array.from(r, (v, i) => v - sm[i])),
-  kartKomp,
-)
-
-/* --- etiketter på axlarna ----------------------------------------------
- * En PCA-axel är bara meningsfull om man kan säga vad den mäter. Kartaxlarna
- * är kombinationer av textkomponenterna, så vi kedjar tillbaka laddningarna
- * hela vägen till termerna och låter de tyngsta orden namnge axeln.
- */
-function axelOrd(kartKomponent) {
-  const bidrag = new Map()
-  for (let k = 0; k < TEXT_KOMPONENTER; k++) {
-    const vikt = kartKomponent.vektor[k]
-    textKomp[k].vektor.forEach((laddning, t) => {
-      bidrag.set(vokabulär[t], (bidrag.get(vokabulär[t]) ?? 0) + (vikt * laddning) / txSd[k])
-    })
-  }
-  const sorterat = [...bidrag.entries()].sort((a, b) => a[1] - b[1])
-  const rensa = (par) => par.map(([t]) => t.slice(2))
-  return { negativ: rensa(sorterat.slice(0, 6)), positiv: rensa(sorterat.slice(-6).reverse()) }
-}
-const axlar = kartKomp.map(axelOrd)
-
-/* --- skriv ut ----------------------------------------------------------- */
 const prisPerLiter = (p) => (p.volume ? +((p.price / p.volume) * 1000).toFixed(2) : null)
 const median = (a) => {
   const s = [...a].sort((x, y) => x - y)
   return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
 }
+const r6 = (n) => String(n).padStart(6)
 
-const produkter = öl.map((p, i) => ({
-  id: p.productId,
-  namn: p.productNameBold,
-  undertitel: p.productNameThin || null,
-  bryggeri: p.producerName,
-  land: p.country,
-  stil: p.categoryLevel3,
-  förälder: p.categoryLevel2,
-  abv: p.alcoholPercentage,
-  pris: p.price,
-  volym: p.volume,
-  prisPerLiter: prisPerLiter(p),
-  sortiment: p.assortmentText,
-  beska: p.tasteClockBitter,
-  fyllighet: p.tasteClockBody,
-  sötma: p.tasteClockSweetness,
-  syra: +syraAv(p).toFixed(2),
-  fatlagrad: (p.tasteClockCasque ?? 0) > 1,
-  // Systembolagets egen matchning mot maträtter. Enda fältet i katalogen som
-  // säger något om ölen som kartan inte redan vet — den bygger på smaktexten,
-  // det här på vad någon på Systembolaget tycker att ölen passar till.
-  // Ligger utanför kartan med flit: matchningen är grov och skulle dra ihop
-  // stilar som inte smakar lika.
-  mat: [...new Set(p.tasteSymbols ?? [])].sort(),
-  // Bara om det finns en bild att hämta. Adressen går att räkna ut ur id:t, så
-  // den behöver inte lagras — men att veta i förväg vilka 55 öl som saknar
-  // bild sparar lika många misslyckade anrop mot Systembolagets server.
-  bild: (p.images?.length ?? 0) > 0,
-  mörkhet: mörkhet(p.color),
-  smaktext: p.taste,
-  // Prefixen K: och D: skiljer karaktärsord från inslag i termrymden, men
-  // efter att de kapats kan samma ord förekomma två gånger — 'kaffe' kan vara
-  // både karaktär och inslag. Unika värden ut.
-  termer: [...new Set([...termerPer[i]].map((t) => t.slice(2)))].sort(),
-  // Inslagen för sig. Karaktärsorden är adjektiv ("rostad", "knäckig") och
-  // inslagen substantiv ("kaffe", "kavring"); de kan inte stå i samma
-  // uppräkning på svenska. Likhetsmotorn bygger sina meningar av inslagen.
-  smakord: [...termerPer[i]]
-    .filter((t) => t.startsWith('D:'))
-    .map((t) => t.slice(2))
-    .sort(),
-  vektor: V[i].map((v) => +v.toFixed(4)),
-  x: +prodKoord[i][0].toFixed(4),
-  y: +prodKoord[i][1].toFixed(4),
-}))
-
-const stilar = stilNamn.map((namn, i) => {
-  const idx = perStil.get(namn)
-  const ps = idx.map((j) => öl[j])
-  const mörk = idx.map((j) => produkter[j].mörkhet).filter((v) => v !== null)
-  // Vilka termer är typiska för just den här stilen, jämfört med alla öl?
-  const lokal = new Map()
-  for (const j of idx) for (const t of termerPer[j]) lokal.set(t, (lokal.get(t) ?? 0) + 1)
-  const kännetecken = [...lokal.entries()]
-    .map(([t, n]) => [t, n / idx.length / (df.get(t) / öl.length)])
-    .filter(([t]) => df.get(t) >= MIN_DF)
-    .sort((a, b) => b[1] - a[1])
-    .map(([t]) => t.slice(2))
-  const unika = [...new Set(kännetecken)].slice(0, 6)
-
-  return {
-    namn,
-    förälder: ps[0].categoryLevel2,
-    antal: idx.length,
-    liten: idx.length < MIN_PRODUKTER_STIL,
-    x: +koord[i][0].toFixed(4),
-    y: +koord[i][1].toFixed(4),
-    beska: +median(ps.map((p) => p.tasteClockBitter)).toFixed(1),
-    fyllighet: +median(ps.map((p) => p.tasteClockBody)).toFixed(1),
-    sötma: +median(ps.map((p) => p.tasteClockSweetness)).toFixed(1),
-    syra: +median(idx.map((j) => produkter[j].syra)).toFixed(2),
-    abv: +median(ps.map((p) => p.alcoholPercentage ?? 0)).toFixed(1),
-    prisPerLiter: +median(ps.map(prisPerLiter).filter(Boolean)).toFixed(0),
-    mörkhet: mörk.length ? +median(mörk).toFixed(2) : null,
-    kännetecken: unika,
-    vektor: [...stilMedel[i]].map((v) => +v.toFixed(4)),
+function byggKarta(dryck) {
+  const kastat = new Map()
+  const räkna = (skäl) => kastat.set(skäl, (kastat.get(skäl) ?? 0) + 1)
+  let valda = []
+  for (const p of alla) {
+    const skäl = dryck.kasta(p)
+    if (skäl) räkna(skäl)
+    else valda.push(p)
   }
-})
 
-/* Hur många öl varje smakord förekommer hos. Likhetsmotorn använder det för
- * att välja vilka ord som är värda att nämna: "delar kaffe och kavring" säger
- * något om två öl, "delar frukt och kryddor" säger ingenting — de orden finns
- * hos halva sortimentet. Prefixet kapas här, så K:kaffe och D:kaffe slås ihop
- * till ett tal. */
-const ordfrekvens = {}
-for (const [term, n] of df) {
-  const ord = term.slice(2)
-  ordfrekvens[ord] = (ordfrekvens[ord] ?? 0) + n
+  /* --- samma produkt två gånger ------------------------------------------
+   * Sortimentet innehåller samma dryck under flera artikelnummer: burk och
+   * flaska, två storlekar, och framför allt övergångar där Systembolaget byter
+   * artikelnummer och båda ligger kvar ett tag. Pistonhead Kustom Lager finns
+   * som artikel från 2011 och en från 2026, identiska i allt utom pantbeloppet.
+   *
+   * Representanten väljs i tur och ordning: den som går att få tag på, den som
+   * finns i fast sortiment, den billigaste per liter, och sist lägsta id så att
+   * utfallet blir detsamma vid varje körning.
+   */
+  const perLiter = (p) => (p.volume ? p.price / p.volume : Infinity)
+  const bättre = (a, b) => {
+    if (!!a.isSupplierTemporaryNotAvailable !== !!b.isSupplierTemporaryNotAvailable)
+      return a.isSupplierTemporaryNotAvailable ? b : a
+    const fastA = a.assortmentText === 'Fast sortiment'
+    const fastB = b.assortmentText === 'Fast sortiment'
+    if (fastA !== fastB) return fastA ? a : b
+    if (perLiter(a) !== perLiter(b)) return perLiter(a) < perLiter(b) ? a : b
+    return a.productId <= b.productId ? a : b
+  }
+  const unika = new Map()
+  for (const p of valda) {
+    const nyckel = dryck.dubblettnyckel(p).join(' ')
+    const fanns = unika.get(nyckel)
+    unika.set(nyckel, fanns ? bättre(fanns, p) : p)
+  }
+  const dubbletter = valda.length - unika.size
+  valda = [...unika.values()]
+
+  /* --- vilka grupper som är grupper --------------------------------------
+   * En grupp med två produkter är ingen punkt på kartan utan en produkt med
+   * en etikett, och dess mittpunkt är produktens egna egenheter. Öl klarar
+   * gränsen 1 — tre av sextio stilar är små. Vin gör det inte: sextio av
+   * hundrafyrtio druvor har färre än fem viner.
+   */
+  const antalPerGrupp = new Map()
+  for (const p of valda)
+    for (const g of dryck.grupperAv(p)) antalPerGrupp.set(g, (antalPerGrupp.get(g) ?? 0) + 1)
+  const godkänd = (g) => (antalPerGrupp.get(g) ?? 0) >= dryck.minGrupp
+  const grupperFör = (p) => dryck.grupperAv(p).filter(godkänd)
+  const före = valda.length
+  valda = valda.filter((p) => grupperFör(p).length)
+  const utanGrupp = före - valda.length
+  if (utanGrupp) räkna(`bara små ${dryck.grupp.flera}`)
+
+  /* --- termrymd ----------------------------------------------------------- */
+  const df = new Map()
+  const termerPer = valda.map((p) => {
+    const t = termer(p.taste)
+    for (const x of t) df.set(x, (df.get(x) ?? 0) + 1)
+    return t
+  })
+  const vokabulär = [...df.entries()]
+    .filter(([, n]) => n >= MIN_DF)
+    .map(([t]) => t)
+    .sort()
+  const termIndex = new Map(vokabulär.map((t, i) => [t, i]))
+
+  const T = termerPer.map((ts) => {
+    const rad = new Float64Array(vokabulär.length)
+    for (const t of ts) {
+      const i = termIndex.get(t)
+      if (i !== undefined) rad[i] = Math.log(valda.length / df.get(t))
+    }
+    // L2-normalisera så att en dryck med sju inslag inte väger tyngre än en
+    // med tre.
+    const norm = Math.hypot(...rad) || 1
+    for (let i = 0; i < rad.length; i++) rad[i] /= norm
+    return rad
+  })
+
+  const Tm = kolumnMedel(T)
+  const Tc = centrera(T, Tm)
+  const textKomp = egenvektorer(kovarians(Tc), TEXT_KOMPONENTER)
+  let TX = projicera(Tc, textKomp)
+
+  /* Textkomponenterna skalas om innan de möter klockorna. Utan omskalning
+   * bestämmer PC1 nästan allt; med full vitning får PC8 samma tyngd som PC1.
+   * Båda ytterligheterna är fel; VIKTNING=egenvarde bygger den andra
+   * varianten för jämförelse. Se PLAN.md för mätningen bakom valet.
+   */
+  const txRåSd = TX[0].map((_, i) => {
+    const m = TX.reduce((s, r) => s + r[i], 0) / TX.length
+    return Math.sqrt(TX.reduce((s, r) => s + (r[i] - m) ** 2, 0) / TX.length) || 1
+  })
+  const txSd =
+    process.env.VIKTNING === 'egenvarde'
+      ? (() => {
+          const total = txRåSd.reduce((s, sd) => s + sd * sd, 0)
+          const k = Math.sqrt(total / TEXT_KOMPONENTER)
+          return txRåSd.map(() => k)
+        })()
+      : txRåSd
+  TX = TX.map((r) => r.map((v, i) => v / txSd[i]))
+
+  /* --- numeriska axlar ---------------------------------------------------- */
+  const NUM = valda.map((p) => [
+    ...dryck.klockor.map((k) => (k.värde(p) ?? 0) / k.max),
+    Math.min(p.alcoholPercentage ?? 0, 15) / 15,
+    ...dryck.extra.map((e) => e.värde(p)),
+  ])
+  const numMedel = kolumnMedel(NUM)
+  const numSd = numMedel.map((m, i) => {
+    const v = NUM.reduce((s, r) => s + (r[i] - m) ** 2, 0) / NUM.length
+    return Math.sqrt(v) || 1
+  })
+  const antalKlockor = dryck.klockor.length + 1 // klockorna plus alkoholhalten
+  const NUMz = NUM.map((r) => r.map((v, i) => (v - numMedel[i]) / numSd[i]))
+
+  /* --- gemensam smakvektor ------------------------------------------------ */
+  const V = TX.map((t, i) => [
+    ...t,
+    ...NUMz[i].map((v, j) => v * (j < antalKlockor ? VIKT_NUM : VIKT_EXTRA)),
+  ])
+
+  /* --- grupper ------------------------------------------------------------ */
+  const perGrupp = new Map()
+  valda.forEach((p, i) => {
+    for (const g of grupperFör(p)) {
+      if (!perGrupp.has(g)) perGrupp.set(g, [])
+      perGrupp.get(g).push(i)
+    }
+  })
+
+  const gruppNamn = [...perGrupp.keys()].sort((a, b) => a.localeCompare(b, 'sv'))
+  const gruppMedel = gruppNamn.map((g) => {
+    const idx = perGrupp.get(g)
+    const m = new Float64Array(V[0].length)
+    for (const i of idx) for (let j = 0; j < m.length; j++) m[j] += V[i][j]
+    for (let j = 0; j < m.length; j++) m[j] /= idx.length
+    return m
+  })
+
+  const sm = kolumnMedel(gruppMedel)
+  const sc = centrera(gruppMedel, sm)
+  const kartKomp = egenvektorer(kovarians(sc), 2)
+  const koord = projicera(sc, kartKomp)
+  const varians = kartKomp.map((k) => k.egenvärde)
+  const variansSum = sc[0]
+    .map((_, i) => {
+      let s = 0
+      for (const r of sc) s += r[i] * r[i]
+      return s / (sc.length - 1)
+    })
+    .reduce((a, b) => a + b, 0)
+
+  // Produkternas egna koordinater i samma bas, så att en enskild dryck kan
+  // placeras på kartan bredvid sin grupp.
+  const prodKoord = projicera(
+    V.map((r) => Float64Array.from(r, (v, i) => v - sm[i])),
+    kartKomp,
+  )
+
+  /* --- etiketter på axlarna ----------------------------------------------
+   * En PCA-axel är bara meningsfull om man kan säga vad den mäter. Kartaxlarna
+   * är kombinationer av textkomponenterna, så vi kedjar tillbaka laddningarna
+   * hela vägen till termerna och låter de tyngsta orden namnge axeln.
+   */
+  function axelOrd(kartKomponent) {
+    const bidrag = new Map()
+    for (let k = 0; k < TEXT_KOMPONENTER; k++) {
+      const vikt = kartKomponent.vektor[k]
+      textKomp[k].vektor.forEach((laddning, t) => {
+        bidrag.set(vokabulär[t], (bidrag.get(vokabulär[t]) ?? 0) + (vikt * laddning) / txSd[k])
+      })
+    }
+    const sorterat = [...bidrag.entries()].sort((a, b) => a[1] - b[1])
+    const rensa = (par) => par.map(([t]) => t.slice(2))
+    return { negativ: rensa(sorterat.slice(0, 6)), positiv: rensa(sorterat.slice(-6).reverse()) }
+  }
+  const axlar = kartKomp.map(axelOrd)
+
+  /* --- skriv ut ----------------------------------------------------------- */
+  const produkter = valda.map((p, i) => ({
+    id: p.productId,
+    namn: p.productNameBold,
+    undertitel: p.productNameThin || null,
+    bryggeri: p.producerName,
+    land: p.country,
+    grupper: grupperFör(p),
+    förälder: dryck.förälderAv(p),
+    abv: p.alcoholPercentage,
+    pris: p.price,
+    volym: p.volume,
+    prisPerLiter: prisPerLiter(p),
+    sortiment: p.assortmentText,
+    klockor: Object.fromEntries(dryck.klockor.map((k) => [k.nyckel, k.värde(p) ?? 0])),
+    ...(dryck.fatlagrad ? { fatlagrad: dryck.fatlagrad(p) } : {}),
+    // Systembolagets egen matchning mot maträtter. Enda fältet i katalogen som
+    // säger något om drycken som kartan inte redan vet — den bygger på
+    // smaktexten, det här på vad någon på Systembolaget tycker att den passar
+    // till. Ligger utanför kartan med flit: matchningen är grov och skulle dra
+    // ihop grupper som inte smakar lika.
+    mat: [...new Set(p.tasteSymbols ?? [])].sort(),
+    // Bara om det finns en bild att hämta. Adressen går att räkna ut ur id:t.
+    bild: (p.images?.length ?? 0) > 0,
+    mörkhet: dryck.mörkhet(p),
+    smaktext: p.taste,
+    // Prefixen K: och D: skiljer karaktärsord från inslag i termrymden, men
+    // efter att de kapats kan samma ord förekomma två gånger — 'kaffe' kan vara
+    // både karaktär och inslag. Unika värden ut.
+    termer: [...new Set([...termerPer[i]].map((t) => t.slice(2)))].sort(),
+    // Inslagen för sig. Karaktärsorden är adjektiv ("rostad", "knäckig") och
+    // inslagen substantiv ("kaffe", "kavring"); de kan inte stå i samma
+    // uppräkning på svenska. Likhetsmotorn bygger sina meningar av inslagen.
+    smakord: [...termerPer[i]]
+      .filter((t) => t.startsWith('D:'))
+      .map((t) => t.slice(2))
+      .sort(),
+    vektor: V[i].map((v) => +v.toFixed(4)),
+    x: +prodKoord[i][0].toFixed(4),
+    y: +prodKoord[i][1].toFixed(4),
+  }))
+
+  const grupper = gruppNamn.map((namn, i) => {
+    const idx = perGrupp.get(namn)
+    const ps = idx.map((j) => valda[j])
+    const mörk = idx.map((j) => produkter[j].mörkhet).filter((v) => v !== null)
+    // Vilka termer är typiska för just den här gruppen, jämfört med alla?
+    const lokal = new Map()
+    for (const j of idx) for (const t of termerPer[j]) lokal.set(t, (lokal.get(t) ?? 0) + 1)
+    const kännetecken = [...lokal.entries()]
+      .map(([t, n]) => [t, n / idx.length / (df.get(t) / valda.length)])
+      .filter(([t]) => df.get(t) >= MIN_DF)
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => t.slice(2))
+    // Förälder är det vanligaste värdet i gruppen, inte det första. För öl är
+    // det samma sak — alla i en stil delar kategori — men en druva odlas i
+    // flera länder, och då är "Italien" på Nebbiolo ett påstående om vilket
+    // som dominerar.
+    const föräldrar = new Map()
+    for (const p of ps) {
+      const f = dryck.förälderAv(p)
+      if (f) föräldrar.set(f, (föräldrar.get(f) ?? 0) + 1)
+    }
+    const förälder = [...föräldrar.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+
+    return {
+      namn,
+      förälder,
+      antal: idx.length,
+      liten: idx.length < dryck.litenUnder,
+      x: +koord[i][0].toFixed(4),
+      y: +koord[i][1].toFixed(4),
+      klockor: Object.fromEntries(
+        dryck.klockor.map((k) => [k.nyckel, +median(ps.map((p) => k.värde(p) ?? 0)).toFixed(1)]),
+      ),
+      abv: +median(ps.map((p) => p.alcoholPercentage ?? 0)).toFixed(1),
+      prisPerLiter: +median(ps.map(prisPerLiter).filter(Boolean)).toFixed(0),
+      mörkhet: mörk.length ? +median(mörk).toFixed(2) : null,
+      kännetecken: [...new Set(kännetecken)].slice(0, 6),
+      vektor: [...gruppMedel[i]].map((v) => +v.toFixed(4)),
+    }
+  })
+
+  /* Hur många produkter varje smakord förekommer hos. Likhetsmotorn använder
+   * det för att välja vilka ord som är värda att nämna: "delar kaffe och
+   * kavring" säger något om två öl, "delar frukt och kryddor" säger ingenting
+   * — de orden finns hos halva sortimentet. Prefixet kapas här, så K:kaffe och
+   * D:kaffe slås ihop till ett tal. */
+  const ordfrekvens = {}
+  for (const [term, n] of df) {
+    const ord = term.slice(2)
+    ordfrekvens[ord] = (ordfrekvens[ord] ?? 0) + n
+  }
+  const matfrekvens = {}
+  for (const p of produkter) for (const m of p.mat) matfrekvens[m] = (matfrekvens[m] ?? 0) + 1
+
+  /* Produkterna sträcker sig utanför gruppernas område — en grupp är ett
+   * medelvärde, och det som bildar det ligger runt omkring. Kartan behöver
+   * veta hur långt för att kunna panorera dit. */
+  const utbredning = {
+    x0: Math.min(...produkter.map((p) => p.x)),
+    x1: Math.max(...produkter.map((p) => p.x)),
+    y0: Math.min(...produkter.map((p) => p.y)),
+    y1: Math.max(...produkter.map((p) => p.y)),
+  }
+
+  const karta = {
+    id: dryck.id,
+    namn: dryck.namn,
+    kort: dryck.kort,
+    sida: dryck.sida,
+    grupp: dryck.grupp,
+    enhet: dryck.enhet,
+    färgskala: dryck.färgskala,
+    klockor: dryck.klockor.map(({ nyckel, etikett, max }) => ({ nyckel, etikett, max })),
+    byggd: new Date().toISOString().slice(0, 10),
+    antalProdukter: produkter.length,
+    antalGrupper: grupper.length,
+    varians: varians.map((v) => +(v / variansSum).toFixed(3)),
+    axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
+    rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_EXTRA },
+    ordfrekvens,
+    matfrekvens,
+    utbredning,
+    grupper,
+  }
+
+  /* --- kontroller ---------------------------------------------------------
+   * Kartan ska stämma med hur drycken faktiskt smakar. Avstånden mäts i
+   * enheter av kartans egen spridning så att de går att jämföra mellan
+   * körningar även om rattarna ändras.
+   */
+  const pos = new Map(grupper.map((g) => [g.namn, [g.x, g.y]]))
+  const spridning =
+    [0, 1].reduce((s, d) => {
+      const v = grupper.map((x) => (d ? x.y : x.x))
+      const m = v.reduce((a, b) => a + b, 0) / v.length
+      return s + Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length)
+    }, 0) / 2
+  const avstånd = (a, b) => {
+    if (!pos.has(a) || !pos.has(b)) return null
+    const [x1, y1] = pos.get(a)
+    const [x2, y2] = pos.get(b)
+    return Math.hypot(x1 - x2, y1 - y2) / spridning
+  }
+  const utfall = dryck.kontroller.map(([text, a, b, op, gräns]) => {
+    const d = avstånd(a, b)
+    const ok = d === null ? null : op === '>' ? d > gräns : d < gräns
+    return { text, a, b, op, gräns, d, ok }
+  })
+
+  return { karta, produkter, kastat, dubbletter, vokabulär, utfall, txRåSd }
 }
 
-/* Hur många öl varje maträtt är märkt för. Sökningen behöver talen innan
- * produkterna hunnit hämtas, så de går in i meta. */
-const matfrekvens = {}
-for (const p of produkter) for (const m of p.mat) matfrekvens[m] = (matfrekvens[m] ?? 0) + 1
-
-/* Produkterna sträcker sig utanför stilarnas område — en stil är ett
- * medelvärde, och de öl som bildar det ligger runt omkring. 293 av dem hamnar
- * helt utanför den ritruta stilarna spänner upp. Kartan behöver veta hur långt
- * för att kunna panorera dit; utan det klipper panoreringsgränsen bort dem. */
-const utbredning = {
-  x0: Math.min(...produkter.map((p) => p.x)),
-  x1: Math.max(...produkter.map((p) => p.x)),
-  y0: Math.min(...produkter.map((p) => p.y)),
-  y1: Math.max(...produkter.map((p) => p.y)),
-}
-
-const meta = {
-  byggd: new Date().toISOString().slice(0, 10),
-  antalProdukter: produkter.length,
-  antalStilar: stilar.length,
-  varians: varians.map((v) => +(v / variansSum).toFixed(3)),
-  axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
-  rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_SYRA },
-  ordfrekvens,
-  matfrekvens,
-  utbredning,
-}
-
-// Stilarna är små och behövs direkt — de byggs in. Produkterna är 2,3 MB och
-// behövs först vid ett klick, så de läggs i public/ och hämtas då. Kartan
-// målas utan att vänta på dem.
+/* --- kör alla drycker ----------------------------------------------------- */
 mkdirSync(resolve(UT, 'public/data'), { recursive: true })
 mkdirSync(resolve(UT, 'src/data'), { recursive: true })
-writeFileSync(resolve(UT, 'public/data/produkter.json'), JSON.stringify(produkter))
-writeFileSync(resolve(UT, 'src/data/stilar.json'), JSON.stringify(stilar, null, 1))
-writeFileSync(resolve(UT, 'src/data/meta.json'), JSON.stringify(meta, null, 1))
 
-/* --- sammanfattning ----------------------------------------------------- */
-const r = (n) => String(n).padStart(6)
-console.log(`
-kastade produkter
-  ej öl              ${r(kastat.ejÖl)}
-  utgången ur sortiment ${r(kastat.utgången)}
-  helt slut          ${r(kastat.slut)}
-  saknar smakdata    ${r(kastat.ingenSmakdata)}
-  saknar stil        ${r(kastat.ingenStil)}
+const kartor = []
+let allaGodkända = true
 
+for (const dryck of DRYCKER) {
+  if (BARA && dryck.id !== BARA) continue
+  console.log(`\n${'='.repeat(62)}\n${dryck.namn.toUpperCase()}\n`)
+  const { karta, produkter, kastat, dubbletter, vokabulär, utfall, txRåSd } = byggKarta(dryck)
+
+  // Grupperna byggs in och behövs direkt. Produkterna är megabyte och behövs
+  // först vid ett klick, så de läggs i public/ och hämtas då. Kartan målas
+  // utan att vänta på dem.
+  writeFileSync(resolve(UT, `public/data/${dryck.id}.json`), JSON.stringify(produkter))
+  kartor.push(karta)
+
+  console.log('kastade produkter')
+  for (const [skäl, n] of [...kastat.entries()].sort((a, b) => b[1] - a[1]))
+    console.log(`  ${skäl.padEnd(24)}${r6(n)}`)
+  console.log(`  ${'dubbletter ihopslagna'.padEnd(24)}${r6(dubbletter)}`)
+  console.log(`
 skrev
-  produkter.json     ${r(produkter.length)}
-  stilar.json        ${r(stilar.length)}   varav små (<${MIN_PRODUKTER_STIL}): ${stilar.filter((s) => s.liten).length}
-  färg satt på       ${r(produkter.filter((p) => p.mörkhet !== null).length)} produkter
-  mat satt på        ${r(produkter.filter((p) => p.mat.length).length)} produkter
-  bild finns för     ${r(produkter.filter((p) => p.bild).length)} produkter
+  ${dryck.id}.json${' '.repeat(Math.max(1, 18 - dryck.id.length))}${r6(produkter.length)} produkter
+  ${karta.grupper.length} ${dryck.grupp.flera}, varav små (<${dryck.litenUnder}): ${karta.grupper.filter((g) => g.liten).length}
+  termrymd: ${vokabulär.length} termer, färg satt på ${produkter.filter((p) => p.mörkhet !== null).length}, bild på ${produkter.filter((p) => p.bild).length}
+  textkomponenter: ${txRåSd.map((sd, i) => `PC${i + 1} ${((sd / txRåSd[0]) ** 2 * 100).toFixed(0)}%`).join('  ')}
 
-kartans varians    PC1 ${(meta.varians[0] * 100).toFixed(0)}%   PC2 ${(meta.varians[1] * 100).toFixed(0)}%   tillsammans ${((meta.varians[0] + meta.varians[1]) * 100).toFixed(0)}%
-  vänster  ${axlar[0].negativ.join(', ')}
-  höger    ${axlar[0].positiv.join(', ')}
-  ned      ${axlar[1].negativ.join(', ')}
-  upp      ${axlar[1].positiv.join(', ')}`)
+kartans varians    PC1 ${(karta.varians[0] * 100).toFixed(0)}%   PC2 ${(karta.varians[1] * 100).toFixed(0)}%   tillsammans ${((karta.varians[0] + karta.varians[1]) * 100).toFixed(0)}%
+  vänster  ${karta.axlar[0].negativ.join(', ')}
+  höger    ${karta.axlar[0].positiv.join(', ')}
+  ned      ${karta.axlar[1].negativ.join(', ')}
+  upp      ${karta.axlar[1].positiv.join(', ')}`)
 
-const störst = [...stilar].sort((a, b) => b.antal - a.antal)
-console.log('\nstörsta stilarna')
-for (const s of störst.slice(0, 5)) console.log(`  ${r(s.antal)}  ${s.namn}`)
-console.log('minsta stilarna')
-for (const s of störst.slice(-5)) console.log(`  ${r(s.antal)}  ${s.namn}`)
+  const störst = [...karta.grupper].sort((a, b) => b.antal - a.antal)
+  console.log(`\nstörsta ${dryck.grupp.flera}`)
+  for (const g of störst.slice(0, 5)) console.log(`  ${r6(g.antal)}  ${g.namn}`)
 
-/* --- kontroller ---------------------------------------------------------
- * Kartan ska stämma med hur öl faktiskt smakar. De här tre kontrollerna är
- * acceptanskriteriet för fas 1, körda automatiskt vid varje bygge. Avstånden
- * mäts i enheter av kartans egen spridning så att de går att jämföra mellan
- * körningar även om rattarna ändras.
- */
-const pos = new Map(stilar.map((s) => [s.namn, [s.x, s.y]]))
-const spridning =
-  [0, 1].reduce((s, d) => {
-    const v = stilar.map((x) => (d ? x.y : x.x))
-    const m = v.reduce((a, b) => a + b, 0) / v.length
-    return s + Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length)
-  }, 0) / 2
-
-const avstånd = (a, b) => {
-  if (!pos.has(a) || !pos.has(b)) return null
-  const [x1, y1] = pos.get(a)
-  const [x2, y2] = pos.get(b)
-  return Math.hypot(x1 - x2, y1 - y2) / spridning
-}
-
-const kontroller = [
-  [
-    'mörkt rostat skilt från humlebeskt',
-    'Torr porter och stout',
-    'India pale ale (IPA)',
-    (d) => d > 0.8,
-  ],
-  ['ljusa lager ligger ihop', 'Pilsner - tysk stil', 'Dortmunder och helles', (d) => d < 0.5],
-  [
-    'stout-släktet håller ihop',
-    'Torr porter och stout',
-    'Imperial porter och stout',
-    (d) => d < 1.5,
-  ],
-  ['veteölen ligger ihop', 'Hefeweizen', 'Witbier', (d) => d < 0.6],
-  ['suröl långt från ljus lager', 'Gueuze', 'Pilsner - tysk stil', (d) => d > 1.5],
-]
-
-console.log('\nkontroller')
-let fel = 0
-for (const [namn, a, b, ok] of kontroller) {
-  const d = avstånd(a, b)
-  if (d === null) {
-    console.log(`  ?  ${namn} (stil saknas)`)
-    continue
+  console.log('\nkontroller')
+  for (const k of utfall) {
+    if (k.ok === null) {
+      console.log(`  ?  ${k.text}  (${k.a} eller ${k.b} saknas)`)
+      allaGodkända = false
+    } else {
+      console.log(
+        `  ${k.ok ? '✓' : '✗'}  ${k.text}  (${k.d.toFixed(2)}, ska vara ${k.op} ${k.gräns})`,
+      )
+      if (!k.ok) allaGodkända = false
+    }
   }
-  const bra = ok(d)
-  if (!bra) fel++
-  console.log(`  ${bra ? '✓' : '✗'}  ${namn}  (${d.toFixed(2)})`)
 }
+
+writeFileSync(resolve(UT, 'src/data/kartor.json'), JSON.stringify(kartor, null, 1))
 console.log(
-  fel === 0
-    ? '\nklart. kartan klarar alla kontroller.\n'
-    : `\n${fel} kontroll(er) missade — justera VIKT_NUM eller VIKT_SYRA och kör om.\n`,
+  `\n${'='.repeat(62)}\n${allaGodkända ? 'klart. alla kartor klarar sina kontroller.' : 'KLART, MEN NÅGON KONTROLL GICK INTE IGENOM — se ovan.'}`,
 )

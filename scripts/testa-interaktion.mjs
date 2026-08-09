@@ -26,14 +26,14 @@ await p.waitForSelector('svg circle')
 
 const upplysta = () =>
   p
-    .locator('svg circle[data-stil]')
+    .locator('svg circle[data-grupp]')
     .evaluateAll((els) =>
       els
         .filter((e) => (e.getAttribute('stroke') ?? '').includes('0.85'))
-        .map((e) => e.getAttribute('data-stil')),
+        .map((e) => e.getAttribute('data-grupp')),
     )
 
-const prick = p.locator('circle[data-stil="Hefeweizen"]')
+const prick = p.locator('circle[data-grupp="Hefeweizen"]')
 const box = await prick.boundingBox()
 await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
 await p.waitForTimeout(150)
@@ -60,7 +60,7 @@ for (let i = 0; i < 5; i++) {
 }
 await p.waitForTimeout(400)
 const långtBort = await vy()
-const synliga = await p.locator('svg circle[data-stil]').evaluateAll(
+const synliga = await p.locator('svg circle[data-grupp]').evaluateAll(
   (els) =>
     els.filter((e) => {
       const r = e.getBoundingClientRect()
@@ -96,7 +96,7 @@ console.log(
 )
 
 // välj en prick som faktiskt syns i den inzoomade mobilvyn
-const synligStil = await m.locator('svg circle[data-stil]').evaluateAll((els) => {
+const synligStil = await m.locator('svg circle[data-grupp]').evaluateAll((els) => {
   for (const e of els) {
     const r = e.getBoundingClientRect()
     if (
@@ -106,12 +106,12 @@ const synligStil = await m.locator('svg circle[data-stil]').evaluateAll((els) =>
       r.top > 220 &&
       r.bottom < innerHeight - 120
     )
-      return e.getAttribute('data-stil')
+      return e.getAttribute('data-grupp')
   }
   return null
 })
 console.log('trycker på:', synligStil)
-await m.locator(`circle[data-stil="${synligStil}"]`).tap()
+await m.locator(`circle[data-grupp="${synligStil}"]`).tap()
 await m.waitForSelector('.panel h2')
 console.log('kortet öppnat:', await m.locator('.panel h2').textContent())
 console.log('greppet syns:', (await m.locator('.grepp').isVisible()) ? '✓' : '✗')

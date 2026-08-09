@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Produkt } from './typer'
+import type { Klockaxel, Produkt } from './typer'
 import { avstånd, förklara, klockskillnader, liknande, ärSammaÖl } from './likhet'
 
 /** Frekvenser för testens smakord. Låga tal betyder ovanligt och därmed
@@ -16,6 +16,14 @@ const FREKVENS = {
   stavfel: 1,
 }
 
+/** Ölkartans klockor. Testerna gäller motorn, inte en viss dryck, men de
+ *  behöver en uppsättning axlar att räkna med. */
+const AXLAR: Klockaxel[] = [
+  { nyckel: 'beska', etikett: 'beska', max: 10 },
+  { nyckel: 'fyllighet', etikett: 'fyllighet', max: 12 },
+  { nyckel: 'sötma', etikett: 'sötma', max: 11 },
+]
+
 let räknare = 0
 
 function öl(delar: Partial<Produkt> = {}): Produkt {
@@ -26,17 +34,14 @@ function öl(delar: Partial<Produkt> = {}): Produkt {
     undertitel: null,
     bryggeri: 'Bryggeri ' + räknare,
     land: 'Sverige',
-    stil: 'Torr porter och stout',
+    grupper: ['Torr porter och stout'],
     förälder: 'Porter & Stout',
     abv: 5,
     pris: 30,
     volym: 330,
     prisPerLiter: 90,
     sortiment: 'Fast sortiment',
-    beska: 6,
-    fyllighet: 7,
-    sötma: 2,
-    syra: 0,
+    klockor: { beska: 6, fyllighet: 7, sötma: 2 },
     fatlagrad: false,
     mat: ['Nöt'],
     bild: true,
@@ -65,28 +70,32 @@ describe('förklara', () => {
   it('säger att profilen är identisk när ingenting skiljer', () => {
     const a = öl()
     const b = öl({ termer: ['kaffe', 'kavring'], smakord: ['kaffe', 'kavring'] })
-    expect(förklara(a, b, FREKVENS)).toBe('Nästan identisk smakprofil.')
+    expect(förklara(a, b, FREKVENS, AXLAR)).toBe('Nästan identisk smakprofil.')
   })
 
   it('nämner axeln som skiljer, och den de ligger närmast på', () => {
-    const a = öl({ beska: 6, fyllighet: 7, sötma: 2 })
-    const b = öl({ beska: 3, fyllighet: 7, sötma: 2 })
-    const text = förklara(a, b, FREKVENS)
+    const a = öl({ klockor: { beska: 6, fyllighet: 7, sötma: 2 } })
+    const b = öl({ klockor: { beska: 3, fyllighet: 7, sötma: 2 } })
+    const text = förklara(a, b, FREKVENS, AXLAR)
     expect(text).toContain('tydligt mindre beska')
     // Fyllighet och sötma är identiska; den närmaste axeln nämns först.
     expect(text).toMatch(/^Samma (fyllighet|sötma)/)
   })
 
   it('skiljer på svag och tydlig skillnad', () => {
-    const a = öl({ beska: 6 })
-    expect(förklara(a, öl({ beska: 7.5 }), FREKVENS)).toContain('något mer beska')
-    expect(förklara(a, öl({ beska: 9 }), FREKVENS)).toContain('tydligt mer beska')
+    const a = öl({ klockor: { beska: 6, fyllighet: 7, sötma: 2 } })
+    expect(
+      förklara(a, öl({ klockor: { beska: 7.5, fyllighet: 7, sötma: 2 } }), FREKVENS, AXLAR),
+    ).toContain('något mer beska')
+    expect(
+      förklara(a, öl({ klockor: { beska: 9, fyllighet: 7, sötma: 2 } }), FREKVENS, AXLAR),
+    ).toContain('tydligt mer beska')
   })
 
   it('hanterar skillnad på alla tre axlarna', () => {
-    const a = öl({ beska: 2, fyllighet: 3, sötma: 1 })
-    const b = öl({ beska: 9, fyllighet: 11, sötma: 8 })
-    const text = förklara(a, b, FREKVENS)
+    const a = öl({ klockor: { beska: 2, fyllighet: 3, sötma: 1 } })
+    const b = öl({ klockor: { beska: 9, fyllighet: 11, sötma: 8 } })
+    const text = förklara(a, b, FREKVENS, AXLAR)
     // Med bara skillnader finns ingen "samma"-axel att inleda med.
     expect(text).not.toContain('samma')
     // Högst två axlar nämns, annars blir meningen en uppräkning.
@@ -95,10 +104,10 @@ describe('förklara', () => {
   })
 
   it('utelämnar en axel där värdet saknas i stället för att räkna den som noll', () => {
-    const a = öl({ beska: 6, fyllighet: 7, sötma: 2 })
-    const b = öl({ beska: 6, fyllighet: 7, sötma: undefined as unknown as number })
-    expect(klockskillnader(a, b).map((s) => s.namn)).toEqual(['beska', 'fyllighet'])
-    expect(förklara(a, b, FREKVENS)).not.toContain('sötma')
+    const a = öl({ klockor: { beska: 6, fyllighet: 7, sötma: 2 } })
+    const b = öl({ klockor: { beska: 6, fyllighet: 7, sötma: undefined as unknown as number } })
+    expect(klockskillnader(a, b, AXLAR).map((s) => s.namn)).toEqual(['beska', 'fyllighet'])
+    expect(förklara(a, b, FREKVENS, AXLAR)).not.toContain('sötma')
   })
 
   it('säger till när ölen inte delar några smakord', () => {
@@ -106,7 +115,7 @@ describe('förklara', () => {
     const b = öl({ termer: ['grapefrukt', 'tallbarr'], smakord: ['grapefrukt', 'tallbarr'] })
     // Leden binds här med komma, inte "och" — båda innehåller redan ett, och
     // "mer tallbarr och grapefrukt och mindre kavring och kaffe" är oläsligt.
-    expect(förklara(a, b, FREKVENS)).toBe(
+    expect(förklara(a, b, FREKVENS, AXLAR)).toBe(
       'Samma styrka i beska, fyllighet och sötma. ' +
         'Inga gemensamma smakord: mer tallbarr och grapefrukt, mindre kavring och kaffe.',
     )
@@ -118,7 +127,7 @@ describe('förklara', () => {
       termer: ['kaffe', 'frukt', 'tallbarr'],
       smakord: ['kaffe', 'frukt', 'tallbarr'],
     })
-    const text = förklara(a, b, FREKVENS)
+    const text = förklara(a, b, FREKVENS, AXLAR)
     // tallbarr (8) är ovanligare än frukt (900) och ska nämnas först.
     expect(text).toContain('tallbarr')
     expect(text).not.toContain('frukt,')
@@ -130,26 +139,22 @@ describe('förklara', () => {
       termer: ['kaffe', 'stavfel', 'lakrits'],
       smakord: ['kaffe', 'stavfel', 'lakrits'],
     })
-    expect(förklara(a, b, FREKVENS)).toContain('lakrits')
-    expect(förklara(a, b, FREKVENS)).not.toContain('stavfel')
+    expect(förklara(a, b, FREKVENS, AXLAR)).toContain('lakrits')
+    expect(förklara(a, b, FREKVENS, AXLAR)).not.toContain('stavfel')
   })
 
   it('bygger en hel mening av båda halvorna', () => {
     const a = öl({
-      beska: 6,
-      fyllighet: 7,
-      sötma: 2,
+      klockor: { beska: 6, fyllighet: 7, sötma: 2 },
       termer: ['kaffe', 'lakrits'],
       smakord: ['kaffe', 'lakrits'],
     })
     const b = öl({
-      beska: 3,
-      fyllighet: 7,
-      sötma: 2,
+      klockor: { beska: 3, fyllighet: 7, sötma: 2 },
       termer: ['kaffe', 'choklad'],
       smakord: ['kaffe', 'choklad'],
     })
-    expect(förklara(a, b, FREKVENS)).toBe(
+    expect(förklara(a, b, FREKVENS, AXLAR)).toBe(
       'Samma fyllighet, tydligt mindre beska. Delar kaffe, men mer choklad och mindre lakrits.',
     )
   })
@@ -191,7 +196,7 @@ describe('liknande', () => {
     const bas = öl({ vektor: [0, 0] })
     const nära = öl({ vektor: [0.1, 0] })
     const fjärran = öl({ vektor: [5, 5] })
-    const träffar = liknande(bas, [bas, fjärran, nära], FREKVENS)
+    const träffar = liknande(bas, [bas, fjärran, nära], FREKVENS, AXLAR)
     expect(träffar.map((t) => t.produkt.id)).toEqual([nära.id, fjärran.id])
     expect(träffar[0].avstånd).toBeLessThan(träffar[1].avstånd)
   })
@@ -200,21 +205,28 @@ describe('liknande', () => {
     const bas = öl({ namn: 'Guinness', undertitel: 'Draught', vektor: [0, 0] })
     const burk = öl({ namn: 'Guinness', undertitel: 'Draught', vektor: [0, 0] })
     const annan = öl({ namn: 'Carnegie', undertitel: 'Porter', vektor: [1, 1] })
-    expect(liknande(bas, [burk, annan], FREKVENS).map((t) => t.produkt.namn)).toEqual(['Carnegie'])
+    expect(liknande(bas, [burk, annan], FREKVENS, AXLAR).map((t) => t.produkt.namn)).toEqual([
+      'Carnegie',
+    ])
   })
 
   it('ger aldrig fler träffar än man bett om', () => {
     const bas = öl({ vektor: [0, 0] })
     const andra = Array.from({ length: 20 }, (_, i) => öl({ vektor: [i + 1, 0] }))
-    expect(liknande(bas, andra, FREKVENS, 5)).toHaveLength(5)
+    expect(liknande(bas, andra, FREKVENS, AXLAR, 5)).toHaveLength(5)
   })
 
   it('förklarar varje träff', () => {
     const bas = öl({ vektor: [0, 0] })
     const andra = [
-      öl({ vektor: [1, 0], beska: 9, termer: ['grapefrukt'], smakord: ['grapefrukt'] }),
+      öl({
+        klockor: { beska: 9, fyllighet: 7, sötma: 2 },
+        vektor: [1, 0],
+        termer: ['grapefrukt'],
+        smakord: ['grapefrukt'],
+      }),
     ]
-    const [träff] = liknande(bas, andra, FREKVENS)
+    const [träff] = liknande(bas, andra, FREKVENS, AXLAR)
     expect(träff.förklaring.length).toBeGreaterThan(10)
     expect(träff.förklaring.endsWith('.')).toBe(true)
   })

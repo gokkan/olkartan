@@ -1,10 +1,18 @@
-# Ölkartan
+# Smakkartan
 
-Systembolagets ölsortiment som en karta, där avstånd betyder smaklikhet. Positionen räknas fram ur Systembolagets egna smakbeskrivningar — 3 375 öl i 60 stilar. Sök på en öl du gillar och se vad som ligger bredvid, eller klicka dig runt. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
+Systembolagets sortiment som kartor, där avstånd betyder smaklikhet. Positionen räknas fram ur Systembolagets egna smakbeskrivningar. Sök på något du gillar och se vad som ligger bredvid, eller klicka dig runt. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
+
+```
+öl      3 374 öl     60 stilar
+rött    1 156 viner  52 druvor
+vitt      758 viner  38 druvor
+```
+
+Tre kartor och inte en: rött och vitt vin mäts med olika smakklockor — rött har strävhet, vitt har sötma — och att lägga dem i samma rymd skulle kräva att den saknade axeln räknas som noll. Öl grupperas på stil, vin på druva. Vinets egen kategorinivå är redan en smakklassning ("Fruktigt & Smakrikt"), så att aggregera på den vore cirkulärt.
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
-Hur kartan räknas fram, och varför den ser ut som den gör, står i [PLAN.md](PLAN.md).
+Hur kartorna räknas fram, och varför de ser ut som de gör, står i [PLAN.md](PLAN.md).
 
 ## Tack
 
@@ -21,14 +29,14 @@ npm run data         # bygger datan och kör kartans kontroller
 npm run dev
 ```
 
-`npm run data` måste köras minst en gång innan produktpanelen fungerar — `public/data/produkter.json` är 2,3 MB och ligger inte i repot.
+`npm run data` måste köras minst en gång innan produktpanelen fungerar — produktfilerna i `public/data/` är flera megabyte och ligger inte i repot. Vad som skiljer kartorna åt står samlat i [scripts/drycker.mjs](scripts/drycker.mjs); resten av pipelinen är gemensam.
 
 ## Kommandon
 
 | | |
 | --- | --- |
 | `npm run build` | produktionsbygge till `dist/` |
-| `npm run data` | bygger om `stilar.json`, `meta.json` och `produkter.json` |
+| `npm run data` | bygger om alla tre kartorna. `DRYCK=rott` bygger bara en |
 | `npm test` | enhetstester för likhetsmotorn, körs i deployen |
 | `npm run test:karta` m.fl. | gränssnittstester, se `package.json` |
 
