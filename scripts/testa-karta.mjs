@@ -101,5 +101,49 @@ const efterKlick = await p.locator('.panel h2').textContent()
 console.log(`  klick i molnet: "${innan}" → "${efterKlick}"`)
 console.log(`  ${innan !== efterKlick ? '✓ öppnade en annan öl' : '✗ inget hände'}`)
 
+/* 4. YTTERKANTERNA
+ * Stilarna spänner upp ritytan, men de är medelvärden — ölen ligger runt
+ * omkring och drygt 290 hamnar helt utanför. Söker man upp en av dem bad
+ * inflygningen om en förflyttning som panoreringsgränsen klippte, och ölen
+ * hamnade utanför bild. Ölen plockas ur datan i stället för att skrivas in
+ * här, så testet följer med när sortimentet ändras. */
+console.log('\nytterkanterna:')
+const ytterst = await p.evaluate(async (bas) => {
+  const alla = await (await fetch(bas + 'data/produkter.json')).json()
+  const ut = []
+  for (const [namn, jämför] of [
+    ['vänster', (a, b) => a.x - b.x],
+    ['höger', (a, b) => b.x - a.x],
+    ['upp', (a, b) => b.y - a.y],
+    ['ned', (a, b) => a.y - b.y],
+  ]) {
+    const p = [...alla].sort(jämför)[0]
+    ut.push({ håll: namn, namn: [p.namn, p.undertitel].filter(Boolean).join(' '), id: p.id })
+  }
+  return ut
+}, new URL(url).href.replace(/\/?$/, '/'))
+
+for (const ö of ytterst) {
+  await p.locator('.sok input').fill(ö.namn)
+  await p.waitForTimeout(320)
+  await p.locator('.sok-traffar li button').last().click()
+  await p.waitForTimeout(1300)
+  const r = await p.evaluate(() => {
+    const vald = [...document.querySelectorAll('circle[data-ol]')].find((e) =>
+      (e.getAttribute('stroke') || '').includes('0.95'),
+    )
+    if (!vald) return null
+    const b = vald.getBoundingClientRect()
+    const svg = document.querySelector('.karta svg').getBoundingClientRect()
+    return { x: b.x + b.width / 2 - svg.x, y: b.y + b.height / 2 - svg.y, w: svg.width, h: svg.height }
+  })
+  const inne = r && r.x > 0 && r.x < r.w && r.y > 0 && r.y < r.h
+  console.log(
+    `  ${ö.håll.padEnd(8)} ${ö.namn.slice(0, 34).padEnd(35)} ` +
+      (r ? `(${r.x.toFixed(0)}, ${r.y.toFixed(0)}) av ${r.w.toFixed(0)}×${r.h.toFixed(0)}  ` : 'ingen prick  ') +
+      (inne ? '✓ i bild' : '✗ utanför bild'),
+  )
+}
+
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

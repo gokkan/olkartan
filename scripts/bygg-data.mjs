@@ -501,6 +501,17 @@ for (const [term, n] of df) {
 const matfrekvens = {}
 for (const p of produkter) for (const m of p.mat) matfrekvens[m] = (matfrekvens[m] ?? 0) + 1
 
+/* Produkterna sträcker sig utanför stilarnas område — en stil är ett
+ * medelvärde, och de öl som bildar det ligger runt omkring. 293 av dem hamnar
+ * helt utanför den ritruta stilarna spänner upp. Kartan behöver veta hur långt
+ * för att kunna panorera dit; utan det klipper panoreringsgränsen bort dem. */
+const utbredning = {
+  x0: Math.min(...produkter.map((p) => p.x)),
+  x1: Math.max(...produkter.map((p) => p.x)),
+  y0: Math.min(...produkter.map((p) => p.y)),
+  y1: Math.max(...produkter.map((p) => p.y)),
+}
+
 const meta = {
   byggd: new Date().toISOString().slice(0, 10),
   antalProdukter: produkter.length,
@@ -510,6 +521,7 @@ const meta = {
   rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_SYRA },
   ordfrekvens,
   matfrekvens,
+  utbredning,
 }
 
 // Stilarna är små och behövs direkt — de byggs in. Produkterna är 2,3 MB och

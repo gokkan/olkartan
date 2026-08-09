@@ -58,4 +58,7 @@ export type Meta = {
   rattar: Record<string, number>
   ordfrekvens: Record<string, number>
   matfrekvens: Record<string, number>
+  /** Produkternas ytterkanter i datakoordinater. Stilarna spänner upp ritytan,
+   *  men ölen ligger runt omkring den — kartan får inte klippa bort dem. */
+  utbredning: { x0: number; x1: number; y0: number; y1: number }
 }

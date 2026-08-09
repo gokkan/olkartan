@@ -280,7 +280,9 @@ Den första versionen riktade mot ritytans geometriska mitt och landade i ett gl
 
 **Hovern släppte inte.** En stil lyste kvar när pekaren gled ut i tomma rutan, eftersom bara svg-elementet hade en lämna-hanterare. Prickarna har nu en egen, villkorad på att det är just den stilen som är hovrad — då spelar det ingen roll i vilken ordning händelserna kommer när man går från en prick till nästa.
 
-**Panoreringen hade inga gränser.** Man kunde dra ut i det svarta tills alla prickar försvann och inte hitta tillbaka. Nu får man dra 30 % av vyn förbi kartans kant, inte mer. Efter fem hårda drag i samma riktning finns 21 prickar kvar i bild.
+**Panoreringen hade inga gränser.** Man kunde dra ut i det svarta tills alla prickar försvann och inte hitta tillbaka. Nu får man dra 30 % av vyn förbi innehållets kant, inte mer. Efter fem hårda drag i samma riktning finns 21 prickar kvar i bild.
+
+Kanten var först ritytans, och det var fel. Stilarna spänner upp ritytan, men de är medelvärden — ölen ligger runt omkring dem, och 293 hamnar helt utanför den. Sökte man upp en av dem bad inflygningen om en förflyttning som gränsen klippte, och ölen landade utanför bild: den västligaste, Majornas Fyra Ett Fyra, hamnade på skärmposition −474 av 0–1000. Byggskriptet skriver nu produkternas ytterkanter till `meta.utbredning`, och gränsen mäts mot unionen av dem och ritytan. Ett test i `testa-karta.mjs` plockar de fyra ytterligheterna ur datan och kontrollerar att var och en hamnar i bild.
 
 **Uppåtpilen låg under sökrutan.** Sökrutan är 340 px bred, alltså nästan skärmbred på telefon, och ligger i övre vänstra hörnet med `z-index: 5`. Axeletiketten "↑ örter" är centrerad 14 px från toppen och hamnade rakt under den. Den flyttas ned under sökrutan på smal skärm. Ett test i `testa-mobil.mjs` mäter numera att rutorna inte överlappar, för det var inget man såg i en skärmbild av kartan — bara i en skärmbild av telefonen.
 

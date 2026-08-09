@@ -24,10 +24,15 @@ const TRÖGHET = 110
 
 type Vy = { k: number; tx: number; ty: number }
 
-/* Hur långt förbi kartans kant man får dra, som andel av vyn. Utan gräns kan
-   man panorera ut i det svarta tills prickarna försvinner helt och det inte
-   längre går att hitta tillbaka. Lite slack behövs ändå — en prick i kanten
-   ska gå att få fri från panelen. */
+/* Hur långt förbi innehållets kant man får dra, som andel av vyn. Utan gräns
+   kan man panorera ut i det svarta tills prickarna försvinner helt och det
+   inte längre går att hitta tillbaka. Lite slack behövs ändå — en prick i
+   kanten ska gå att få fri från panelen.
+
+   Kanten är innehållets, inte ritytans. Stilarna spänner upp ritytan, men de
+   är medelvärden och ölen ligger runt omkring dem: 293 hamnar helt utanför.
+   Mättes gränsen mot ritytan gick de inte att flyga till — sökningen bad om
+   en förflyttning som gränsen klippte, och ölen hamnade utanför bild. */
 const SLACK = 0.3
 
 /* Ritytan är 1000×700 och skalas in i elementet med `meet`, alltså efter den
@@ -50,15 +55,18 @@ const MAX_LUPP = 3
 const PRICKANDEL = 0.6
 const MINSTA_PRICK_PUNKTER = 7
 
-function begränsa(v: Vy): Vy {
-  const spann = (vyLängd: number, innehåll: number) => {
+/** Innehållets ytterkanter i ritenheter — det som gränsen mäts emot. */
+type Ruta = { x0: number; x1: number; y0: number; y1: number }
+
+function begränsa(v: Vy, g: Ruta): Vy {
+  const spann = (vyLängd: number, c0: number, c1: number) => {
     const slack = vyLängd * SLACK
-    const a = vyLängd - innehåll - slack
-    const b = slack
+    const a = vyLängd - slack - c1 * v.k
+    const b = slack - c0 * v.k
     return [Math.min(a, b), Math.max(a, b)] as const
   }
-  const [minX, maxX] = spann(W, W * v.k)
-  const [minY, maxY] = spann(H, H * v.k)
+  const [minX, maxX] = spann(W, g.x0, g.x1)
+  const [minY, maxY] = spann(H, g.y0, g.y1)
   return {
     k: v.k,
     tx: Math.min(Math.max(v.tx, minX), maxX),
@@ -219,7 +227,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       cx = W / 2
       cy = H / 2
     }
-    const start = begränsa({ k, tx: W / 2 - cx * k, ty: H / 2 - cy * k })
+    const start = begränsa({ k, tx: W / 2 - cx * k, ty: H / 2 - cy * k }, gränser)
     mål.current = start
     sätt(start)
     // Punkterna behövs bara vid första ritningen; vyn ska inte hoppa om
@@ -242,6 +250,18 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       py: (y: number) => H - MARGINAL - (y - y0) * sy,
     }
   }, [stilar])
+
+  /* Ytterkanterna som panoreringen mäts emot: ritytan, utvidgad med de öl som
+     ligger utanför den. Y vänds på vägen — datans övre kant är ritytans nedre. */
+  const gränser = useMemo<Ruta>(() => {
+    const u = meta.utbredning
+    return {
+      x0: Math.min(0, skala.px(u.x0)),
+      x1: Math.max(W, skala.px(u.x1)),
+      y0: Math.min(0, skala.py(u.y1)),
+      y1: Math.max(H, skala.py(u.y0)),
+    }
+  }, [skala, meta])
 
   const punkter = useMemo(() => {
     const maxAntal = Math.max(1, ...stilar.map((s) => s.antal))
@@ -268,7 +288,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     () => ({
       flygTill(x, y, önskad) {
         const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, önskad ?? Math.max(vyNu.current.k, 3)))
-        mål.current = begränsa({ k, tx: W / 2 - skala.px(x) * k, ty: H / 2 - skala.py(y) * k })
+        mål.current = begränsa(
+          { k, tx: W / 2 - skala.px(x) * k, ty: H / 2 - skala.py(y) * k },
+          gränser,
+        )
         animera()
       },
       rymPunkter(punkter) {
@@ -284,11 +307,11 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
         )
         const mx = (Math.min(...xs) + Math.max(...xs)) / 2
         const my = (Math.min(...ys) + Math.max(...ys)) / 2
-        mål.current = begränsa({ k, tx: W / 2 - mx * k, ty: H / 2 - my * k })
+        mål.current = begränsa({ k, tx: W / 2 - mx * k, ty: H / 2 - my * k }, gränser)
         animera()
       },
     }),
-    [skala, animera],
+    [skala, animera, gränser],
   )
 
   /* Etiketter placeras girigt, störst stil först. En etikett måste vara fri
@@ -360,12 +383,15 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       const m = mål.current
       const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, m.k * Math.exp(-e.deltaY * 0.0022)))
       // Håll punkten under pekaren stilla medan skalan ändras.
-      mål.current = begränsa({ k, tx: x - ((x - m.tx) * k) / m.k, ty: y - ((y - m.ty) * k) / m.k })
+      mål.current = begränsa(
+        { k, tx: x - ((x - m.tx) * k) / m.k, ty: y - ((y - m.ty) * k) / m.k },
+        gränser,
+      )
       animera()
     }
     el.addEventListener('wheel', hjul, { passive: false })
     return () => el.removeEventListener('wheel', hjul)
-  }, [tillSvg, animera])
+  }, [tillSvg, animera, gränser])
 
   /** Avbryt en pågående inflygning — annars slåss den med fingret om vyn. */
   function stoppaGlid() {
@@ -416,7 +442,10 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       const avstånd = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y))
       const k = Math.min(MAX_SKALA, Math.max(MIN_SKALA, (n.k * avstånd) / n.avstånd))
       const mitt = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-      const ny = begränsa({ k, tx: mitt.x - n.innehåll.x * k, ty: mitt.y - n.innehåll.y * k })
+      const ny = begränsa(
+        { k, tx: mitt.x - n.innehåll.x * k, ty: mitt.y - n.innehåll.y * k },
+        gränser,
+      )
       mål.current = ny
       sätt(ny)
       return
@@ -433,7 +462,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
       e.currentTarget.setPointerCapture(e.pointerId)
     }
     // Panorering följer fingret direkt. Utjämning här skulle bara kännas trögt.
-    const ny = begränsa({ k: vyNu.current.k, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) })
+    const ny = begränsa({ k: vyNu.current.k, tx: d.tx + (x - d.x), ty: d.ty + (y - d.y) }, gränser)
     mål.current = ny
     sätt(ny)
   }
