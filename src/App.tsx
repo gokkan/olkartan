@@ -4,6 +4,7 @@ import Panel from './Panel'
 import Urval from './Urval'
 import Sok from './Sok'
 import Kartval from './Kartval'
+import Karta3D from './Karta3D'
 import Om from './Om'
 import Fangare from './Fangare'
 import kartorData from './data/kartor.json'
@@ -74,8 +75,18 @@ export default function App() {
     return []
   }, [produkter, läge.ord, läge.mat, grupp, produkt])
 
-  /** Kartans id följer alltid med, utom för den första — den är standard. */
-  const bas = (): Läge => (karta.id === kartor[0].id ? {} : { karta: karta.id })
+  /* I 3D-läget går det inte att klicka på något. Det är hela skälet till att
+     läget är möjligt: utan träffytor slipper man djupsorterad träffprövning,
+     etiketter som flyttar sig varje bildruta och en tredje gest på telefonen.
+     Vill man välja något trycker man 2D. */
+  const tredje = läge.vy === '3d'
+
+  /** Kartans id följer alltid med, utom för den första — den är standard. Så
+   *  även vyläget: byter man stil ska man inte kastas ur molnet. */
+  const bas = (): Läge => ({
+    ...(karta.id === kartor[0].id ? {} : { karta: karta.id }),
+    ...(läge.vy ? { vy: läge.vy } : {}),
+  })
 
   /* Kartan äger sin zoom och position och tappar dem inte när man klickar sig
      runt. Sökningen är undantaget: där är förflyttningen hela poängen. */
@@ -112,22 +123,31 @@ export default function App() {
      den som läser och byter vill se den andra kartans siffror — inte stänga
      rutan och öppna den igen. */
   const väljKarta = (id: string) =>
-    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om })
+    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om, vy: läge.vy })
 
   const stäng = () => gåTill(bas())
 
   return (
     <main>
       <div className="scen">
-        <Karta
-          ref={hanterare}
-          karta={karta}
-          vald={urval ? null : (grupp?.namn ?? null)}
-          molnet={molnet}
-          valdProdukt={produkt}
-          onVälj={väljGrupp}
-          onVäljProdukt={väljProdukt}
-        />
+        {tredje ? (
+          <Karta3D
+            karta={karta}
+            vald={urval ? null : (grupp?.namn ?? null)}
+            molnet={molnet}
+            valdProdukt={produkt}
+          />
+        ) : (
+          <Karta
+            ref={hanterare}
+            karta={karta}
+            vald={urval ? null : (grupp?.namn ?? null)}
+            molnet={molnet}
+            valdProdukt={produkt}
+            onVälj={väljGrupp}
+            onVäljProdukt={väljProdukt}
+          />
+        )}
 
         <div className="reglage">
           <Fangare namn="Sökrutan">
@@ -148,6 +168,14 @@ export default function App() {
           </Fangare>
           <div className="reglage-rad">
             <Kartval kartor={kartor} vald={karta} onVälj={väljKarta} />
+            <button
+              className={`vy-knapp${tredje ? ' aktiv' : ''}`}
+              onClick={() => gåTill({ ...läge, vy: tredje ? undefined : '3d' })}
+              aria-pressed={tredje}
+              title={tredje ? 'Tillbaka till kartan' : 'Vrid molnet i tre dimensioner'}
+            >
+              {tredje ? '2D' : '3D'}
+            </button>
             <button
               className={`om-knapp${läge.om ? ' aktiv' : ''}`}
               onClick={() => gåTill(läge.om ? { ...läge, om: undefined } : { ...läge, om: '1' })}
@@ -212,7 +240,11 @@ export default function App() {
           {karta.antalGrupper} {karta.grupp.flera}, {karta.antalProdukter.toLocaleString('sv-SE')}{' '}
           {karta.enhet.flera}
         </span>
-        <span>avstånd är smaklikhet · klicka på {karta.grupp.obestämd}, rulla för att zooma</span>
+        <span>
+          {tredje
+            ? `avstånd är smaklikhet · dra för att vrida — tryck 2D för att kunna välja`
+            : `avstånd är smaklikhet · klicka på ${karta.grupp.obestämd}, rulla för att zooma`}
+        </span>
       </footer>
     </main>
   )

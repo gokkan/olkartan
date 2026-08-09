@@ -108,20 +108,23 @@ console.log(`  ${innan !== efterKlick ? '✓ öppnade en annan öl' : '✗ inget
  * hamnade utanför bild. Ölen plockas ur datan i stället för att skrivas in
  * här, så testet följer med när sortimentet ändras. */
 console.log('\nytterkanterna:')
-const ytterst = await p.evaluate(async (bas) => {
-  const alla = await (await fetch(bas + 'data/ol.json')).json()
-  const ut = []
-  for (const [namn, jämför] of [
-    ['vänster', (a, b) => a.x - b.x],
-    ['höger', (a, b) => b.x - a.x],
-    ['upp', (a, b) => b.y - a.y],
-    ['ned', (a, b) => a.y - b.y],
-  ]) {
-    const p = [...alla].sort(jämför)[0]
-    ut.push({ håll: namn, namn: [p.namn, p.undertitel].filter(Boolean).join(' '), id: p.id })
-  }
-  return ut
-}, new URL(url).href.replace(/\/?$/, '/'))
+const ytterst = await p.evaluate(
+  async (bas) => {
+    const alla = await (await fetch(bas + 'data/ol.json')).json()
+    const ut = []
+    for (const [namn, jämför] of [
+      ['vänster', (a, b) => a.x - b.x],
+      ['höger', (a, b) => b.x - a.x],
+      ['upp', (a, b) => b.y - a.y],
+      ['ned', (a, b) => a.y - b.y],
+    ]) {
+      const p = [...alla].sort(jämför)[0]
+      ut.push({ håll: namn, namn: [p.namn, p.undertitel].filter(Boolean).join(' '), id: p.id })
+    }
+    return ut
+  },
+  new URL(url).href.replace(/\/?$/, '/'),
+)
 
 for (const ö of ytterst) {
   await p.locator('.sok input').fill(ö.namn)
@@ -135,13 +138,83 @@ for (const ö of ytterst) {
     if (!vald) return null
     const b = vald.getBoundingClientRect()
     const svg = document.querySelector('.karta svg').getBoundingClientRect()
-    return { x: b.x + b.width / 2 - svg.x, y: b.y + b.height / 2 - svg.y, w: svg.width, h: svg.height }
+    return {
+      x: b.x + b.width / 2 - svg.x,
+      y: b.y + b.height / 2 - svg.y,
+      w: svg.width,
+      h: svg.height,
+    }
   })
   const inne = r && r.x > 0 && r.x < r.w && r.y > 0 && r.y < r.h
   console.log(
     `  ${ö.håll.padEnd(8)} ${ö.namn.slice(0, 34).padEnd(35)} ` +
-      (r ? `(${r.x.toFixed(0)}, ${r.y.toFixed(0)}) av ${r.w.toFixed(0)}×${r.h.toFixed(0)}  ` : 'ingen prick  ') +
+      (r
+        ? `(${r.x.toFixed(0)}, ${r.y.toFixed(0)}) av ${r.w.toFixed(0)}×${r.h.toFixed(0)}  `
+        : 'ingen prick  ') +
       (inne ? '✓ i bild' : '✗ utanför bild'),
+  )
+}
+
+/* 5. 3D-LÄGET
+ * Läget finns för att den platta kartan trycker ihop allt utom två riktningar,
+ * så att två prickar kan ligga på varandra utan att smaka lika. Testet mäter
+ * att den tredje riktningen faktiskt når fram till skärmen: ta de två stilar
+ * som ligger närmast varandra, vrid ett kvarts varv, mät igen. Går de inte
+ * isär gör läget ingen nytta och behöver inte finnas. */
+console.log('\n3D-läget:')
+for (const [namn, hash] of [
+  ['öl', '#vy=3d'],
+  ['rött', '#karta=rott&vy=3d'],
+]) {
+  await p.goto(url.replace(/\/?$/, '/') + hash, { waitUntil: 'networkidle' })
+  await p.waitForSelector('.karta3d circle[data-grupp]')
+  // Ett klick utan rörelse stoppar den automatiska snurren.
+  await p.mouse.move(500, 400)
+  await p.mouse.down()
+  await p.mouse.up()
+  await p.waitForTimeout(200)
+
+  const läs = () =>
+    p.evaluate(() =>
+      [...document.querySelectorAll('.karta3d circle[data-grupp]')].map((e) => ({
+        namn: e.getAttribute('data-grupp'),
+        x: +e.getAttribute('cx'),
+        y: +e.getAttribute('cy'),
+      })),
+    )
+  const före3d = await läs()
+  const mellan = (l, i, j) => Math.hypot(l[i].x - l[j].x, l[i].y - l[j].y)
+  let par = null
+  const alla = []
+  for (let i = 0; i < före3d.length; i++)
+    for (let j = i + 1; j < före3d.length; j++) {
+      const v = mellan(före3d, i, j)
+      alla.push(v)
+      if (!par || v < par.v) par = { i, j, v }
+    }
+  alla.sort((a, b) => a - b)
+
+  // 0,008 radianer per bildpunkt, se Karta3D.
+  await p.mouse.move(400, 400)
+  await p.mouse.down()
+  await p.mouse.move(400 + Math.round(Math.PI / 2 / 0.008), 400, { steps: 15 })
+  await p.mouse.up()
+  await p.waitForTimeout(300)
+  const efter3d = await läs()
+  const efter = mellan(efter3d, par.i, par.j)
+  console.log(
+    `  ${namn.padEnd(5)} "${före3d[par.i].namn}" / "${före3d[par.j].namn}": ` +
+      `${par.v.toFixed(0)} px → ${efter.toFixed(0)} px efter ett kvarts varv ` +
+      `(typiskt par ${alla[Math.floor(alla.length / 2)].toFixed(0)} px)  ` +
+      (efter > par.v * 2 ? '✓ glider isär' : '✗ djupet når inte fram'),
+  )
+
+  // Ingenting får gå att klicka på. Det är villkoret för att läget ska vara
+  // enkelt nog att finnas.
+  await p.mouse.click(520, 380)
+  await p.waitForTimeout(300)
+  console.log(
+    `        klick öppnar inget: ${(await p.locator('.panel').count()) === 0 ? '✓' : '✗'}`,
   )
 }
 

@@ -335,7 +335,13 @@ function byggKarta(dryck) {
 
   const sm = kolumnMedel(gruppMedel)
   const sc = centrera(gruppMedel, sm)
-  const kartKomp = egenvektorer(kovarians(sc), 2)
+  /* Tre komponenter, inte två. De två första är kartan; den tredje används
+     bara av 3D-läget, som finns för att man ska kunna se när två prickar
+     ligger på varandra utan att smaka lika. PC3 skiljer fyra av fem sådana
+     par åt — se PLAN.md. Att räkna fram den ändrar ingenting i de två
+     första: potensiteration med deflation ger samma svar oavsett hur många
+     komponenter man ber om. */
+  const kartKomp = egenvektorer(kovarians(sc), 3)
   const koord = projicera(sc, kartKomp)
   const varians = kartKomp.map((k) => k.egenvärde)
   const variansSum = sc[0]
@@ -412,6 +418,7 @@ function byggKarta(dryck) {
     vektor: V[i].map((v) => +v.toFixed(4)),
     x: +prodKoord[i][0].toFixed(4),
     y: +prodKoord[i][1].toFixed(4),
+    z: +prodKoord[i][2].toFixed(4),
   }))
 
   const grupper = gruppNamn.map((namn, i) => {
@@ -444,6 +451,7 @@ function byggKarta(dryck) {
       liten: idx.length < dryck.litenUnder,
       x: +koord[i][0].toFixed(4),
       y: +koord[i][1].toFixed(4),
+      z: +koord[i][2].toFixed(4),
       klockor: Object.fromEntries(
         dryck.klockor.map((k) => [k.nyckel, +median(ps.map((p) => k.värde(p) ?? 0)).toFixed(1)]),
       ),

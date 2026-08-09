@@ -76,6 +76,46 @@ main {
   cursor: pointer;
 }
 
+/* I 3D-läget går ingenting att klicka på. Prickarna ska varken byta pekare
+   eller svara på hovring — hela ytan är ett enda dragfält. */
+.karta3d circle,
+.karta3d text {
+  cursor: inherit;
+  pointer-events: none;
+}
+
+.karta3d .kompass line {
+  stroke: var(--svag);
+}
+
+.karta3d .kompassring {
+  fill: color-mix(in srgb, var(--yta) 55%, transparent);
+  stroke: var(--linje);
+}
+
+.karta3d .kompass text {
+  fill: var(--svag);
+  letter-spacing: 0.03em;
+  paint-order: stroke;
+  stroke: var(--botten);
+  stroke-linejoin: round;
+}
+
+/* Vad den tredje riktningen är. Står nere i mitten, där axelorden annars
+   ligger — de går inte att visa i 3D eftersom riktningarna vrider sig. */
+.tredje-not {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  max-width: min(680px, 92%);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--svag);
+  pointer-events: none;
+}
+
 .etikett {
   fill: var(--svag);
   pointer-events: none;
@@ -684,6 +724,32 @@ footer span:last-child {
   font-style: italic;
   line-height: 1;
   cursor: pointer;
+}
+
+/* Samma pillerform som kartvalet — det är ett läge man växlar, inte en text
+   man öppnar, och ska därför inte se ut som i-knappen. */
+.vy-knapp {
+  flex: none;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--linje);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--svag);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.vy-knapp:hover {
+  color: var(--text);
+}
+
+.vy-knapp.aktiv {
+  background: var(--botten);
+  color: var(--text);
 }
 
 .om-knapp:hover {

@@ -450,6 +450,30 @@ Det är inte en bugg utan priset för två dimensioner, och valet att räkna lis
 
 Varje tal i den texten hämtas ur kartans metadata. `synligAndel` och `antalTermer` räknas fram i bygget just för det: en text som påstår "42 %" måste räknas om när rattarna ändras, annars ljuger den tyst. Gränssnittstestet läser talen ur meningarna och larmar om någon lucka blir tom.
 
+### Och ett 3D-läge, som bara går att titta på
+
+Nästa fråga var om ett roterbart moln skulle vara mer rättvisande. Första svaret blev nej, men det svarade på fel fråga: en *slumpad* kameravinkel visar 41 % mot kartans 42 %, eftersom PCA redan valt ut den bästa möjliga 2D-vyn. Med fri rotation är det inte en vinkel man får utan alla, över tid.
+
+Den rätta frågan är om det man missar går att vrida fram. För de par som ligger på varandra men smakar olika:
+
+```
+                falska grannar   PC3-glapp    glider synligt isär
+                  av 300          (median)      vid rotation
+öl                   75            0,66          60 st  (80 %)
+rött                 36            0,82          24 st  (67 %)
+vitt                 14            0,47           8 st  (57 %)
+```
+
+Fyra av fem avslöjas. Värsta paret — Gotha Elf mot Ekta Pils, 0,013 isär i bild — har ett PC3-glapp på 1,96 mot ett typiskt avstånd på 1,65, alltså mer än en hel karta isär så fort man vrider. Med tre axlar går närmaste grannens smakrang från median 393 till 89.
+
+Taket sitter ändå lågt: PC3-glappet är bara 23 % av deras verkliga skillnad, och var femte falsk granne ligger ihop från varenda vinkel. Rotationen säger *att* två prickar bedrar en, inte *hur mycket*.
+
+**Man kan bara titta.** Det är villkoret som gör läget rimligt. Utan träffytor försvinner djupsorterad träffprövning, etiketter som måste räknas om varje bildruta, och en tredje gest på telefonen. Kvar blir ett moln som snurrar av sig självt tills man tar tag i det.
+
+Två saker skiljer det från den platta kartan. **Skalan är enhetlig på alla tre axlarna** — den platta kartan sträcker x mot y för att fylla rutan, och för rött vin är sträckningen 1,85 gånger, men ett moln som deformeras när det vrids ljuger om varje avstånd utom de två man råkar titta rakt på. Och **sfären fyller elementets kortaste led, inte ritytans**: utan den mätningen blev molnet en femtedel av en telefonskärm.
+
+Testet mäter det som är läget värt: ta de två stilar som ligger närmast varandra, vrid ett kvarts varv, mät igen. Dortmunder och Zwickel går från 2 px till 145 px av ett typiskt avstånd på 196. Går de inte isär gör läget ingen nytta.
+
 ---
 
 ## Formgivning

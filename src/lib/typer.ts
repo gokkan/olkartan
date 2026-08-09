@@ -15,6 +15,8 @@ export type Grupp = {
   liten: boolean
   x: number
   y: number
+  /** Tredje huvudkomponenten. Används bara av 3D-läget. */
+  z: number
   klockor: Record<string, number>
   abv: number
   prisPerLiter: number
@@ -53,6 +55,8 @@ export type Produkt = {
   vektor: number[]
   x: number
   y: number
+  /** Tredje huvudkomponenten. Används bara av 3D-läget. */
+  z: number
 }
 
 /** Allt som skiljer en karta från en annan, plus dess grupper. */

@@ -20,9 +20,13 @@ export type Läge = {
   /** Om-rutan. Ligger i hashen som allt annat, så att "läs hur den räknas"
    *  går att skicka som länk och bakåtknappen stänger den. */
   om?: string
+  /** `3d` för det roterbara molnet. Kameravinkeln ligger med flit utanför —
+   *  den ändras hela tiden, och en hash som skrivs om per bildruta gör
+   *  bakåtknappen obrukbar. Länken öppnar molnet, inte en viss vy av det. */
+  vy?: string
 }
 
-const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om'] as const
+const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy'] as const
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))

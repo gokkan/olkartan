@@ -14,6 +14,8 @@ Grupperna är prickarna, men en dryck utan grupp finns ändå med. Var sjätte v
 
 I-knappen vid kartvalet förklarar hela kedjan, inklusive vad kartan inte visar: två dimensioner räcker till 73 % av skillnaden mellan två stilar men bara 42 % mellan två enskilda öl. Därför räknar "Liknande" på hela smakprofilen och inte på avståndet i bild.
 
+3D-knappen visar en tredje riktning som molnet går att vrida runt. Fyra av fem drycker som ligger på varandra i den platta bilden glider isär så fort man vrider. Där går det bara att titta — tillbaka till 2D för att välja något.
+
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
 Hur kartorna räknas fram, och varför de ser ut som de gör, står i [PLAN.md](PLAN.md).
