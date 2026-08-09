@@ -24,9 +24,11 @@ export type Läge = {
    *  den ändras hela tiden, och en hash som skrivs om per bildruta gör
    *  bakåtknappen obrukbar. Länken öppnar molnet, inte en viss vy av det. */
   vy?: string
+  /** Vilken smakklocka prickarna färgas efter. Utelämnad = dryckens egen färg. */
+  farg?: string
 }
 
-const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy'] as const
+const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy', 'farg'] as const
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))

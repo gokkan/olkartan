@@ -105,6 +105,14 @@ export default function Om({ karta, onStäng }: { karta: Karta; onStäng: () => 
         färgbeskrivning, ord för ord — ”{karta.id === 'ol' ? 'brunsvart' : 'mörk, blålila'}”,
         ”ljusgul” — och inte ur en kategori översatt till en ton.
       </p>
+      <p className="brödtext">
+        Smakklockorna finns inte som riktningar i bilden, men färgen går att byta till någon av dem
+        i rutan uppe till vänster. Då ser man hur {karta.klockor[0].etikett} ligger utspridd över
+        kartan i stället för hur mörk drycken är. Skalan sträcks över det spann där {e.flera}{' '}
+        faktiskt ligger, inte över klockans hela skala — annars vore kartan enfärgad. Är spannet
+        mycket smalt används bara en flik av färgskalan, och kartan ser platt ut; det är då
+        sanningen om den klockan.
+      </p>
 
       <h3>Källa</h3>
       <p className="brödtext">

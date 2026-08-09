@@ -77,6 +77,29 @@ function slåUpp(steg: Steg[], mörkhet: number | null): string {
   return `rgb(${k[0]} ${k[1]} ${k[2]})`
 }
 
+/**
+ * Skalan för en smakklocka, när man färgar kartan efter beska i stället för
+ * efter hur mörk drycken är.
+ *
+ * Den ligger med flit utanför dryckernas färgspråk. Skulle en beskaskala också
+ * gå från ljust till mörkbrunt vore det omöjligt att veta vilken av de två
+ * avläsningarna man tittar på. Kall och blek betyder lite, varm och ljus
+ * betyder mycket — en riktning som inte finns i någon av SRM-skalorna.
+ */
+const KLOCKSTEG: Steg[] = [
+  [0.0, [0x3f, 0x4f, 0x63]], // kall skiffer
+  [0.3, [0x5c, 0x77, 0x86]], // dimblå
+  [0.55, [0x9a, 0x9b, 0x7c]], // grågrön mitt
+  [0.78, [0xd8, 0xa4, 0x4e]], // varm gul
+  [1.0, [0xff, 0xe2, 0x9a]], // ljusast
+]
+
+/** `t` är 0–1: klockans värde delat med dess max för den här kartan. */
+export const klockfärg = (t: number) => slåUpp(KLOCKSTEG, t)
+
+/** Två ändar av skalan, till teckenförklaringen. */
+export const KLOCKSKALA = [0, 0.25, 0.5, 0.75, 1].map(klockfärg)
+
 export type Palett = {
   /** Prickens fyllning, i dryckens äkta ton. */
   fyllning: (mörkhet: number | null) => string
@@ -110,4 +133,41 @@ export function palett(skala: Skala): Palett {
   }
   paletter.set(skala, ny)
   return ny
+}
+
+/* Vad prickarna på kartan färgas efter. Normalt drycken själv — hur mörk den
+   är — men man kan byta till en smakklocka och se hur den ligger utspridd över
+   kartan. Bara kartan byter; panelen, sökträffarna och kartvalet behåller
+   dryckens färg, för där svarar färgen på "vad är det här" och inte på "hur
+   mycket beska". Formerna är avsiktligt lika: samma anrop, annan skala. */
+type Mätt = { mörkhet: number | null; klockor: Record<string, number> }
+type Axel = { nyckel: string; spann: [number, number] }
+
+export type Kartfärger = {
+  fyllning: (o: Mätt) => string
+  kant: (o: Mätt) => string
+  litenPrick: (o: Mätt) => string
+  ring: (o: Mätt) => string
+}
+
+export function kartfärger(skala: Skala, klocka: Axel | null): Kartfärger {
+  const p = palett(skala)
+  if (!klocka)
+    return {
+      fyllning: (o) => p.fyllning(o.mörkhet),
+      kant: (o) => p.kant(o.mörkhet),
+      litenPrick: (o) => p.litenPrick(o.mörkhet),
+      ring: (o) => p.ring(o.mörkhet),
+    }
+  const [lo, hi] = klocka.spann
+  const t = (o: Mätt) =>
+    Math.min(1, Math.max(0, ((o.klockor[klocka.nyckel] ?? lo) - lo) / (hi - lo || 1)))
+  return {
+    fyllning: (o) => klockfärg(t(o)),
+    // Klockskalan har inga mörka ändar att rädda, så kanten kan vara samma
+    // för alla — den finns bara för att skilja prickar som ligger på varandra.
+    kant: () => 'rgb(255 255 255 / 0.22)',
+    litenPrick: (o) => klockfärg(t(o)),
+    ring: (o) => klockfärg(Math.max(0.55, t(o))),
+  }
 }

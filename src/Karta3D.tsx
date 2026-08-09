@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Karta as KartaTyp, Produkt } from './lib/typer'
-import { palett } from './lib/färg'
+import type { Karta as KartaTyp, Klockaxel, Produkt } from './lib/typer'
+import { kartfärger } from './lib/färg'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -52,16 +52,19 @@ type Vinkel = { gir: number; lut: number; k: number }
 
 export default function Karta3D({
   karta,
+  färgklocka,
   vald,
   molnet,
   valdProdukt,
 }: {
   karta: KartaTyp
+  /** Klockan som prickarna färgas efter, eller null för dryckens egen färg. */
+  färgklocka: Klockaxel | null
   vald: string | null
   molnet: Produkt[]
   valdProdukt: Produkt | null
 }) {
-  const kulör = palett(karta.färgskala)
+  const kulör = kartfärger(karta.färgskala, färgklocka)
   const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
   const [ruta, setRuta] = useState({ ritfaktor: REFERENSFAKTOR, bredd: 1060, höjd: 864 })
@@ -190,6 +193,7 @@ export default function Karta3D({
       ...vrid(g),
       r: 4 + 20 * Math.sqrt(g.antal / maxAntal),
       mörkhet: g.mörkhet,
+      klockor: g.klockor,
       grupp: true,
       utvald: vald === g.namn,
     }))
@@ -201,6 +205,7 @@ export default function Karta3D({
         ...vrid(p),
         r: valdProdukt?.id === p.id ? 5.5 : 3.2,
         mörkhet: p.mörkhet,
+        klockor: p.klockor,
         grupp: false,
         utvald: valdProdukt?.id === p.id,
       })
@@ -424,8 +429,8 @@ export default function Karta3D({
             // som på den platta kartan — zoomen sprider isär molnet, den
             // förstorar det inte.
             r={p.r * luppPrick}
-            fill={p.grupp ? kulör.fyllning(p.mörkhet) : kulör.litenPrick(p.mörkhet)}
-            stroke={p.utvald ? 'rgb(255 255 255 / 0.95)' : kulör.kant(p.mörkhet)}
+            fill={p.grupp ? kulör.fyllning(p) : kulör.litenPrick(p)}
+            stroke={p.utvald ? 'rgb(255 255 255 / 0.95)' : kulör.kant(p)}
             strokeWidth={(p.utvald ? 2.5 : 0.8) * lupp}
             opacity={dis(p.d) * (molnet.length && p.grupp && !p.utvald ? 0.3 : 1)}
           />

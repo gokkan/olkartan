@@ -1,7 +1,18 @@
 import type { Skala } from './färg'
 
-/** En smakklocka: beska för öl, strävhet för rött vin. Max skiljer per dryck. */
-export type Klockaxel = { nyckel: string; etikett: string; max: number }
+/**
+ * En smakklocka: beska för öl, strävhet för rött vin. Max skiljer per dryck.
+ *
+ * `max` är skalans slut, som panelens staplar mäts mot. `spann` är var
+ * produkterna faktiskt ligger — det färgskalan sträcks över när man färgar
+ * kartan efter klockan. Se byggskriptet.
+ */
+export type Klockaxel = {
+  nyckel: string
+  etikett: string
+  max: number
+  spann: [number, number]
+}
 
 /**
  * En prick på kartan. En ölstil eller en vindruva — kartan bryr sig inte om

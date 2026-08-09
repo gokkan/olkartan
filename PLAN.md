@@ -478,6 +478,27 @@ Två saker skiljer det från den platta kartan. **Skalan är enhetlig på alla t
 
 Testet mäter det som är läget värt: ta de två stilar som ligger närmast varandra, vrid ett kvarts varv, mät igen. Dortmunder och Zwickel går från 2 px till 145 px av ett typiskt avstånd på 196. Går de inte isär gör läget ingen nytta.
 
+### Smakklockorna får färgen, inte z-axeln
+
+Nästa fråga låg nära: kan man se beska och fyllighet någonstans? Det första förslaget vore att låta en klocka vara z-axeln i stället för PC3 — läsbart, med ett namn. Mätningen säger nej:
+
+```
+                    PC3    bästa klockan
+öl                  80 %   61 %  (beska)
+rött                67 %   19 %  (strävhet)
+vitt                57 %   79 %  (fyllighet)
+```
+
+Andelen falska grannar som glider isär. En klocka duger på vitvinskartan och är oanvändbar på rödvinskartan, där fruktsyran skiljer noll procent av paren. Dessutom är klockorna heltal: de ger 267 unika lägen för 3 395 öl och 80 lägen för 1 445 röda viner. Som axel blir det ett galler med tjugo drycker per punkt.
+
+**Färgen är den lediga kanalen.** Platsen betyder smaklikhet, storleken antal, och färgen betydde hur mörk drycken är — den enda av de tre som går att byta ut utan att tappa något som inte står någon annanstans. En ruta under kartvalet växlar mellan dryckens färg och en klocka, och valet ligger i hashen som allt annat.
+
+Två beslut i den skalan. Den ligger **utanför dryckernas färgspråk** — kall och blek till varm och ljus, en riktning som inte finns i någon SRM-skala — för annars går det inte att veta vilken av de två avläsningarna man ser. Och den **sträcks över det spann där produkterna faktiskt ligger**, inte över klockans hela skala: nittio procent av de röda vinerna har fruktsyra mellan 9 och 10 av 11, och mot hela skalan blir kartan enfärgad. Golvet på 40 % av skalan finns för att det inte ska slå över åt andra hållet — sträcktes ett spann på ett enda steg ut över hela färgskalan skulle en klocka som knappt varierar se ut att bära hela kartan. Med golvet används bara en flik, och kartan ser platt ut, vilket är sanningen om den klockan.
+
+Ölkartan färgad efter beska stämmer med ögat: surölen och veteölen kalla, IPA-hörnet varmt, imperial stout varmt. Testet kräver IPA varmare än pilsner varmare än gueuze.
+
+**Och en gammal fälla igen.** Färgrutan gav reglaget en tredje rad, och uppåtpilens axelord hamnade under det — samma bugg som när kartvalet kom till. Talet stod handsatt i css:en (`top: 96px`). Nu mäter App reglagets höjd och skickar den som `--reglage`, så nästa rad flyttar etiketten av sig själv.
+
 ---
 
 ## Formgivning

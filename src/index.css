@@ -750,6 +750,55 @@ footer span:last-child {
   cursor: pointer;
 }
 
+/* Vad färgen ska betyda. Ligger på egen rad under reglagen — den hör ihop med
+   kartan snarare än med navigeringen, och en fjärde knapp i raden hade brutit
+   den på telefon. */
+.fargval {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  padding: 3px 9px 3px 11px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--linje);
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 12px;
+  color: var(--svag);
+}
+
+.fargval select {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 2px;
+  cursor: pointer;
+}
+
+.fargval select option {
+  background: var(--yta);
+  color: var(--text);
+}
+
+.fargskala {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fargband {
+  display: block;
+  width: 62px;
+  height: 8px;
+  border-radius: 99px;
+  border: 1px solid var(--linje);
+}
+
 /* Samma pillerform som kartvalet — det är ett läge man växlar, inte en text
    man öppnar, och ska därför inte se ut som i-knappen. */
 .vy-knapp {
@@ -1027,10 +1076,11 @@ footer span:last-child {
   }
 
   /* Reglaget är nästan skärmbrett på telefon och låg annars rakt över
-     uppåtpilen. Etiketten flyttas ned under det i stället — under både
-     sökrutan och kartvalet. */
+     uppåtpilen. Etiketten flyttas ned under det. Höjden mäts i App och kommer
+     in som `--reglage` — den stod tidigare som ett handsatt tal här, och gick
+     sönder varje gång reglaget fick en rad till. */
   .axel.upp {
-    top: 96px;
+    top: calc(var(--reglage, 82px) + 22px);
   }
 }
 

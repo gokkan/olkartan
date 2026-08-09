@@ -284,7 +284,52 @@ console.log(
   `  ovanpå en stil: "${övertog}" → stäng → "${åter}"  ${åter === 'Hefeweizen' ? '✓' : '✗'}`,
 )
 
-/* --- 10. Rama in molnet -------------------------------------------------- */
+/* --- 10. Färg efter smakklocka ---------------------------------------------
+ * Platsen betyder smaklikhet och storleken antal, så färgen är den enda lediga
+ * kanalen för klockorna. Testet kollar att den faktiskt skiljer: IPA ska bli
+ * varmare än pilsner när kartan färgas efter beska. */
+console.log('\nfärg efter klocka:')
+await p.goto(bas, { waitUntil: 'networkidle' })
+await klar()
+const kulör = () =>
+  p.evaluate(() => {
+    const av = (n) =>
+      document.querySelector(`circle[data-grupp="${n}"]`)?.getAttribute('fill') ?? ''
+    const värme = (s) => {
+      const [r, , b] = s.match(/\d+/g)?.map(Number) ?? [0, 0, 0]
+      return r - b
+    }
+    return {
+      olika: new Set(
+        [...document.querySelectorAll('circle[data-grupp]')].map((e) => e.getAttribute('fill')),
+      ).size,
+      ipa: värme(av('India pale ale (IPA)')),
+      pilsner: värme(av('Pilsner - tysk stil')),
+      gueuze: värme(av('Gueuze')),
+    }
+  })
+console.log(`  standard: ${(await kulör()).olika} olika färger`)
+await p.locator('.fargval select').selectOption('beska')
+await p.waitForTimeout(400)
+const k = await kulör()
+console.log(
+  `  beska: ${k.olika} olika · IPA ${k.ipa} > pilsner ${k.pilsner} > gueuze ${k.gueuze}  ` +
+    (k.ipa > k.pilsner && k.pilsner > k.gueuze ? '✓ följer beskan' : '✗'),
+)
+console.log(
+  `  hash: ${new URL(p.url()).hash} · skala ${await p.locator('.fargskala').textContent()}`,
+)
+
+/* Beska finns inte på vitvinskartan — valet ska falla tillbaka, inte krascha. */
+await p.locator('.kartval button', { hasText: 'vitt' }).click()
+await p.waitForTimeout(700)
+console.log(
+  `  efter byte till vitt: valt "${await p.locator('.fargval select').inputValue()}", ` +
+    `alternativ ${(await p.locator('.fargval option').allTextContents()).slice(1).join('/')}  ` +
+    ((await p.locator('.fargval select').inputValue()) === '' ? '✓ föll tillbaka' : '✗'),
+)
+
+/* --- 11. Rama in molnet -------------------------------------------------- */
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
 await p.goto(bas + '#grupp=' + encodeURIComponent('India pale ale (IPA)'), {

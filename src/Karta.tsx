@@ -8,8 +8,8 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
-import { palett } from './lib/färg'
+import type { Grupp, Karta as KartaTyp, Klockaxel, Produkt } from './lib/typer'
+import { kartfärger } from './lib/färg'
 import { grupprad } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
 
@@ -84,6 +84,8 @@ export type KartHandtag = {
 
 type Props = {
   karta: KartaTyp
+  /** Klockan som prickarna färgas efter, eller null för dryckens egen färg. */
+  färgklocka: Klockaxel | null
   vald: string | null
   /** Produkterna som ska ritas ut som ett moln. En grupps produkter, eller
    *  träffarna på ett smakord — kartan bryr sig inte om vilket. */
@@ -94,11 +96,11 @@ type Props = {
 }
 
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
-  { karta, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
+  { karta, färgklocka, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
   const grupper = karta.grupper
-  const kulör = palett(karta.färgskala)
+  const kulör = kartfärger(karta.färgskala, färgklocka)
   // Axelorden är långa — 'sirapslimpa, pomerans, choklad' tar halva bredden
   // på en telefon. På smal skärm räcker det tyngsta ordet åt varje håll.
   const smal = useSmalSkärm('(max-width: 700px)')
@@ -532,18 +534,14 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 r={skStil(p.r)}
                 // Den valda stilen är inte längre en prick utan behållaren
                 // runt sina öl, och ritas därför som en kontur.
-                fill={
-                  utvald && molnpunkter.length
-                    ? kulör.ring(p.grupp.mörkhet)
-                    : kulör.fyllning(p.grupp.mörkhet)
-                }
+                fill={utvald && molnpunkter.length ? kulör.ring(p.grupp) : kulör.fyllning(p.grupp)}
                 fillOpacity={utvald && molnpunkter.length ? 0.14 : 1}
                 stroke={
                   utvald
-                    ? kulör.ring(p.grupp.mörkhet)
+                    ? kulör.ring(p.grupp)
                     : aktiv
                       ? 'rgb(255 255 255 / 0.85)'
-                      : kulör.kant(p.grupp.mörkhet)
+                      : kulör.kant(p.grupp)
                 }
                 strokeWidth={sk(utvald ? 2 : aktiv ? 2 : 1)}
                 opacity={p.tom ? 0.12 : nedtonad ? (aktiv ? 0.6 : 0.22) : 1}
@@ -569,7 +567,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
                 cx={ö.px}
                 cy={ö.py}
                 r={skPrick(utvald ? 5.5 : 3.6)}
-                fill={kulör.litenPrick(ö.produkt.mörkhet)}
+                fill={kulör.litenPrick(ö.produkt)}
                 stroke={utvald ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.45)'}
                 strokeWidth={sk(utvald ? 2 : 0.6)}
                 onPointerEnter={() => setHovradProdukt(ö.produkt)}

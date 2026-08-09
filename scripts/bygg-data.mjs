@@ -516,7 +516,31 @@ function byggKarta(dryck) {
     grupp: dryck.grupp,
     enhet: dryck.enhet,
     färgskala: dryck.färgskala,
-    klockor: dryck.klockor.map(({ nyckel, etikett, max }) => ({ nyckel, etikett, max })),
+    /* `max` är klockans skala, som staplarna i panelen mäts mot. `spann` är
+       var produkterna faktiskt ligger, och det är den färgskalan sträcks över
+       — annars blir kartan enfärgad. Rödvinets fruktsyra ligger mellan 9 och
+       10 av 11 hos nittio procent av vinerna.
+
+       Golvet på 40 % av skalan finns för att det inte får bli tvärtom heller.
+       Sträcktes ett spann på ett enda steg ut över hela färgskalan skulle en
+       klocka som knappt varierar se ut att bära hela kartan. Med golvet
+       används bara en flik av skalan, och kartan ser platt ut — vilket är
+       sanningen om den klockan. */
+    klockor: dryck.klockor.map(({ nyckel, etikett, max }) => {
+      const v = produkter.map((p) => p.klockor[nyckel]).sort((a, b) => a - b)
+      const kvantil = (t) => v[Math.floor(t * (v.length - 1))]
+      let lo = kvantil(0.05)
+      let hi = kvantil(0.95)
+      const minsta = max * 0.4
+      if (hi - lo < minsta) {
+        const mitt = (lo + hi) / 2
+        // Klockorna är heltal, så ändarna ska vara det också — annars står det
+        // "0,7999999999999998" i teckenförklaringen.
+        lo = Math.max(0, Math.floor(mitt - minsta / 2))
+        hi = Math.min(max, Math.ceil(mitt + minsta / 2))
+      }
+      return { nyckel, etikett, max, spann: [lo, hi] }
+    }),
     byggd: new Date().toISOString().slice(0, 10),
     antalProdukter: produkter.length,
     antalGrupper: grupper.length,

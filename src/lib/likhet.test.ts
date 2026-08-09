@@ -19,9 +19,9 @@ const FREKVENS = {
 /** Ölkartans klockor. Testerna gäller motorn, inte en viss dryck, men de
  *  behöver en uppsättning axlar att räkna med. */
 const AXLAR: Klockaxel[] = [
-  { nyckel: 'beska', etikett: 'beska', max: 10 },
-  { nyckel: 'fyllighet', etikett: 'fyllighet', max: 12 },
-  { nyckel: 'sötma', etikett: 'sötma', max: 11 },
+  { nyckel: 'beska', etikett: 'beska', max: 10, spann: [2, 8] },
+  { nyckel: 'fyllighet', etikett: 'fyllighet', max: 12, spann: [4, 9] },
+  { nyckel: 'sötma', etikett: 'sötma', max: 11, spann: [0, 6] },
 ]
 
 let räknare = 0

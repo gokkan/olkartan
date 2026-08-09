@@ -92,11 +92,14 @@ console.log(
 
 /* Texten på kartan ska gå att läsa. Under elva punkter går den inte att läsa
    på en telefon, hur fin kartan än är. */
-const textstorlek = await p.locator('text.etikett').first().evaluate((e) => {
-  const r = e.getBoundingClientRect()
-  // Höjden på rutan är den utritade texten i skärmpunkter.
-  return { px: +r.height.toFixed(1), antal: document.querySelectorAll('text.etikett').length }
-})
+const textstorlek = await p
+  .locator('text.etikett')
+  .first()
+  .evaluate((e) => {
+    const r = e.getBoundingClientRect()
+    // Höjden på rutan är den utritade texten i skärmpunkter.
+    return { px: +r.height.toFixed(1), antal: document.querySelectorAll('text.etikett').length }
+  })
 console.log(
   `\netiketter: ${textstorlek.antal} st, ${textstorlek.px} px  ` +
     (textstorlek.px >= 11 ? '✓ läsbara' : '✗ för små'),
@@ -112,7 +115,11 @@ const kortet = () =>
     const a = document.querySelector('.panel')
     if (!a) return null
     const r = a.getBoundingClientRect()
-    return { topp: Math.round(r.top), synligt: Math.round(innerHeight - r.top), kikar: a.classList.contains('kikar') }
+    return {
+      topp: Math.round(r.top),
+      synligt: Math.round(innerHeight - r.top),
+      kikar: a.classList.contains('kikar'),
+    }
   })
 
 let k = await kortet()
@@ -122,7 +129,9 @@ const kartaKvar = await p.evaluate((topp) => {
   const c = [...document.querySelectorAll('svg circle')]
   return c.filter((e) => e.getBoundingClientRect().bottom < topp).length
 }, k.topp)
-console.log(`  prickar kvar ovanför kortet: ${kartaKvar}  ${kartaKvar > 20 ? '✓' : '✗ kortet täcker kartan'}`)
+console.log(
+  `  prickar kvar ovanför kortet: ${kartaKvar}  ${kartaKvar > 20 ? '✓' : '✗ kortet täcker kartan'}`,
+)
 
 /* Dra i greppet med riktig beröring. Syntetiska pointer events tar en annan
    väg genom webbläsaren och ger falskt negativt. */

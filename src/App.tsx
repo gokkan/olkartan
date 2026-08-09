@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Karta, { type KartHandtag } from './Karta'
 import Panel from './Panel'
 import Urval from './Urval'
@@ -10,12 +10,31 @@ import Fangare from './Fangare'
 import kartorData from './data/kartor.json'
 import { useProdukter } from './lib/hämtaProdukter'
 import { läsLäge, skrivLäge, type Läge } from './lib/lank'
+import { KLOCKSKALA } from './lib/färg'
 import type { Karta as KartaTyp, Produkt, Grupp } from './lib/typer'
 
 const kartor = kartorData as unknown as KartaTyp[]
 
 export default function App() {
   const hanterare = useRef<KartHandtag>(null)
+
+  /* Reglagets höjd, mätt och skickad vidare som CSS-variabel.
+   *
+   * På telefon är reglaget nästan skärmbrett och ligger rakt över uppåtpilens
+   * axelord. Etiketten sköts därför ned under det — men "hur långt ned" stod
+   * som ett handsatt tal i css:en, och gick sönder båda gångerna reglaget
+   * växte: först när kartvalet kom, sedan när färgvalet kom. Nu mäts det. */
+  const reglaget = useRef<HTMLDivElement>(null)
+  const [reglagehöjd, setReglagehöjd] = useState(82)
+  useEffect(() => {
+    const el = reglaget.current
+    if (!el) return
+    const mät = () => setReglagehöjd(Math.round(el.getBoundingClientRect().height))
+    mät()
+    const ro = new ResizeObserver(mät)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   /* Hela urvalet ligger i adressfältet. Att låta hashen vara sanningen i
      stället för att spegla ett separat tillstånd gör bakåtknappen gratis. */
@@ -81,6 +100,16 @@ export default function App() {
      Vill man välja något trycker man 2D. */
   const tredje = läge.vy === '3d'
 
+  /* Vad prickarnas färg ska betyda. Normalt hur mörk drycken är — det är
+     dryckens eget färgspråk och svarar på "vad är det här". Väljer man en
+     klocka svarar färgen i stället på "hur mycket beska", och man ser hur den
+     ligger utspridd över kartan. Klockan valideras mot kartan: byter man till
+     vitt vin finns ingen beska, och då faller färgen tillbaka. */
+  const färgklocka = useMemo(
+    () => karta.klockor.find((k) => k.nyckel === läge.farg) ?? null,
+    [karta, läge.farg],
+  )
+
   /** Kartans id följer alltid med, utom för den första — den är standard. Så
    *  även vyläget: byter man stil ska man inte kastas ur molnet. */
   const bas = (): Läge => ({
@@ -129,10 +158,11 @@ export default function App() {
 
   return (
     <main>
-      <div className="scen">
+      <div className="scen" style={{ '--reglage': `${reglagehöjd}px` } as CSSProperties}>
         {tredje ? (
           <Karta3D
             karta={karta}
+            färgklocka={färgklocka}
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
@@ -141,6 +171,7 @@ export default function App() {
           <Karta
             ref={hanterare}
             karta={karta}
+            färgklocka={färgklocka}
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
@@ -149,7 +180,7 @@ export default function App() {
           />
         )}
 
-        <div className="reglage">
+        <div className="reglage" ref={reglaget}>
           <Fangare namn="Sökrutan">
             <Sok
               karta={karta}
@@ -186,6 +217,37 @@ export default function App() {
               i
             </button>
           </div>
+
+          {/* Kartan visar var något ligger, men inte hur beskt det är — den
+              axeln finns inte i bilden. Färgen är den enda lediga kanalen:
+              storleken betyder antal och platsen betyder smaklikhet. */}
+          <label className="fargval">
+            <span>färg</span>
+            <select
+              value={färgklocka?.nyckel ?? ''}
+              onChange={(e) => gåTill({ ...läge, farg: e.target.value || undefined })}
+            >
+              <option value="">{karta.id === 'ol' ? 'ölets färg' : 'vinets färg'}</option>
+              {karta.klockor.map((k) => (
+                <option key={k.nyckel} value={k.nyckel}>
+                  {k.etikett}
+                </option>
+              ))}
+            </select>
+            {/* Ändarna är där produkterna faktiskt ligger, inte klockans skala
+                — annars vore kartan enfärgad. Talen står ut så att ingen tror
+                att bandet spänner över hela skalan. */}
+            {färgklocka && (
+              <span className="fargskala" aria-hidden>
+                <span>{färgklocka.spann[0]}</span>
+                <span
+                  className="fargband"
+                  style={{ background: `linear-gradient(90deg, ${KLOCKSKALA.join(',')})` }}
+                />
+                <span>{färgklocka.spann[1]}</span>
+              </span>
+            )}
+          </label>
         </div>
 
         {/* Om-rutan tar hela panelplatsen så länge den är öppen. Det man
