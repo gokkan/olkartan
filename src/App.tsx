@@ -45,7 +45,9 @@ export default function App() {
   )
 
   /* En länk till en produkt behöver inte bära gruppen med sig — den framgår
-     av produkten. Har den flera druvor väljs den första. */
+     av produkten. Har den flera druvor väljs den första, och har den ingen
+     alls blir det ingen grupp: 263 röda viner saknar druva hos Systembolaget
+     men ligger ändå på kartan. */
   const grupp = useMemo(() => {
     const namn = läge.grupp ?? produkt?.grupper[0]
     return namn ? (gruppPerNamn.get(namn) ?? null) : null
@@ -65,8 +67,11 @@ export default function App() {
     if (läge.ord) return produkter.filter((p) => p.termer.includes(läge.ord!))
     if (läge.mat) return produkter.filter((p) => p.mat.includes(läge.mat!))
     if (grupp) return produkter.filter((p) => p.grupper.includes(grupp.namn))
+    // En produkt utan grupp har inget moln att ingå i. Den ritas ensam, för
+    // annars skulle kartan vara tom när man sökt upp den.
+    if (produkt) return [produkt]
     return []
-  }, [produkter, läge.ord, läge.mat, grupp])
+  }, [produkter, läge.ord, läge.mat, grupp, produkt])
 
   /** Kartans id följer alltid med, utom för den första — den är standard. */
   const bas = (): Läge => (karta.id === kartor[0].id ? {} : { karta: karta.id })
@@ -95,7 +100,9 @@ export default function App() {
     }
     const bytteGrupp = !p.grupper.includes(läge.grupp ?? '')
     gåTill({ ...bas(), grupp: p.grupper[0], produkt: p.id })
-    if (bytteGrupp) hanterare.current?.flygTill(p.x, p.y)
+    // Utan grupp finns ingen granne att jämföra med — då är en förflyttning
+    // alltid rätt, för det är den enda prick som kommer att synas.
+    if (bytteGrupp || !p.grupper.length) hanterare.current?.flygTill(p.x, p.y)
   }
 
   const väljOrd = (ord: string) => gåTill({ ...bas(), ord })
@@ -153,7 +160,7 @@ export default function App() {
           </Fangare>
         )}
 
-        {grupp && (produkt || !urval) && (
+        {(grupp || produkt) && (produkt || !urval) && (
           <Fangare namn="Panelen">
             <Panel
               karta={karta}
@@ -161,7 +168,7 @@ export default function App() {
               produkter={produkter}
               fel={fel}
               vald={produkt}
-              tillbaka={urval ? urval.värde.toLowerCase() : grupp.namn}
+              tillbaka={urval ? urval.värde.toLowerCase() : (grupp?.namn ?? null)}
               onVäljGrupp={väljGrupp}
               onVäljProdukt={väljProdukt}
               onVäljMat={väljMat}

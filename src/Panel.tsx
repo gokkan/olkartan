@@ -18,13 +18,16 @@ import { liknande } from './lib/likhet'
 
 type Props = {
   karta: Karta
-  grupp: Grupp
+  /** Saknas för de produkter som inte hör till någon grupp — se `grupprad`.
+   *  Då finns bara produktvyn, och den visas utan jämförelse mot en median. */
+  grupp: Grupp | null
   produkter: Produkt[] | null
   fel: string | null
   vald: Produkt | null
   /** Vad tillbakalänken i produktvyn heter. Gruppens namn i vanliga fall, men
-   *  smakordet eller maträtten om det är därifrån man kom. */
-  tillbaka: string
+   *  smakordet eller maträtten om det är därifrån man kom — och ingenting
+   *  alls när produkten saknar grupp, för då finns inget att gå tillbaka till. */
+  tillbaka: string | null
   onVäljGrupp: (g: Grupp) => void
   onVäljProdukt: (p: Produkt) => void
   onVäljMat: (mat: string) => void
@@ -95,10 +98,13 @@ export default function Panel({
 }: Props) {
   const kulör = palett(karta.färgskala)
   const lista = useMemo(
-    () => (produkter ? produkterIGrupp(produkter, grupp) : []),
+    () => (produkter && grupp ? produkterIGrupp(produkter, grupp) : []),
     [produkter, grupp],
   )
-  const grannar = useMemo(() => närmasteGrupper(karta.grupper, grupp), [karta, grupp])
+  const grannar = useMemo(
+    () => (grupp ? närmasteGrupper(karta.grupper, grupp) : []),
+    [karta, grupp],
+  )
   /* Appens kärna. Avståndet räknas i hela smakrymden, inte på kartans två
      dimensioner — därför hamnar träffarna ofta i en annan grupp än den man
      utgick från, vilket är själva poängen. */
@@ -113,9 +119,11 @@ export default function Panel({
       {vald ? (
         /* ------------------------------------------------------ produktvy -- */
         <>
-          <button className="tillbaka" onClick={onTillbaka}>
-            ← {tillbaka}
-          </button>
+          {tillbaka && (
+            <button className="tillbaka" onClick={onTillbaka}>
+              ← {tillbaka}
+            </button>
+          )}
           {/* data-kik: så långt kortet öppnas på telefon vid första trycket. */}
           <div className="produkthuvud" data-kik>
             <div>
@@ -154,6 +162,19 @@ export default function Panel({
             )}
           </dl>
 
+          {/* Systembolaget lämnar druvfältet tomt för var sjätte vin och
+              skriver i stället "… och övriga druvsorter" i råvarutexten, som
+              inte finns i katalogdatan. Kartan vet ändå var vinet ligger — det
+              är smaktexten som placerar det — men det hör inte till någon
+              prick, och det ska stå rakt ut. */}
+          {vald.grupper.length === 0 && (
+            <p className="källnot">
+              {karta.grupp.denna.charAt(0).toUpperCase() + karta.grupp.denna.slice(1)} är inte
+              angiven i Systembolagets katalog, så den hör inte till någon prick på kartan. Platsen
+              räknas fram ur smaktexten som vanligt.
+            </p>
+          )}
+
           {vald.grupper.length > 1 && (
             <>
               <h3>{karta.grupp.flera}</h3>
@@ -177,17 +198,20 @@ export default function Panel({
           )}
 
           <h3>
-            Smakprofil <span className="not">mot {karta.grupp.denna}s median</span>
+            Smakprofil
+            {grupp && <span className="not">mot {karta.grupp.denna}s median</span>}
           </h3>
           <Staplar
             karta={karta}
             värden={vald.klockor}
-            markör={grupp.klockor}
+            markör={grupp?.klockor}
             färg={kulör.stapel(vald.mörkhet)}
           />
-          <p className="teckenförklaring">
-            <span className="prick markör" /> {grupp.namn}
-          </p>
+          {grupp && (
+            <p className="teckenförklaring">
+              <span className="prick markör" /> {grupp.namn}
+            </p>
+          )}
 
           <h3>Så beskrivs den</h3>
           <p className="smaktext">{vald.smaktext}</p>
@@ -228,14 +252,14 @@ export default function Panel({
                     style={{ background: kulör.fyllning(t.produkt.mörkhet) }}
                   />
                   <span className="l-namn">{heltNamn(t.produkt)}</span>
-                  <span className="l-stil">{grupprad(t.produkt)}</span>
+                  <span className="l-stil">{grupprad(t.produkt, karta)}</span>
                   <span className="l-förklaring">{t.förklaring}</span>
                 </button>
               </li>
             ))}
           </ul>
         </>
-      ) : (
+      ) : grupp ? (
         /* --------------------------------------------------------- gruppvy -- */
         <>
           <p className="meta">{grupp.förälder}</p>
@@ -314,7 +338,7 @@ export default function Panel({
             ))}
           </ul>
         </>
-      )}
+      ) : null}
     </Panelram>
   )
 }

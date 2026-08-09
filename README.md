@@ -3,12 +3,14 @@
 Systembolagets sortiment som kartor, där avstånd betyder smaklikhet. Positionen räknas fram ur Systembolagets egna smakbeskrivningar. Sök på något du gillar och se vad som ligger bredvid, eller klicka dig runt. Allt du väljer hamnar i adressfältet, så länken går att skicka vidare.
 
 ```
-öl      3 374 öl     60 stilar
-rött    1 156 viner  52 druvor
-vitt      758 viner  38 druvor
+öl      3 395 öl     60 stilar
+rött    1 445 viner  52 druvor
+vitt      967 viner  39 druvor
 ```
 
 Tre kartor och inte en: rött och vitt vin mäts med olika smakklockor — rött har strävhet, vitt har sötma — och att lägga dem i samma rymd skulle kräva att den saknade axeln räknas som noll. Öl grupperas på stil, vin på druva. Vinets egen kategorinivå är redan en smakklassning ("Fruktigt & Smakrikt"), så att aggregera på den vore cirkulärt.
+
+Grupperna är prickarna, men en dryck utan grupp finns ändå med. Var sjätte vin har tomt druvfält hos Systembolaget; det placeras på kartan ändå, för det är smaktexten som bestämmer platsen.
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 

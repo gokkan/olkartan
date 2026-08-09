@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
 import { palett } from './lib/färg'
+import { grupprad } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -491,7 +492,7 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
 
   const [xAxel, yAxel] = karta.axlar
   const knappnål = hovradProdukt
-    ? { rubrik: hovradProdukt.namn, under: hovradProdukt.grupper.join(' · ') }
+    ? { rubrik: hovradProdukt.namn, under: grupprad(hovradProdukt, karta) }
     : hovrad
       ? { rubrik: hovrad.namn, under: `${hovrad.antal} st` }
       : null

@@ -243,7 +243,7 @@ export default function Sok({
                   ) : (
                     <>
                       <span className="sok-namn">{heltNamn(t.produkt)}</span>
-                      <span className="sok-stil">{grupprad(t.produkt)}</span>
+                      <span className="sok-stil">{grupprad(t.produkt, karta)}</span>
                       <span className="sok-meta">{producentRad(t.produkt)}</span>
                     </>
                   )}

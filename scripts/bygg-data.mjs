@@ -173,6 +173,9 @@ const median = (a) => {
 const r6 = (n) => String(n).padStart(6)
 
 function byggKarta(dryck) {
+  // Druvläsaren behöver hela sortimentet innan något filtreras bort — den
+  // bygger sitt ordförråd ur de viner som har druvan angiven.
+  dryck.förbered?.(alla)
   const kastat = new Map()
   const räkna = (skäl) => kastat.set(skäl, (kastat.get(skäl) ?? 0) + 1)
   let valda = []
@@ -203,12 +206,22 @@ function byggKarta(dryck) {
     return a.productId <= b.productId ? a : b
   }
   const unika = new Map()
+  /* Gruppen hör till drycken, inte till artikeln. Systembolaget kan ha druvan
+     ifylld på det ena artikelnumret och tomt på det andra, och representanten
+     väljs på om vinet går att köpa — inte på hur välskött posten är. Utan
+     unionen här tappade rödvinskartan en druva så fort de druvlösa vinerna
+     fick vara kvar: representanten råkade bli den tomma posten. */
+  const unionPer = new Map()
   for (const p of valda) {
     const nyckel = dryck.dubblettnyckel(p).join(' ')
     const fanns = unika.get(nyckel)
     unika.set(nyckel, fanns ? bättre(fanns, p) : p)
+    const g = unionPer.get(nyckel) ?? []
+    for (const x of dryck.grupperAv(p)) if (!g.includes(x)) g.push(x)
+    unionPer.set(nyckel, g)
   }
   const dubbletter = valda.length - unika.size
+  const grupperna = new Map([...unika].map(([nyckel, p]) => [p, unionPer.get(nyckel)]))
   valda = [...unika.values()]
 
   /* --- vilka grupper som är grupper --------------------------------------
@@ -216,16 +229,21 @@ function byggKarta(dryck) {
    * en etikett, och dess mittpunkt är produktens egna egenheter. Öl klarar
    * gränsen 1 — tre av sextio stilar är små. Vin gör det inte: sextio av
    * hundrafyrtio druvor har färre än fem viner.
+   *
+   * Produkten kastas däremot inte för att gruppen faller bort, och inte heller
+   * för att katalogen saknar den. Den har en smaktext, alltså en plats, och
+   * den platsen är vad appen har att erbjuda. Farmers Market Organic finns i
+   * hyllan för 89 kronor men har tomt druvfält, och att den då inte gick att
+   * söka upp var svaret "vi vet inte vad det här är" på frågan "var ligger
+   * den?". Utan grupp drar den inte i någon mittpunkt — den ligger bara där
+   * den ligger.
    */
   const antalPerGrupp = new Map()
   for (const p of valda)
-    for (const g of dryck.grupperAv(p)) antalPerGrupp.set(g, (antalPerGrupp.get(g) ?? 0) + 1)
+    for (const g of grupperna.get(p)) antalPerGrupp.set(g, (antalPerGrupp.get(g) ?? 0) + 1)
   const godkänd = (g) => (antalPerGrupp.get(g) ?? 0) >= dryck.minGrupp
-  const grupperFör = (p) => dryck.grupperAv(p).filter(godkänd)
-  const före = valda.length
-  valda = valda.filter((p) => grupperFör(p).length)
-  const utanGrupp = före - valda.length
-  if (utanGrupp) räkna(`bara små ${dryck.grupp.flera}`)
+  const grupperFör = (p) => grupperna.get(p).filter(godkänd)
+  const utanGrupp = valda.filter((p) => !grupperFör(p).length).length
 
   /* --- termrymd ----------------------------------------------------------- */
   const df = new Map()
@@ -505,7 +523,7 @@ function byggKarta(dryck) {
     return { text, a, b, op, gräns, d, ok }
   })
 
-  return { karta, produkter, kastat, dubbletter, vokabulär, utfall, txRåSd }
+  return { karta, produkter, kastat, dubbletter, utanGrupp, vokabulär, utfall, txRåSd }
 }
 
 /* --- kör alla drycker ----------------------------------------------------- */
@@ -518,7 +536,8 @@ let allaGodkända = true
 for (const dryck of DRYCKER) {
   if (BARA && dryck.id !== BARA) continue
   console.log(`\n${'='.repeat(62)}\n${dryck.namn.toUpperCase()}\n`)
-  const { karta, produkter, kastat, dubbletter, vokabulär, utfall, txRåSd } = byggKarta(dryck)
+  const { karta, produkter, kastat, dubbletter, utanGrupp, vokabulär, utfall, txRåSd } =
+    byggKarta(dryck)
 
   // Grupperna byggs in och behövs direkt. Produkterna är megabyte och behövs
   // först vid ett klick, så de läggs i public/ och hämtas då. Kartan målas
@@ -532,7 +551,7 @@ for (const dryck of DRYCKER) {
   console.log(`  ${'dubbletter ihopslagna'.padEnd(24)}${r6(dubbletter)}`)
   console.log(`
 skrev
-  ${dryck.id}.json${' '.repeat(Math.max(1, 18 - dryck.id.length))}${r6(produkter.length)} produkter
+  ${dryck.id}.json${' '.repeat(Math.max(1, 18 - dryck.id.length))}${r6(produkter.length)} produkter, varav ${utanGrupp} utan ${dryck.grupp.en}
   ${karta.grupper.length} ${dryck.grupp.flera}, varav små (<${dryck.litenUnder}): ${karta.grupper.filter((g) => g.liten).length}
   termrymd: ${vokabulär.length} termer, färg satt på ${produkter.filter((p) => p.mörkhet !== null).length}, bild på ${produkter.filter((p) => p.bild).length}
   textkomponenter: ${txRåSd.map((sd, i) => `PC${i + 1} ${((sd / txRåSd[0]) ** 2 * 100).toFixed(0)}%`).join('  ')}

@@ -22,6 +22,12 @@
  * 3. Ett vin kan ha flera druvor. En öl har en stil, men en Bordeaux är
  *    cabernet *och* merlot, och båda druvorna ska räkna vinet som sitt. Därför
  *    är gruppen en lista, inte ett värde.
+ *
+ * Gruppen kan också saknas. Var sjätte vin med smaktext har `grapes` tomt —
+ * Systembolaget skriver "Negroamaro, primitivo och övriga druvsorter" i
+ * råvarutexten och lämnar det strukturerade fältet tomt. De vinerna har ändå
+ * en smak och en plats, så de ligger kvar på kartan utan druva. Se
+ * `grupperAv` och `utan grupp` i bygg-data.mjs.
  */
 
 /** Karaktärsordens ledord, som stryks: "något syrlig" är samma ord som "syrlig". */
@@ -93,8 +99,44 @@ const klocka = (p, nyckel) => p.tasteClocks?.find((c) => c.key === nyckel)?.valu
  * Ett vin räknas till varje druva det är gjort på. Druvorna kommer i
  * Systembolagets ordning, som inte är alfabetisk utan efter andel — den
  * ordningen är värd att behålla i gränssnittet.
+ *
+ * Fältet `grapes` är tomt för 375 av de 2 558 viner som har smaktext. Ofta står
+ * druvan ändå på etiketten: "Grand Sud Merlot", "Famille Audu Chardonnay". Den
+ * läses av här, men bara mot ordförrådet från de viner som HAR fältet ifyllt —
+ * listan är alltså Systembolagets egen och inte min. Det räddar en femtedel av
+ * de tomma; resten ligger kvar på kartan utan druva.
  */
-const druvor = (p) => [...new Set(p.grapes ?? [])]
+const BOKSTAV = 'a-zåäöéèêüïíìóòáàñç'
+const flykta = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+function druvläsare(hörHit) {
+  let mönster = []
+  return {
+    /** Ordförrådet, byggt ur hela sortimentet innan något filtreras bort. */
+    lär(alla) {
+      const namn = new Set()
+      for (const p of alla) if (hörHit(p)) for (const g of p.grapes ?? []) namn.add(g)
+      mönster = [...namn].map((g) => [
+        g,
+        new RegExp(`(^|[^${BOKSTAV}])${flykta(g)}([^${BOKSTAV}]|$)`, 'i'),
+      ])
+    },
+    av(p) {
+      const angivna = [...new Set(p.grapes ?? [])]
+      if (angivna.length) return angivna
+      const namn = [p.productNameBold, p.productNameThin].filter(Boolean).join(' ')
+      const träff = mönster.filter(([, re]) => re.test(namn)).map(([g]) => g)
+      // "Black Stallion Cabernet Sauvignon" träffar både Cabernet sauvignon
+      // och Sauvignon, om båda finns i ordförrådet. Den längre vinner.
+      return träff.filter(
+        (g) => !träff.some((h) => h !== g && h.toLowerCase().includes(g.toLowerCase())),
+      )
+    },
+  }
+}
+
+const rödaDruvor = druvläsare((p) => p.categoryLevel2 === 'Rött vin')
+const vitaDruvor = druvläsare((p) => p.categoryLevel2 === 'Vitt vin')
 
 /** [svenskt namn, fältet i tasteClocks, maxvärde för den här dryckstypen] */
 const vinklockor = (nycklar) =>
@@ -128,10 +170,12 @@ export const DRYCKER = [
       // Smaktexten och klockorna fylls i vid samma tillfälle: saknas den ena
       // saknas i praktiken den andra. Kravet på beska > 0 fångar båda.
       if (!p.taste || !p.tasteClockBitter) return 'saknar smakdata'
-      if (!p.categoryLevel3) return 'saknar stil'
       return null
     },
-    grupperAv: (p) => [p.categoryLevel3],
+    // 24 öl saknar stil i katalogen, 21 efter att dubbletterna slagits ihop.
+    // De ligger kvar på kartan som enskilda prickar utan att dra i någon stils
+    // mittpunkt.
+    grupperAv: (p) => [p.categoryLevel3].filter(Boolean),
     förälderAv: (p) => p.categoryLevel2,
     dubblettnyckel: (p) => [p.productNameBold, p.productNameThin ?? '', p.producerName ?? ''],
     klockor: [
@@ -156,7 +200,13 @@ export const DRYCKER = [
     mörkhet: mörkhetAv(FÄRGORD_ÖL),
     fatlagrad: (p) => (p.tasteClockCasque ?? 0) > 1,
     kontroller: [
-      ['mörkt rostat skilt från humlebeskt', 'Torr porter och stout', 'India pale ale (IPA)', '>', 0.8],
+      [
+        'mörkt rostat skilt från humlebeskt',
+        'Torr porter och stout',
+        'India pale ale (IPA)',
+        '>',
+        0.8,
+      ],
       ['ljusa lager ligger ihop', 'Pilsner - tysk stil', 'Dortmunder och helles', '<', 0.5],
       ['stout-släktet håller ihop', 'Torr porter och stout', 'Imperial porter och stout', '<', 1.5],
       ['veteölen ligger ihop', 'Hefeweizen', 'Witbier', '<', 0.6],
@@ -183,10 +233,10 @@ export const DRYCKER = [
       if (o) return o
       if (!p.taste) return 'saknar smaktext'
       if (klocka(p, 'TasteClockBody') === undefined) return 'saknar klockor'
-      if (!druvor(p).length) return 'saknar druva'
       return null
     },
-    grupperAv: druvor,
+    förbered: (alla) => rödaDruvor.lär(alla),
+    grupperAv: (p) => rödaDruvor.av(p),
     förälderAv: (p) => p.country,
     // Årgången hör till nyckeln för vin men inte för öl. Två årgångar av samma
     // vin har olika smaktext och är två viner på kartan; två burkstorlekar av
@@ -231,10 +281,10 @@ export const DRYCKER = [
       if (o) return o
       if (!p.taste) return 'saknar smaktext'
       if (klocka(p, 'TasteClockBody') === undefined) return 'saknar klockor'
-      if (!druvor(p).length) return 'saknar druva'
       return null
     },
-    grupperAv: druvor,
+    förbered: (alla) => vitaDruvor.lär(alla),
+    grupperAv: (p) => vitaDruvor.av(p),
     förälderAv: (p) => p.country,
     dubblettnyckel: (p) => [
       p.productNameBold,

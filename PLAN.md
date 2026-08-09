@@ -359,7 +359,7 @@ Det handlagda sortimentet är fullständigt beskrivet. De 11 189 ordervarorna ä
 
 **Ett vin kan ha flera druvor.** En öl har en stil, men en Bordeaux är cabernet *och* merlot, och båda druvorna räknar vinet som sitt. Gruppen är därför en lista i datamodellen, inte ett värde. Det gjorde `stil: string` till `grupper: string[]` genom hela appen.
 
-**En druva med två viner är ingen druva på kartan** utan ett vin med en etikett, och dess mittpunkt är vinets egna egenheter. Öl klarar gränsen ett — tre av sextio stilar är små. Vin gör det inte: sextio av hundrafyrtio druvor har färre än fem viner. Gränsen är fem, och de viner vars alla druvor faller bort kastas: 245 röda och 130 vita.
+**En druva med två viner är ingen druva på kartan** utan ett vin med en etikett, och dess mittpunkt är vinets egna egenheter. Öl klarar gränsen ett — tre av sextio stilar är små. Vin gör det inte: sextio av hundrafyrtio druvor har färre än fem viner. Gränsen är fem. Vinet självt kastas däremot inte när dess druvor faller bort — se nästa avsnitt.
 
 ### Kontrollerna, och en som hade fel
 
@@ -386,7 +386,32 @@ Appen bytte `stil` mot `grupp` genomgående och läser klockaxlarna ur kartan i 
 
 ### En dubblett som gömde sig i ett NUL-tecken
 
-Ölen gick från 3 375 till 3 374 i omskrivningen, och det tog en stund att förstå varför. Den gamla dubblettnyckeln fogade ihop namnfälten med ett ` ` mellan sig — ett osynligt tecken som dessutom fick `grep` att kalla filen binär. Med NUL emellan är "Stigbergets" + "Amazing Haze IPA" och "Stigbergets Amazing Haze" + "IPA" två olika nycklar. Det är samma öl; Systembolaget har bara delat namnet olika i de två artiklarna. Nyckeln fogas nu ihop med mellanslag, vilket jämför det visade namnet i stället för fältuppdelningen, och dubbletten försvann.
+Ölen gick från 3 375 till 3 374 i omskrivningen, och det tog en stund att förstå varför. Den gamla dubblettnyckeln fogade ihop namnfälten med en NUL-byte mellan sig — ett osynligt tecken som dessutom fick `grep` att kalla filen binär (och som en gång följde med in i den här filen, vilket gjorde samma sak med den). Med NUL emellan är "Stigbergets" + "Amazing Haze IPA" och "Stigbergets Amazing Haze" + "IPA" två olika nycklar. Det är samma öl; Systembolaget har bara delat namnet olika i de två artiklarna. Nyckeln fogas nu ihop med mellanslag, vilket jämför det visade namnet i stället för fältuppdelningen, och dubbletten försvann.
+
+---
+
+## Ett vin utan druva är fortfarande ett vin
+
+Farmers Market Organic står i hyllan för 89 kronor, har en smaktext och tre smakklockor — och gick inte att söka upp. Fältet `grapes` är tomt. Systembolagets egen sida skriver "Negroamaro, primitivo och övriga druvsorter" under Råvaror, men den texten finns inte i katalogdatan, och druvkartan kastade allt som saknade druva.
+
+Det gällde 375 viner med smaktext, var sjätte: 245 röda och 130 vita. Plus 24 öl utan `categoryLevel3`. Formuleringen "vi vet inte vad det här är" var appens svar på frågan "var ligger den?" — men appen visste var den låg. Placeringen kommer ur smaktexten, inte ur druvan.
+
+**Två åtgärder, i den ordningen.**
+
+*Läs druvan på etiketten.* "Grand Sud Merlot", "Famille Audu Chardonnay", "Black Stallion Napa Valley Cabernet Sauvignon" — druvan står på flaskan även när fältet är tomt. Ordförrådet byggs ur de viner som *har* fältet ifyllt, så listan är Systembolagets egen och inte min. Det räddar 63 viner, och gav vitvinskartan en druva till: Moscato passerade fem.
+
+*Låt resten ligga kvar utan grupp.* De ingår i termrymden och PCA:n — de är röda viner, beskrivna med samma ordförråd, och det finns inget smakskäl att utesluta dem — men de drar inte i någon druvas mittpunkt och syns inte i någon druvas lista. Öppnar man ett står det rakt ut att druvan inte är angiven, och staplarna visas utan medianmarkör eftersom det inte finns någon median att jämföra med.
+
+```
+        före            efter
+öl      3 374 öl        3 395   varav 21 utan stil
+rött    1 156 viner     1 445   varav 263 utan druva
+vitt      758 viner       967   varav 181 utan druva
+```
+
+**En dubblett som åt en druva.** Rödvinskartan tappade en druva så fort de druvlösa vinerna fick vara kvar. Samma vin ligger ofta under två artikelnummer, och representanten väljs på om vinet går att köpa — inte på hur välskött posten är. Nu kunde den tomma posten vinna och druvan försvann med den. Druvan hör till vinet, inte till artikelnumret, så dubbletterna unionerar sina grupper. 52 druvor igen.
+
+**Vinkartorna roterade.** 25 % fler viner i termrymden ger nya huvudkomponenter. Avståndskorrelationen mot den gamla kartan är 0,96 och alla fjorton kontroller går igenom med oförändrade marginaler, men var fjärde närmaste-granne-relation ändrades i utkanterna och varje druva flyttade sig — medianen 1,9 spridningsenheter, vilket nästan uteslutande är rotationen. Ölkartan rörde sig 0,005: 21 nya öl av 3 395 ändrar ingenting. Grannlistorna efteråt är om något bättre: cabernet sauvignon → tannat, malbec, cabernet franc, merlot; grenache → cinsault, grenache noir, mourvèdre; gewürztraminer → torrontés, pinot gris, muscat.
 
 **Whisky — nej, inte som karta.** 467 med smaktext, en enda klocka (rökighet), och framför allt ingen nivå att aggregera på: `categoryLevel3` är maltwhisky 315, blended 95, bourbon 31 och sedan ensiffrigt. En karta med tre användbara prickar är ingen karta. Regionen räcker inte heller — 248 av 467 saknar den. Det whisky skulle kunna bli är ett moln utan stillager, en spridningsbild av 467 flaskor. Det är en annan produkt.
 

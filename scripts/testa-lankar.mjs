@@ -90,7 +90,9 @@ await p.locator('.produkter button').first().click()
 await p.waitForTimeout(400)
 console.log(`  klick på "${förstaÖlet.trim()}" → ${await p.locator('.panel h2').textContent()}`)
 console.log(`  tillbakalänk: ${await p.locator('.tillbaka').textContent()}`)
-console.log(`  urvalet kvar i hashen: ${decodeURIComponent(p.url()).includes('mat=Fisk') ? '✓' : '✗'}`)
+console.log(
+  `  urvalet kvar i hashen: ${decodeURIComponent(p.url()).includes('mat=Fisk') ? '✓' : '✗'}`,
+)
 console.log(`  molnet kvar på kartan: ${await p.locator('circle[data-produkt]').count()}`)
 await p.locator('.tillbaka').click()
 await p.waitForTimeout(400)
@@ -150,7 +152,7 @@ await p.unroute('**/productimages/**')
 // det, inte appen, och det är inte något att larma om längre ned.
 fel.length = 0
 
-/* --- 7. Byte av karta ----------------------------------------------------- */
+/* --- 7. Byte av karta ------------------------------------------------------ */
 console.log('\nkartbyte:')
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
@@ -172,14 +174,63 @@ await p.locator('.sok input').fill('cabernet sauvignon')
 await p.waitForTimeout(350)
 await p.locator('.sok-traffar li button').first().click()
 await p.waitForSelector('.panel h2')
-console.log(`  druvvy: ${await p.locator('.panel h2').textContent()} — ${await p.locator('.panel .undertitel').textContent()}`)
+console.log(
+  `  druvvy: ${await p.locator('.panel h2').textContent()} — ${await p.locator('.panel .undertitel').textContent()}`,
+)
 await p.locator('.produkter button').first().click()
 await p.waitForTimeout(400)
 const druvor = await p.locator('.termer .term-knapp').allTextContents()
 console.log(`  vinet: ${await p.locator('.panel h2').textContent()}`)
 console.log(`  klickbara chips: ${druvor.slice(0, 6).join(', ')}`)
 
-/* --- 8. Rama in molnet --------------------------------------------------- */
+/* --- 8. Produkter utan grupp ---------------------------------------------
+ * Var sjätte vin har tomt druvfält hos Systembolaget — Farmers Market Organic
+ * står i hyllan för 89 kronor men gick inte att söka upp, för kartan kastade
+ * allt som saknade druva. De ligger kvar nu, utan att höra till någon prick.
+ * Produkten plockas ur datan så att testet följer med när sortimentet ändras. */
+console.log('\nutan grupp:')
+for (const [karta, hash] of [
+  ['rott', '#karta=rott'],
+  ['ol', ''],
+]) {
+  await p.goto(bas + hash, { waitUntil: 'networkidle' })
+  await klar()
+  const ö = await p.evaluate(
+    async (u) => {
+      const alla = await (await fetch(u)).json()
+      const utan = alla.filter((x) => x.grupper.length === 0)
+      const f = utan.find((x) => x.namn === 'Farmers Market') ?? utan[0]
+      return {
+        antal: utan.length,
+        id: f?.id,
+        namn: [f?.namn, f?.undertitel].filter(Boolean).join(' '),
+      }
+    },
+    bas + `data/${karta}.json`,
+  )
+
+  await p.goto(bas + `#${hash ? 'karta=' + karta + '&' : ''}produkt=${ö.id}`, {
+    waitUntil: 'networkidle',
+  })
+  await klar()
+  await p.waitForSelector('.panel h2')
+  await p.waitForTimeout(1200)
+  const rubrik = await p.locator('.panel h2').textContent()
+  // Ingen tillbakalänk (det finns ingen grupp att gå till), ingen markör i
+  // staplarna (ingen median att jämföra med), men en prick på kartan och en
+  // not som säger varför.
+  const not = await p.locator('.panel .källnot').count()
+  const bak = await p.locator('.tillbaka').count()
+  const markör = await p.locator('.stapel-markör').count()
+  const prickar = await p.locator('circle[data-produkt]').count()
+  const ok = rubrik === ö.namn && not === 1 && bak === 0 && markör === 0 && prickar === 1
+  console.log(
+    `  ${karta.padEnd(5)} ${String(ö.antal).padStart(4)} st · "${ö.namn}" → "${rubrik}", ` +
+      `not ${not}, tillbaka ${bak}, markör ${markör}, prickar ${prickar}  ${ok ? '✓' : '✗'}`,
+  )
+}
+
+/* --- 9. Rama in molnet --------------------------------------------------- */
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
 await p.goto(bas + '#grupp=' + encodeURIComponent('India pale ale (IPA)'), {

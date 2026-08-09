@@ -28,7 +28,7 @@ export default function Produktlista({
             </span>
             <span className="p-meta">{producentRad(p)}</span>
             <span className="p-tal">
-              {grupprad(p)} · {p.abv} % · {kr(p.prisPerLiter)}
+              {grupprad(p, karta)} · {p.abv} % · {kr(p.prisPerLiter)}
             </span>
           </button>
         </li>

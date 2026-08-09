@@ -76,8 +76,15 @@ export const heltNamn = (p: Produkt) => [p.namn, p.undertitel].filter(Boolean).j
 export const producentRad = (p: Produkt) =>
   [p.bryggeri === p.namn ? null : p.bryggeri, p.land].filter(Boolean).join(' · ')
 
-/** Vad produkten hör till, som text. En stil, eller flera druvor. */
-export const grupprad = (p: Produkt) => p.grupper.join(' · ')
+/**
+ * Vad produkten hör till, som text. En stil, eller flera druvor.
+ *
+ * Den kan också höra till ingenting: 263 röda viner har tomt druvfält hos
+ * Systembolaget, och 21 öl saknar stil. De ligger ändå på kartan — smaktexten
+ * räcker för en plats. Raden säger då vad som saknas, inte ingenting alls.
+ */
+export const grupprad = (p: Produkt, karta: Karta) =>
+  p.grupper.join(' · ') || `${karta.grupp.en} ej angiven`
 
 /** Klockvärdena i kartans egen ordning, för staplarna. */
 export const klockvärden = (karta: Karta, klockor: Record<string, number>) =>
