@@ -45,6 +45,8 @@ const SNURRFART = 9
 const MINSTA_DIS = 0.3
 /** Så många gruppnamn skrivs ut. Fler blir en väv av text. */
 const NAMN = 14
+/** Rutor per sida i golvet. Fler blir ett moaré, färre ger inget att hålla i. */
+const RUTOR = 8
 
 type Vinkel = { gir: number; lut: number; k: number }
 
@@ -123,11 +125,18 @@ export default function Karta3D({
      som mäts på riktigt slösar inte bort halva ytan. */
   const rymd = useMemo(() => {
     const g = karta.grupper
-    const spann = (v: number[]) => [Math.min(...v), Math.max(...v)] as const
-    const [x0, x1] = spann(g.map((p) => p.x))
-    const [y0, y1] = spann(g.map((p) => p.y))
-    const [z0, z1] = spann(g.map((p) => p.z))
-    const mitt = { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: (z0 + z1) / 2 }
+    /* Vridningen sker kring tyngdpunkten, inte kring lådans mitt. Lådans mitt
+       ger den minsta omslutande sfären och alltså det största molnet, men
+       prickarna ligger inte jämnt: den täta delen skulle svepa fram och
+       tillbaka över skärmen medan man vrider, och det är just det som gör en
+       roterande vy svår att orientera sig i. Med tyngdpunkten som nav står
+       tätheten stilla och det är ytterkanterna som rör sig. */
+    const vikt = g.reduce((s, p) => s + p.antal, 0) || 1
+    const mitt = {
+      x: g.reduce((s, p) => s + p.x * p.antal, 0) / vikt,
+      y: g.reduce((s, p) => s + p.y * p.antal, 0) / vikt,
+      z: g.reduce((s, p) => s + p.z * p.antal, 0) / vikt,
+    }
     const r = Math.max(...g.map((p) => Math.hypot(p.x - mitt.x, p.y - mitt.y, p.z - mitt.z)))
     /* Sfären ska fylla elementets kortaste led, inte ritytans. Radien räknas
        därför i skärmpunkter och översätts tillbaka till ritenheter. */
@@ -135,11 +144,12 @@ export default function Karta3D({
     return { mitt, skala: iPunkter / ruta.ritfaktor / r, djup: r }
   }, [karta, ruta])
 
-  const vrid = useCallback(
-    (p: { x: number; y: number; z: number }) => {
-      const dx = (p.x - rymd.mitt.x) * rymd.skala
-      const dy = (p.y - rymd.mitt.y) * rymd.skala
-      const dz = (p.z - rymd.mitt.z) * rymd.skala
+  /** Radien i det lokala, skalade rummet — golvets och rutnätets måttstock. */
+  const R = rymd.djup * rymd.skala
+
+  /** Roterar en punkt som redan är räknad relativt mitten och skalad. */
+  const rotera = useCallback(
+    (dx: number, dy: number, dz: number) => {
       const cg = Math.cos(vinkel.gir)
       const sg = Math.sin(vinkel.gir)
       const x1 = dx * cg + dz * sg
@@ -152,10 +162,20 @@ export default function Karta3D({
         px: W / 2 + x1 * vinkel.k,
         py: H / 2 - y1 * vinkel.k,
         // Normaliserat djup, −1 längst bort och 1 närmast.
-        d: Math.max(-1, Math.min(1, z2 / (rymd.djup * rymd.skala))),
+        d: Math.max(-1, Math.min(1, z2 / R)),
       }
     },
-    [rymd, vinkel],
+    [vinkel, R],
+  )
+
+  const vrid = useCallback(
+    (p: { x: number; y: number; z: number }) =>
+      rotera(
+        (p.x - rymd.mitt.x) * rymd.skala,
+        (p.y - rymd.mitt.y) * rymd.skala,
+        (p.z - rymd.mitt.z) * rymd.skala,
+      ),
+    [rotera, rymd],
   )
 
   /* Allt som ska ritas, bakifrån och fram. Prickarnas storlek följer antalet
@@ -218,6 +238,69 @@ export default function Karta3D({
     }
     return ut
   }, [punkter, karta, lupp, luppPrick])
+
+  /* Ett golv med rutnät under molnet, plus ett lodrätt streck genom mitten.
+     Utan referens går det inte att avgöra hur långt man vridit eller vad som
+     är upp — prickarna ensamma ser likadana ut från varje håll. Golvet ligger
+     i planet för de två axlar man ser på den platta kartan, så det man känner
+     igen därifrån är golvet och det nya är höjden.
+
+     Rutorna är inte till för att mätas i. De finns för att ögat ska ha något
+     att hålla fast vid när molnet rör sig, och därför är de bleka. */
+  /* Golvhöjden är molnets egen underkant, inte sfärens botten. Sfären rymmer
+     rotationen åt alla håll, men molnet är platt i höjdled — mäter man mot
+     sfären svävar prickarna långt över sitt golv och lodlinjerna blir längre
+     än allt de ska förklara. */
+  const golvY = useMemo(() => {
+    const ys = karta.grupper.map((g) => (g.y - rymd.mitt.y) * rymd.skala)
+    return Math.min(...ys) - R * 0.06
+  }, [karta, rymd, R])
+
+  const golv = useMemo(() => {
+    /* Rutnätet är en kvadrat, och en kvadrats hörn ligger √2 gånger längre ut
+       än dess sida. Sidan måste därför hållas innanför R/√2, annars sticker
+       hörnen utanför bild när golvet vrids. Inom den gränsen läggs det så tätt
+       intill molnet som molnet självt kräver. */
+    const bredast = Math.max(
+      ...karta.grupper.map((g) =>
+        Math.max(
+          Math.abs((g.x - rymd.mitt.x) * rymd.skala),
+          Math.abs((g.z - rymd.mitt.z) * rymd.skala),
+        ),
+      ),
+    )
+    const kant = Math.min(R / Math.SQRT2, bredast * 1.12)
+    const steg = (kant * 2) / RUTOR
+    const linjer: { x1: number; y1: number; x2: number; y2: number; d: number }[] = []
+    for (let i = 0; i <= RUTOR; i++) {
+      const t = -kant + i * steg
+      for (const [a, b] of [
+        [rotera(t, golvY, -kant), rotera(t, golvY, kant)],
+        [rotera(-kant, golvY, t), rotera(kant, golvY, t)],
+      ])
+        linjer.push({ x1: a.px, y1: a.py, x2: b.px, y2: b.py, d: (a.d + b.d) / 2 })
+    }
+    // Lodrätt streck ur golvets mitt upp till molnets tak, så att "upp" har en
+    // riktning även när golvet ses nästan från kanten.
+    const tak = Math.max(...karta.grupper.map((g) => (g.y - rymd.mitt.y) * rymd.skala))
+    const ned = rotera(0, golvY, 0)
+    const upp = rotera(0, tak, 0)
+    return { linjer, stolpe: { x1: ned.px, y1: ned.py, x2: upp.px, y2: upp.py } }
+  }, [rotera, R, golvY, karta, rymd])
+
+  /* Lodlinjen från den valda pricken ned till golvet. Ett enda streck, men det
+     är det som gör att man ser var i höjdled något ligger — utan det svävar
+     prickarna utan förankring. */
+  const lodlinje = useMemo(() => {
+    const träff = valdProdukt ?? karta.grupper.find((g) => g.namn === vald)
+    if (!träff) return null
+    const dx = (träff.x - rymd.mitt.x) * rymd.skala
+    const dy = (träff.y - rymd.mitt.y) * rymd.skala
+    const dz = (träff.z - rymd.mitt.z) * rymd.skala
+    const a = rotera(dx, dy, dz)
+    const b = rotera(dx, golvY, dz)
+    return { x1: a.px, y1: a.py, x2: b.px, y2: b.py, fot: b }
+  }, [valdProdukt, vald, karta, rymd, rotera, golvY])
 
   /* En kompass i hörnet i stället för axlar genom molnet. Strecken genom
      prickarna såg ut som innehåll; i hörnet läser de som det de är — en
@@ -301,6 +384,34 @@ export default function Karta3D({
         onPointerCancel={släpp}
         onPointerLeave={släpp}
       >
+        {/* Golvet först av allt — det ska ligga under molnet, inte i det. */}
+        <g className="golv" strokeWidth={0.7 * lupp}>
+          {golv.linjer.map((l, i) => (
+            <line
+              key={i}
+              x1={l.x1}
+              y1={l.y1}
+              x2={l.x2}
+              y2={l.y2}
+              opacity={0.1 + 0.22 * ((l.d + 1) / 2)}
+            />
+          ))}
+          <line className="stolpe" {...golv.stolpe} strokeWidth={0.7 * lupp} />
+        </g>
+
+        {lodlinje && (
+          <g className="lodlinje">
+            <line
+              x1={lodlinje.x1}
+              y1={lodlinje.y1}
+              x2={lodlinje.x2}
+              y2={lodlinje.y2}
+              strokeWidth={1.1 * lupp}
+            />
+            <circle cx={lodlinje.fot.px} cy={lodlinje.fot.py} r={2.2 * lupp} />
+          </g>
+        )}
+
         {punkter.map((p) => (
           <circle
             key={p.nyckel}

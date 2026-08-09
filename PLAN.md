@@ -470,6 +470,10 @@ Taket sitter ändå lågt: PC3-glappet är bara 23 % av deras verkliga skillnad,
 
 **Man kan bara titta.** Det är villkoret som gör läget rimligt. Utan träffytor försvinner djupsorterad träffprövning, etiketter som måste räknas om varje bildruta, och en tredje gest på telefonen. Kvar blir ett moln som snurrar av sig självt tills man tar tag i det.
 
+**Prickarna ensamma går inte att orientera sig i.** De ser likadana ut från varje håll, så man vet varken vad som är upp eller hur långt man vridit. Ett golv med rutnät under molnet löser det: det ligger i planet för de två axlar man känner igen från den platta kartan, så det nya är höjden. Golvet läggs vid molnets egen underkant och inte vid sfärens botten — molnet är platt i höjdled, och mot sfären skulle prickarna sväva långt över sitt golv. Rutnätets sida hålls innanför R/√2, för en kvadrats hörn ligger √2 gånger längre ut än dess sida och stack annars utanför bild när golvet vreds. Den valda pricken får en lodlinje ned till golvet med en fot där den landar; det enda strecket är vad som gör höjdled läsbar.
+
+Vridningen sker kring **tyngdpunkten**, inte kring lådans mitt. Lådans mitt ger den minsta omslutande sfären och alltså det största molnet, men prickarna ligger ojämnt: den täta delen skulle svepa fram och tillbaka över skärmen medan man vrider, vilket är precis det som gör en roterande vy svår att följa. Med tyngdpunkten som nav står tätheten stilla och ytterkanterna rör sig.
+
 Två saker skiljer det från den platta kartan. **Skalan är enhetlig på alla tre axlarna** — den platta kartan sträcker x mot y för att fylla rutan, och för rött vin är sträckningen 1,85 gånger, men ett moln som deformeras när det vrids ljuger om varje avstånd utom de två man råkar titta rakt på. Och **sfären fyller elementets kortaste led, inte ritytans**: utan den mätningen blev molnet en femtedel av en telefonskärm.
 
 Testet mäter det som är läget värt: ta de två stilar som ligger närmast varandra, vrid ett kvarts varv, mät igen. Dortmunder och Zwickel går från 2 px till 145 px av ett typiskt avstånd på 196. Går de inte isär gör läget ingen nytta.
