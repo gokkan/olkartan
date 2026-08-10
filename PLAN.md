@@ -501,6 +501,29 @@ Två beslut i den skalan. Den ligger **utanför dryckernas färgspråk** — kal
 
 Ölkartan färgad efter beska stämmer med ögat: surölen och veteölen kalla, IPA-hörnet varmt, imperial stout varmt. Testet kräver IPA varmare än pilsner varmare än gueuze.
 
+**Pris och alkoholhalt med, av motsatta skäl.** Jag mätte alla fält i datan på hur stor andel av variationen som ligger *mellan* grupperna — ligger den inom dem blir kartan brus:
+
+```
+ÖL                        RÖTT              VITT
+mörkhet          73 %     strävhet  37 %    alkohol   45 %
+beska            71 %     mörkhet   37 %    sötma     45 %
+alkoholhalt      68 %     fyllighet 34 %    fruktsyra 35 %
+fyllighet        63 %     fruktsyra 33 %    fyllighet 27 %
+pris per liter   52 %     pris      17 %    pris      20 %
+fatlagrad        19 %     alkohol   14 %    mörkhet   16 %
+fast sortiment    8 %     fast sort. 6 %    fast sort. 14 %
+```
+
+Alkoholhalten har starkast signal på ölkartan men är redan en av kartans ingångar — färgen visar där mest hur väl kartan fångat det den matats med. Priset är svagare men ligger *helt utanför*: information positionen omöjligt kan bära, och svaret på en fråga man faktiskt har. Rutan delar dem i "smakprofil" och "om flaskan" av precis det skälet.
+
+Priset räknas logaritmiskt. Linjärt hade nittio procent av sortimentet trängts ihop i den svala änden — skillnaden mellan 60 och 120 kronor litern betyder mer för den som handlar än den mellan 800 och 900.
+
+Två fält valdes bort. **Fast sortiment** är det praktiskt nyttigaste men klustrar inte alls (8 %); som färg blir det prickigt brus, och hör hemma som filter. **Svenskt ursprung** ser ut som en fullträff på vinkartorna (88 % och 100 %) men är en artefakt: solaris och rondo odlas bara i Sverige, så druvan avgör landet helt och färgen säger inget som druvnamnet inte redan gör.
+
+Prisbilden på ölkartan är läsvärd: hela surölshörnet, imperial stout, barley wine och isbock dyra; internationell stil, pilsner och veteölen billiga.
+
+**En bieffekt värd att komma ihåg:** `npx tsc --noEmit` kontrollerar ingenting i det här repot — rotens tsconfig är bara en lösningsfil med referenser. Två typfel gled igenom på det innan `npm run build` (`tsc -b`) fångade dem. Det finns nu som `npm run typkoll`.
+
 **Och en gammal fälla igen.** Färgrutan gav reglaget en tredje rad, och uppåtpilens axelord hamnade under det — samma bugg som när kartvalet kom till. Talet stod handsatt i css:en (`top: 96px`). Nu mäter App reglagets höjd och skickar den som `--reglage`, så nästa rad flyttar etiketten av sig själv.
 
 ---

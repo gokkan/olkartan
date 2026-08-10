@@ -14,7 +14,7 @@ Grupperna är prickarna, men en dryck utan grupp finns ändå med. Var sjätte v
 
 I-knappen vid kartvalet förklarar hela kedjan, inklusive vad kartan inte visar: två dimensioner räcker till 73 % av skillnaden mellan två stilar men bara 42 % mellan två enskilda öl. Därför räknar "Liknande" på hela smakprofilen och inte på avståndet i bild.
 
-Smakklockorna — beska, fyllighet, sötma — finns inte som riktningar i bilden, men färgen går att byta till någon av dem. Då ser man hur beskan ligger utspridd över kartan i stället för hur mörk drycken är.
+Färgen går att byta: en smakklocka (beska, fyllighet, sötma), priset per liter eller alkoholhalten. Klockorna och alkoholhalten är sådant kartan redan är byggd av; priset ligger utanför och är det enda som lägger till något platsen omöjligt kan bära.
 
 Det finns också ett roterbart 3D-läge på `#vy=3d`, där den tredje huvudkomponenten blir djup. Knappen till det är borttagen tills vidare; läget är kvar och testas, se [PLAN.md](PLAN.md).
 
@@ -46,6 +46,7 @@ npm run dev
 | `npm run build` | produktionsbygge till `dist/` |
 | `npm run data` | bygger om alla tre kartorna. `DRYCK=rott` bygger bara en |
 | `npm test` | enhetstester för likhetsmotorn, körs i deployen |
+| `npm run typkoll` | `tsc -b`. Obs: `npx tsc --noEmit` kontrollerar ingenting här — rotens tsconfig är bara en lösningsfil med referenser |
 | `npm run test:karta` m.fl. | gränssnittstester, se `package.json` |
 
 Gränssnittstesterna kräver att `npm run dev` kör i en annan terminal, plus Playwright (`npm i --no-save playwright && npx playwright install chromium`). Den ligger med flit utanför `package.json` — 200 MB webbläsare hör inte hemma i ett bygge. Kör dem för hand när du rört kartan, panelen eller sökningen.

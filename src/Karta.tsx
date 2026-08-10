@@ -8,7 +8,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { Grupp, Karta as KartaTyp, Klockaxel, Produkt } from './lib/typer'
+import type { Färgkanal, Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
 import { grupprad } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
@@ -84,8 +84,8 @@ export type KartHandtag = {
 
 type Props = {
   karta: KartaTyp
-  /** Klockan som prickarna färgas efter, eller null för dryckens egen färg. */
-  färgklocka: Klockaxel | null
+  /** Vad prickarna färgas efter, eller null för dryckens egen färg. */
+  färgkanal: Färgkanal | null
   vald: string | null
   /** Produkterna som ska ritas ut som ett moln. En grupps produkter, eller
    *  träffarna på ett smakord — kartan bryr sig inte om vilket. */
@@ -96,11 +96,11 @@ type Props = {
 }
 
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
-  { karta, färgklocka, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
+  { karta, färgkanal, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
   ref,
 ) {
   const grupper = karta.grupper
-  const kulör = kartfärger(karta.färgskala, färgklocka)
+  const kulör = kartfärger(karta.färgskala, färgkanal)
   // Axelorden är långa — 'sirapslimpa, pomerans, choklad' tar halva bredden
   // på en telefon. På smal skärm räcker det tyngsta ordet åt varje håll.
   const smal = useSmalSkärm('(max-width: 700px)')

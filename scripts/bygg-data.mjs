@@ -498,6 +498,69 @@ function byggKarta(dryck) {
     return +median(kvoter).toFixed(3)
   }
 
+  /* --- vad färgen kan visa ------------------------------------------------
+   * Platsen betyder smaklikhet och storleken antal, så färgen är den enda
+   * lediga kanalen. Skalan sträcks över det spann där produkterna faktiskt
+   * ligger — mot hela klockans skala blir kartan enfärgad, för nittio procent
+   * av de röda vinerna har fruktsyra mellan 9 och 10 av 11.
+   *
+   * Golvet finns för att det inte ska slå över åt andra hållet: sträcktes ett
+   * spann på ett enda steg ut över hela färgskalan skulle en klocka som knappt
+   * varierar se ut att bära hela kartan. Med golvet används bara en flik, och
+   * kartan ser platt ut — vilket är sanningen om den klockan.
+   */
+  function kvantilspann(värden, minsta = 0, tak = Infinity) {
+    const v = värden.filter((x) => typeof x === 'number' && isFinite(x)).sort((a, b) => a - b)
+    if (!v.length) return [0, 1]
+    const kvantil = (t) => v[Math.floor(t * (v.length - 1))]
+    let lo = kvantil(0.05)
+    let hi = kvantil(0.95)
+    if (hi - lo < minsta) {
+      const mitt = (lo + hi) / 2
+      lo = Math.max(0, mitt - minsta / 2)
+      hi = Math.min(tak, mitt + minsta / 2)
+    }
+    return [lo, hi]
+  }
+  const heltal = ([lo, hi]) => [Math.floor(lo), Math.ceil(hi)]
+  const endecimal = ([lo, hi]) => [+lo.toFixed(1), +hi.toFixed(1)]
+
+  /* Klockorna är smakprofilen och står för sig. Pris och alkoholhalt är fakta
+     om flaskan — alkoholhalten är dessutom en av kartans egna ingångar, så
+     färgen visar där mest hur väl kartan fångat det den matats med. Priset är
+     det enda som ligger helt utanför: information positionen omöjligt kan
+     bära. Det är också det enda som behöver logaritmisk skala, för spannet går
+     från tjugolappen till fyrsiffrigt. */
+  const färgkanaler = [
+    ...dryck.klockor.map(({ nyckel, etikett, max }) => ({
+      nyckel,
+      etikett,
+      sort: 'klocka',
+      spann: heltal(
+        kvantilspann(
+          produkter.map((p) => p.klockor[nyckel]),
+          max * 0.4,
+          max,
+        ),
+      ),
+    })),
+    {
+      nyckel: 'pris',
+      etikett: 'pris per liter',
+      sort: 'annat',
+      enhet: ' kr/l',
+      logg: true,
+      spann: heltal(kvantilspann(produkter.map((p) => p.prisPerLiter))),
+    },
+    {
+      nyckel: 'abv',
+      etikett: 'alkoholhalt',
+      sort: 'annat',
+      enhet: ' %',
+      spann: endecimal(kvantilspann(produkter.map((p) => p.abv))),
+    },
+  ]
+
   /* Produkterna sträcker sig utanför gruppernas område — en grupp är ett
    * medelvärde, och det som bildar det ligger runt omkring. Kartan behöver
    * veta hur långt för att kunna panorera dit. */
@@ -516,31 +579,10 @@ function byggKarta(dryck) {
     grupp: dryck.grupp,
     enhet: dryck.enhet,
     färgskala: dryck.färgskala,
-    /* `max` är klockans skala, som staplarna i panelen mäts mot. `spann` är
-       var produkterna faktiskt ligger, och det är den färgskalan sträcks över
-       — annars blir kartan enfärgad. Rödvinets fruktsyra ligger mellan 9 och
-       10 av 11 hos nittio procent av vinerna.
-
-       Golvet på 40 % av skalan finns för att det inte får bli tvärtom heller.
-       Sträcktes ett spann på ett enda steg ut över hela färgskalan skulle en
-       klocka som knappt varierar se ut att bära hela kartan. Med golvet
-       används bara en flik av skalan, och kartan ser platt ut — vilket är
-       sanningen om den klockan. */
-    klockor: dryck.klockor.map(({ nyckel, etikett, max }) => {
-      const v = produkter.map((p) => p.klockor[nyckel]).sort((a, b) => a - b)
-      const kvantil = (t) => v[Math.floor(t * (v.length - 1))]
-      let lo = kvantil(0.05)
-      let hi = kvantil(0.95)
-      const minsta = max * 0.4
-      if (hi - lo < minsta) {
-        const mitt = (lo + hi) / 2
-        // Klockorna är heltal, så ändarna ska vara det också — annars står det
-        // "0,7999999999999998" i teckenförklaringen.
-        lo = Math.max(0, Math.floor(mitt - minsta / 2))
-        hi = Math.min(max, Math.ceil(mitt + minsta / 2))
-      }
-      return { nyckel, etikett, max, spann: [lo, hi] }
-    }),
+    /* `max` är klockans skala, som panelens staplar mäts mot. Var produkterna
+       faktiskt ligger står i `färgkanaler` — det är en annan fråga. */
+    klockor: dryck.klockor.map(({ nyckel, etikett, max }) => ({ nyckel, etikett, max })),
+    färgkanaler,
     byggd: new Date().toISOString().slice(0, 10),
     antalProdukter: produkter.length,
     antalGrupper: grupper.length,

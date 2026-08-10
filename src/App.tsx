@@ -105,8 +105,8 @@ export default function App() {
      klocka svarar färgen i stället på "hur mycket beska", och man ser hur den
      ligger utspridd över kartan. Klockan valideras mot kartan: byter man till
      vitt vin finns ingen beska, och då faller färgen tillbaka. */
-  const färgklocka = useMemo(
-    () => karta.klockor.find((k) => k.nyckel === läge.farg) ?? null,
+  const färgkanal = useMemo(
+    () => karta.färgkanaler.find((k) => k.nyckel === läge.farg) ?? null,
     [karta, läge.farg],
   )
 
@@ -162,7 +162,7 @@ export default function App() {
         {tredje ? (
           <Karta3D
             karta={karta}
-            färgklocka={färgklocka}
+            färgkanal={färgkanal}
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
@@ -171,7 +171,7 @@ export default function App() {
           <Karta
             ref={hanterare}
             karta={karta}
-            färgklocka={färgklocka}
+            färgkanal={färgkanal}
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
@@ -224,33 +224,56 @@ export default function App() {
             </button>
           </div>
 
-          {/* Kartan visar var något ligger, men inte hur beskt det är — den
-              axeln finns inte i bilden. Färgen är den enda lediga kanalen:
-              storleken betyder antal och platsen betyder smaklikhet. */}
+          {/* Kartan visar var något ligger, men inte hur beskt eller hur dyrt
+              det är. Färgen är den enda lediga kanalen: storleken betyder
+              antal och platsen betyder smaklikhet.
+
+              Klockorna och det andra står i skilda grupper eftersom de svarar
+              på olika sorters frågor. Klockorna är smakprofilen, och
+              alkoholhalten är dessutom en av kartans egna ingångar — färgen
+              visar där mest hur väl kartan fångat det den matats med. Priset
+              ligger helt utanför och är det enda som lägger till något
+              positionen omöjligt kan bära. */}
           <label className="fargval">
             <span>färg</span>
             <select
-              value={färgklocka?.nyckel ?? ''}
+              value={färgkanal?.nyckel ?? ''}
               onChange={(e) => gåTill({ ...läge, farg: e.target.value || undefined })}
             >
               <option value="">{karta.id === 'ol' ? 'ölets färg' : 'vinets färg'}</option>
-              {karta.klockor.map((k) => (
-                <option key={k.nyckel} value={k.nyckel}>
-                  {k.etikett}
-                </option>
-              ))}
+              <optgroup label="smakprofil">
+                {karta.färgkanaler
+                  .filter((k) => k.sort === 'klocka')
+                  .map((k) => (
+                    <option key={k.nyckel} value={k.nyckel}>
+                      {k.etikett}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="om flaskan">
+                {karta.färgkanaler
+                  .filter((k) => k.sort === 'annat')
+                  .map((k) => (
+                    <option key={k.nyckel} value={k.nyckel}>
+                      {k.etikett}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
-            {/* Ändarna är där produkterna faktiskt ligger, inte klockans skala
-                — annars vore kartan enfärgad. Talen står ut så att ingen tror
-                att bandet spänner över hela skalan. */}
-            {färgklocka && (
+            {/* Ändarna är där produkterna faktiskt ligger, inte skalans slut —
+                annars vore kartan enfärgad. Talen står ut så att ingen tror att
+                bandet spänner över allt. */}
+            {färgkanal && (
               <span className="fargskala" aria-hidden>
-                <span>{färgklocka.spann[0]}</span>
+                <span>{färgkanal.spann[0].toLocaleString('sv-SE')}</span>
                 <span
                   className="fargband"
                   style={{ background: `linear-gradient(90deg, ${KLOCKSKALA.join(',')})` }}
                 />
-                <span>{färgklocka.spann[1]}</span>
+                <span>
+                  {färgkanal.spann[1].toLocaleString('sv-SE')}
+                  {färgkanal.enhet}
+                </span>
               </span>
             )}
           </label>

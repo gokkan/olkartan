@@ -140,8 +140,17 @@ export function palett(skala: Skala): Palett {
    kartan. Bara kartan byter; panelen, sökträffarna och kartvalet behåller
    dryckens färg, för där svarar färgen på "vad är det här" och inte på "hur
    mycket beska". Formerna är avsiktligt lika: samma anrop, annan skala. */
-type Mätt = { mörkhet: number | null; klockor: Record<string, number> }
-type Axel = { nyckel: string; spann: [number, number] }
+type Mätt = {
+  mörkhet: number | null
+  klockor: Record<string, number>
+  abv: number
+  prisPerLiter: number | null
+}
+type Kanal = { nyckel: string; spann: [number, number]; logg?: boolean }
+
+/** Kanalens värde hos en grupp eller en produkt — båda bär samma tre fält. */
+export const kanalvärde = (o: Mätt, nyckel: string): number | null =>
+  nyckel === 'pris' ? o.prisPerLiter : nyckel === 'abv' ? o.abv : (o.klockor[nyckel] ?? null)
 
 export type Kartfärger = {
   fyllning: (o: Mätt) => string
@@ -150,22 +159,30 @@ export type Kartfärger = {
   ring: (o: Mätt) => string
 }
 
-export function kartfärger(skala: Skala, klocka: Axel | null): Kartfärger {
+export function kartfärger(skala: Skala, kanal: Kanal | null): Kartfärger {
   const p = palett(skala)
-  if (!klocka)
+  if (!kanal)
     return {
       fyllning: (o) => p.fyllning(o.mörkhet),
       kant: (o) => p.kant(o.mörkhet),
       litenPrick: (o) => p.litenPrick(o.mörkhet),
       ring: (o) => p.ring(o.mörkhet),
     }
-  const [lo, hi] = klocka.spann
-  const t = (o: Mätt) =>
-    Math.min(1, Math.max(0, ((o.klockor[klocka.nyckel] ?? lo) - lo) / (hi - lo || 1)))
+  /* Priset räknas om logaritmiskt. Linjärt hade nittio procent av sortimentet
+     trängts ihop i den svala änden och en handfull flaskor ägt resten av
+     skalan — skillnaden mellan 60 och 120 kr/l är den som betyder något för
+     den som handlar, inte den mellan 800 och 900. */
+  const [lo, hi] = kanal.logg ? kanal.spann.map((v) => Math.log(Math.max(1, v))) : kanal.spann
+  const t = (o: Mätt) => {
+    const rå = kanalvärde(o, kanal.nyckel)
+    if (rå === null) return 0
+    const v = kanal.logg ? Math.log(Math.max(1, rå)) : rå
+    return Math.min(1, Math.max(0, (v - lo) / (hi - lo || 1)))
+  }
   return {
     fyllning: (o) => klockfärg(t(o)),
-    // Klockskalan har inga mörka ändar att rädda, så kanten kan vara samma
-    // för alla — den finns bara för att skilja prickar som ligger på varandra.
+    // Kanalskalan har inga mörka ändar att rädda, så kanten kan vara samma för
+    // alla — den finns bara för att skilja prickar som ligger på varandra.
     kant: () => 'rgb(255 255 255 / 0.22)',
     litenPrick: (o) => klockfärg(t(o)),
     ring: (o) => klockfärg(Math.max(0.55, t(o))),

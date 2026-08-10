@@ -99,12 +99,17 @@ export default function Om({ karta, onStäng }: { karta: Karta; onStäng: () => 
         ”ljusgul” — och inte ur en kategori översatt till en ton.
       </p>
       <p className="brödtext">
-        Smakklockorna finns inte som riktningar i bilden, men färgen går att byta till någon av dem
-        i rutan uppe till vänster. Då ser man hur {karta.klockor[0].etikett} ligger utspridd över
-        kartan i stället för hur mörk drycken är. Skalan sträcks över det spann där {e.flera}{' '}
-        faktiskt ligger, inte över klockans hela skala — annars vore kartan enfärgad. Är spannet
-        mycket smalt används bara en flik av färgskalan, och kartan ser platt ut; det är då
-        sanningen om den klockan.
+        I rutan uppe till vänster går färgen att byta till något annat: en smakklocka, priset per
+        liter eller alkoholhalten. Klockorna och alkoholhalten är sådant kartan redan är byggd av —
+        färgen visar där mest hur väl platsen fångat dem. Priset ligger utanför och är det enda som
+        lägger till något kartan omöjligt kan bära.
+      </p>
+      <p className="brödtext">
+        Skalan sträcks över det spann där {e.flera} faktiskt ligger, inte över hela skalan — annars
+        vore kartan enfärgad. Ändarna står vid färgbandet. Är spannet mycket smalt används bara en
+        flik av färgskalan och kartan ser platt ut; det är då sanningen om den avläsningen. Priset
+        räknas dessutom logaritmiskt, för skillnaden mellan 60 och 120 kronor litern betyder mer än
+        den mellan 800 och 900.
       </p>
 
       <h3>Källa</h3>

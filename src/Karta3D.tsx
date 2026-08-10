@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Karta as KartaTyp, Klockaxel, Produkt } from './lib/typer'
+import type { Färgkanal, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
 import { useSmalSkärm } from './lib/skarm'
 
@@ -52,19 +52,19 @@ type Vinkel = { gir: number; lut: number; k: number }
 
 export default function Karta3D({
   karta,
-  färgklocka,
+  färgkanal,
   vald,
   molnet,
   valdProdukt,
 }: {
   karta: KartaTyp
-  /** Klockan som prickarna färgas efter, eller null för dryckens egen färg. */
-  färgklocka: Klockaxel | null
+  /** Vad prickarna färgas efter, eller null för dryckens egen färg. */
+  färgkanal: Färgkanal | null
   vald: string | null
   molnet: Produkt[]
   valdProdukt: Produkt | null
 }) {
-  const kulör = kartfärger(karta.färgskala, färgklocka)
+  const kulör = kartfärger(karta.färgskala, färgkanal)
   const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
   const [ruta, setRuta] = useState({ ritfaktor: REFERENSFAKTOR, bredd: 1060, höjd: 864 })
@@ -193,7 +193,12 @@ export default function Karta3D({
       ...vrid(g),
       r: 4 + 20 * Math.sqrt(g.antal / maxAntal),
       mörkhet: g.mörkhet,
+      // Färgkanalerna läser klockor, alkoholhalt och pris — alla tre måste
+      // följa med in i den projicerade punkten. En grupp har alltid ett pris,
+      // en produkt kan sakna det; typen tas från den som kan vara tom.
       klockor: g.klockor,
+      abv: g.abv,
+      prisPerLiter: g.prisPerLiter as number | null,
       grupp: true,
       utvald: vald === g.namn,
     }))
@@ -206,6 +211,8 @@ export default function Karta3D({
         r: valdProdukt?.id === p.id ? 5.5 : 3.2,
         mörkhet: p.mörkhet,
         klockor: p.klockor,
+        abv: p.abv,
+        prisPerLiter: p.prisPerLiter,
         grupp: false,
         utvald: valdProdukt?.id === p.id,
       })

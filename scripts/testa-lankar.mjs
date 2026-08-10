@@ -320,6 +320,30 @@ console.log(
   `  hash: ${new URL(p.url()).hash} · skala ${await p.locator('.fargskala').textContent()}`,
 )
 
+/* Pris och alkoholhalt ligger utanför smakprofilen. Imperial stout ska vara
+   både dyrare och starkare än en internationell lager — går den kontrollen
+   sönder är det värdet som inte når fram till färgen. */
+for (const [val, tyngre] of [
+  ['pris', 'dyrare'],
+  ['abv', 'starkare'],
+]) {
+  await p.locator('.fargval select').selectOption(val)
+  await p.waitForTimeout(400)
+  const v = await p.evaluate(() => {
+    const värme = (n) => {
+      const s = document.querySelector(`circle[data-grupp="${n}"]`)?.getAttribute('fill') ?? ''
+      const [r, , b] = s.match(/\d+/g)?.map(Number) ?? [0, 0, 0]
+      return r - b
+    }
+    return { stout: värme('Imperial porter och stout'), lager: värme('Internationell stil') }
+  })
+  console.log(
+    `  ${val}: skala ${await p.locator('.fargskala').textContent()} · ` +
+      `imperial stout ${v.stout} > internationell lager ${v.lager}  ` +
+      (v.stout > v.lager ? `✓ ${tyngre} varmare` : '✗'),
+  )
+}
+
 /* Beska finns inte på vitvinskartan — valet ska falla tillbaka, inte krascha. */
 await p.locator('.kartval button', { hasText: 'vitt' }).click()
 await p.waitForTimeout(700)
