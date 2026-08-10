@@ -16,7 +16,7 @@ I-knappen vid kartvalet förklarar hela kedjan, inklusive vad kartan inte visar:
 
 Smakklockorna — beska, fyllighet, sötma — finns inte som riktningar i bilden, men färgen går att byta till någon av dem. Då ser man hur beskan ligger utspridd över kartan i stället för hur mörk drycken är.
 
-3D-knappen visar en tredje riktning som molnet går att vrida runt. Fyra av fem drycker som ligger på varandra i den platta bilden glider isär så fort man vrider. Där går det bara att titta — tillbaka till 2D för att välja något.
+Det finns också ett roterbart 3D-läge på `#vy=3d`, där den tredje huvudkomponenten blir djup. Knappen till det är borttagen tills vidare; läget är kvar och testas, se [PLAN.md](PLAN.md).
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 

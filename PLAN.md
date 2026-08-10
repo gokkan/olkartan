@@ -478,6 +478,10 @@ Två saker skiljer det från den platta kartan. **Skalan är enhetlig på alla t
 
 Testet mäter det som är läget värt: ta de två stilar som ligger närmast varandra, vrid ett kvarts varv, mät igen. Dortmunder och Zwickel går från 2 px till 145 px av ett typiskt avstånd på 196. Går de inte isär gör läget ingen nytta.
 
+**Parkerat.** Knappen är borttagen igen. Läget svarar på en fråga man måste ha ställt sig först — "ljuger de här två prickarna för mig?" — och en knapp i reglaget bjuder in alla andra att öppna något de inte har användning för. Färgvalet nedan visar sig svara på en fråga fler faktiskt har.
+
+Koden ligger kvar och `#vy=3d` fungerar, med en 2D-knapp som enda tillägg i gränssnittet så att den som följt en länk kommer ut. Gränssnittstestet kör läget via adressen, inte via knappen, och fortsätter alltså mäta att djupet når fram. Ett parkerat läge som ingen anropar ruttnar tyst; ett som testas gör det inte.
+
 ### Smakklockorna får färgen, inte z-axeln
 
 Nästa fråga låg nära: kan man se beska och fyllighet någonstans? Det första förslaget vore att låta en klocka vara z-axeln i stället för PC3 — läsbart, med ett namn. Mätningen säger nej:

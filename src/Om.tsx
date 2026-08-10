@@ -92,13 +92,6 @@ export default function Om({ karta, onStäng }: { karta: Karta; onStäng: () => 
         räknar på hela smakprofilen och inte på avståndet i bild — det är förklaringen till att
         träffarna ofta hamnar långt bort på kartan, och ibland i en annan {g.en}.
       </p>
-      <p className="brödtext">
-        Knappen <strong>3D</strong> visar en tredje riktning ({karta.axlar[2].positiv[0]} ↔{' '}
-        {karta.axlar[2].negativ[0]}) som molnet går att vrida runt. Fyra av fem {e.flera} som ligger
-        på varandra i den platta bilden glider isär så fort man vrider. Man kan bara titta — tryck
-        2D för att välja något igen.
-      </p>
-
       <h3>Prickarnas storlek och färg</h3>
       <p className="brödtext">
         Storleken är antalet {e.flera} i {g.denna}. Färgen kommer ur Systembolagets egen

@@ -199,14 +199,20 @@ export default function App() {
           </Fangare>
           <div className="reglage-rad">
             <Kartval kartor={kartor} vald={karta} onVälj={väljKarta} />
-            <button
-              className={`vy-knapp${tredje ? ' aktiv' : ''}`}
-              onClick={() => gåTill({ ...läge, vy: tredje ? undefined : '3d' })}
-              aria-pressed={tredje}
-              title={tredje ? 'Tillbaka till kartan' : 'Vrid molnet i tre dimensioner'}
-            >
-              {tredje ? '2D' : '3D'}
-            </button>
+            {/* 3D-läget är parkerat: knappen som tog en dit är borttagen, men
+                `#vy=3d` fungerar och gränssnittstestet kör det. Ett läge som
+                bara ligger kvar som oanropad kod ruttnar utan att någon märker
+                det; ett som går att nå och mäta gör inte det. Vägen ut måste
+                däremot finnas, annars sitter den som följt en länk fast. */}
+            {tredje && (
+              <button
+                className="vy-knapp aktiv"
+                onClick={() => gåTill({ ...läge, vy: undefined })}
+                title="Tillbaka till kartan"
+              >
+                2D
+              </button>
+            )}
             <button
               className={`om-knapp${läge.om ? ' aktiv' : ''}`}
               onClick={() => gåTill(läge.om ? { ...läge, om: undefined } : { ...läge, om: '1' })}
