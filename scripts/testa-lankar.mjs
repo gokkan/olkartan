@@ -344,6 +344,27 @@ for (const [val, tyngre] of [
   )
 }
 
+/* Färgvalet är en inställning för hur man tittar, inte en del av det man
+   tittar på, och får inte nollställas av ett klick. Det gjorde det: bas() bar
+   med sig karta och vyläge men inte färgen, så varje prick man valde slog
+   tillbaka till ölfärg. */
+await p.locator('.fargval select').selectOption('beska')
+await p.waitForTimeout(300)
+const vald = () => p.locator('.fargval select').inputValue()
+await p.locator('circle[data-grupp="Hefeweizen"]').click()
+await p.waitForTimeout(400)
+const efterStil = await vald()
+await p.locator('.produkter button').first().click()
+await p.waitForTimeout(500)
+const efterProdukt = await vald()
+await p.locator('.stäng').click()
+await p.waitForTimeout(400)
+const efterStäng = await vald()
+console.log(
+  `  överlever klick: stil "${efterStil}", produkt "${efterProdukt}", stäng "${efterStäng}"  ` +
+    ([efterStil, efterProdukt, efterStäng].every((v) => v === 'beska') ? '✓' : '✗ nollställs'),
+)
+
 /* Beska finns inte på vitvinskartan — valet ska falla tillbaka, inte krascha. */
 await p.locator('.kartval button', { hasText: 'vitt' }).click()
 await p.waitForTimeout(700)

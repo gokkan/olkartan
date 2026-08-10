@@ -110,11 +110,17 @@ export default function App() {
     [karta, läge.farg],
   )
 
-  /** Kartans id följer alltid med, utom för den första — den är standard. Så
-   *  även vyläget: byter man stil ska man inte kastas ur molnet. */
+  /** Vad som överlever ett klick.
+   *
+   *  Kartans id, utom för den första — den är standard. Vyläget, så att man
+   *  inte kastas ur molnet av att välja en stil. Och färgvalet: har man ställt
+   *  om prickarna till beska är det en inställning man gjort för att titta på
+   *  kartan, inte en del av det man tittar på. Att den nollställdes vid varje
+   *  klick gjorde den nästan oanvändbar. */
   const bas = (): Läge => ({
     ...(karta.id === kartor[0].id ? {} : { karta: karta.id }),
     ...(läge.vy ? { vy: läge.vy } : {}),
+    ...(läge.farg ? { farg: läge.farg } : {}),
   })
 
   /* Kartan äger sin zoom och position och tappar dem inte när man klickar sig
@@ -151,8 +157,14 @@ export default function App() {
   /* Om-rutan följer med vid kartbyte. Den beskriver kartan man tittar på, så
      den som läser och byter vill se den andra kartans siffror — inte stänga
      rutan och öppna den igen. */
-  const väljKarta = (id: string) =>
-    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om, vy: läge.vy })
+  const väljKarta = (id: string) => {
+    // Färgvalet följer med om den nya kartan har samma kanal. Beska finns inte
+    // för vin, och en hash som pekar på något kartan inte har vore en lögn —
+    // fyllighet, pris och alkoholhalt finns däremot överallt.
+    const ny = kartor.find((k) => k.id === id)
+    const farg = ny?.färgkanaler.some((k) => k.nyckel === läge.farg) ? läge.farg : undefined
+    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om, vy: läge.vy, farg })
+  }
 
   const stäng = () => gåTill(bas())
 
