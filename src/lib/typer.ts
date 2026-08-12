@@ -102,6 +102,10 @@ export type Karta = {
    *  avståndet som ligger i planet — kvoten är alltså mätt, inte uppskattad.
    *  Grupperna klarar sig bra; enskilda produkter visar under hälften. */
   synligAndel: { grupp: number; produkt: number }
+  /** Medianavståndet till närmaste granne i smakrymden. Utan ett jämförelsetal
+   *  säger ett enskilt avstånd ingenting; med det kan produktvyn säga att en
+   *  dryck är ovanligt ensam. */
+  typisktGrannavstånd: number
   axlar: { komponent: number; negativ: string[]; positiv: string[] }[]
   rattar: Record<string, number>
   ordfrekvens: Record<string, number>

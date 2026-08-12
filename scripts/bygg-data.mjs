@@ -498,6 +498,31 @@ function byggKarta(dryck) {
     return +median(kvoter).toFixed(3)
   }
 
+  /* Hur långt det brukar vara till närmaste granne i smakrymden. Appen räknar
+     ändå ut avståndet till den närmaste när den bygger "Liknande"-listan, men
+     utan ett jämförelsetal säger 2,59 ingenting. Med det kan produktvyn säga
+     att ingenting annat ligger i närheten — en öl vars granne ligger tre
+     gånger längre bort än vanligt är verkligt ensam.
+
+     Mäts på ett urval av 400 mot alla; en median ur 400 prov räcker gott och
+     sparar en kvarts miljard avståndsberäkningar. */
+  const typisktGrannavstånd = (() => {
+    const steg = Math.max(1, Math.floor(produkter.length / 400))
+    const närmaste = []
+    for (let i = 0; i < produkter.length; i += steg) {
+      const a = produkter[i]
+      let bäst = Infinity
+      for (const b of produkter) {
+        if (b === a) continue
+        let s = 0
+        for (let j = 0; j < a.vektor.length; j++) s += (a.vektor[j] - b.vektor[j]) ** 2
+        if (s < bäst) bäst = s
+      }
+      if (isFinite(bäst)) närmaste.push(Math.sqrt(bäst))
+    }
+    return +median(närmaste).toFixed(3)
+  })()
+
   /* --- vad färgen kan visa ------------------------------------------------
    * Platsen betyder smaklikhet och storleken antal, så färgen är den enda
    * lediga kanalen. Skalan sträcks över det spann där produkterna faktiskt
@@ -592,6 +617,7 @@ function byggKarta(dryck) {
     antalTermer: vokabulär.length,
     varians: varians.map((v) => +(v / variansSum).toFixed(3)),
     synligAndel: { grupp: synligAndel(grupper), produkt: synligAndel(produkter) },
+    typisktGrannavstånd,
     axlar: axlar.map((a, i) => ({ komponent: i + 1, ...a })),
     rattar: { MIN_DF, TEXT_KOMPONENTER, VIKT_NUM, VIKT_EXTRA },
     ordfrekvens,

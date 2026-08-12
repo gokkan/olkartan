@@ -248,6 +248,63 @@ footer span:last-child {
   margin: 26px 0 10px;
 }
 
+/* Rubrik med en knapp i högerkanten — samma rad, inte en knapp under. */
+.med-vippa {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vippa {
+  flex: none;
+  border: 1px solid var(--linje);
+  border-radius: 99px;
+  padding: 2px 9px;
+  background: transparent;
+  color: var(--svag);
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.vippa:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+/* Noterna om att en dryck sticker ut. De syns bara när de gäller, så de får
+   ta plats när de gör det. */
+.avvikelser {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.avvikelser .term-knapp {
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  color: var(--text);
+}
+
+.avvikelser .not {
+  color: var(--svag);
+}
+
+.märke {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  font-size: 11.5px;
+}
+
 .panel h3 .not {
   text-transform: none;
   letter-spacing: 0;

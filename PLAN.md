@@ -528,6 +528,30 @@ Prisbilden på ölkartan är läsvärd: hela surölshörnet, imperial stout, bar
 
 ---
 
+## Att leta efter det udda
+
+Frågan var hur man hittar det som sticker ut. Det finns fler sätt än man tror, och de ger olika svar. Jag mätte fem på ölkartan:
+
+**a) Långt från sin egen stils mitt.** Fungerar, men domineras av slaskkategorierna: topplistan är fruktade surölar i "Frukt- och bärlambic" och "Övrig syrlig öl", som är breda från början.
+
+**b) Långt från allt.** Avståndet till närmaste granne, mot ett typiskt på 0,73. Smedsbo Slott Elektra Sauer Kveik ligger 2,59 — en 22-procentig syrlig kveik med maltvinäger och farinsocker i smaktexten. Det finns inget annat likt den.
+
+**c) Närmare en annan stil än sin egen.** Den roligaste. Ringu Brewing Julbock är märkt ljus bocköl men mäter 3,07 närmare torr porter och stout. Bryggkonst Örebro *Som en lager* är en kölsch som ligger närmast hefeweizen. Antingen felmärkta eller gränsgångare, och båda är intressanta.
+
+**d) Ovanligast ordförråd**, mätt som medel-idf över inslagen. Mogwai *Burgercalypse*: grillsås, saltgurka, tomat, vitpeppar. En öl som smakar hamburgare.
+
+**e) Prisavvikare inom stilen.** Nyttigt men inte spännande — det hittar mest sortimentets golv, 25,80 kr/l, tre gånger om.
+
+**Byggt: a, b och c**, för att de ryms i ytor som redan finns.
+
+*a* blev en vippa i gruppvyns rubrik i stället för en andra lista. "Mest typiska" är redan sorterad efter avstånd till mitten, så den andra änden är samma lista baklänges — en knapp som vänder håll räcker, och hela gruppen förblir bläddringsbar från båda hållen.
+
+*b* och *c* blev noter i produktvyn som bara syns när de gäller. Ett kort utan noter är den vanliga sortens dryck, vilket är det vanligaste fallet — Guinness Draught får inga. Noten om ensamhet behövde ett jämförelsetal: `typisktGrannavstånd` räknas i bygget som medianen av avståndet till närmaste granne, mätt på 400 produkter mot alla. Utan det säger 2,59 ingenting; med det står det "3,6 gånger längre bort än vanligt". Avståndet till den närmaste får appen gratis — det är första raden i "Liknande"-listan, som ändå räknas ut.
+
+*d* och *e* är inte byggda. *d* skulle behöva en egen bläddringsvy, och det är en större fråga än en not på ett kort.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.

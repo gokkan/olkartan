@@ -374,7 +374,46 @@ console.log(
     ((await p.locator('.fargval select').inputValue()) === '' ? '✓ föll tillbaka' : '✗'),
 )
 
-/* --- 11. Rama in molnet -------------------------------------------------- */
+/* --- 11. Det som sticker ut -----------------------------------------------
+ * Listan i gruppvyn läses från båda hållen, och produktvyn säger till när en
+ * dryck avviker. Noterna ska bara synas när de gäller — ett kort utan noter
+ * är den vanliga sortens dryck, och det är det vanligaste fallet. */
+console.log('\nudda:')
+await p.goto(bas + '#grupp=' + encodeURIComponent('Berliner weisse'), { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.produkter button')
+const först = () => p.locator('.produkter .p-namn').first().textContent()
+const typiskast = await först()
+await p.locator('.vippa').click()
+await p.waitForTimeout(400)
+const uddast = await först()
+console.log(`  typiskast "${typiskast.trim()}" → vippa → uddast "${uddast.trim()}"`)
+console.log(
+  `  rubriken följer med: "${(await p.locator('.med-vippa').textContent()).replace(/\s+/g, ' ')}"  ` +
+    (typiskast !== uddast ? '✓ vänder listan' : '✗'),
+)
+
+for (const [fråga, väntat] of [
+  ['Ringu Brewing Julbock', 'smakar mer som'],
+  ['Elektra Sauer Kveik', 'ensam'],
+  ['Guinness Draught', null],
+]) {
+  await p.goto(bas, { waitUntil: 'networkidle' })
+  await klar()
+  await p.locator('.sok input').fill(fråga)
+  await p.waitForTimeout(450)
+  await p.locator('.sok-traffar li button').last().click()
+  await p.waitForSelector('.panel h2')
+  await p.waitForTimeout(900)
+  const antal = await p.locator('.avvikelser').count()
+  const text = antal ? (await p.locator('.avvikelser').textContent()).replace(/\s+/g, ' ') : ''
+  const ok = väntat === null ? antal === 0 : text.includes(väntat)
+  console.log(
+    `  ${(await p.locator('.panel h2').textContent()).slice(0, 32).padEnd(33)}${text || 'inga noter'}  ${ok ? '✓' : '✗'}`,
+  )
+}
+
+/* --- 12. Rama in molnet -------------------------------------------------- */
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
 await p.goto(bas + '#grupp=' + encodeURIComponent('India pale ale (IPA)'), {

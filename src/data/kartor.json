@@ -67,7 +67,7 @@
         "spann": [4.5, 9.5]
       }
     ],
-    "byggd": "2026-08-10",
+    "byggd": "2026-08-12",
     "antalProdukter": 3395,
     "antalGrupper": 60,
     "antalTermer": 152,
@@ -76,6 +76,7 @@
       "grupp": 0.725,
       "produkt": 0.424
     },
+    "typisktGrannavstånd": 0.727,
     "axlar": [
       {
         "komponent": 1,
@@ -2079,7 +2080,7 @@
         "spann": [12.5, 15]
       }
     ],
-    "byggd": "2026-08-10",
+    "byggd": "2026-08-12",
     "antalProdukter": 1445,
     "antalGrupper": 52,
     "antalTermer": 100,
@@ -2088,6 +2089,7 @@
       "grupp": 0.667,
       "produkt": 0.472
     },
+    "typisktGrannavstånd": 1.119,
     "axlar": [
       {
         "komponent": 1,
@@ -3707,7 +3709,7 @@
         "spann": [9, 14]
       }
     ],
-    "byggd": "2026-08-10",
+    "byggd": "2026-08-12",
     "antalProdukter": 967,
     "antalGrupper": 39,
     "antalTermer": 95,
@@ -3716,6 +3718,7 @@
       "grupp": 0.67,
       "produkt": 0.455
     },
+    "typisktGrannavstånd": 1.125,
     "axlar": [
       {
         "komponent": 1,

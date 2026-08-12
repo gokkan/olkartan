@@ -10,13 +10,43 @@ export function avstånd(a: number[], b: number[]): number {
  * Produkterna i en grupp, mest typiska först — alltså de som ligger närmast
  * gruppens egen medelvektor. En "Torr porter och stout" som smakar precis som
  * stilen hamnar överst, en udda fågel längst ned.
+ *
+ * Vänd på listan och man får det andra svaret: vilka som avviker mest från sin
+ * egen stil. Det är samma sortering läst bakifrån, så det behövs ingen andra
+ * lista — bara en knapp som byter håll.
  */
-export function produkterIGrupp(produkter: Produkt[], grupp: Grupp): Produkt[] {
-  return produkter
+export function produkterIGrupp(produkter: Produkt[], grupp: Grupp, udda = false): Produkt[] {
+  const sorterad = produkter
     .filter((p) => p.grupper.includes(grupp.namn))
     .map((p) => ({ p, d: avstånd(p.vektor, grupp.vektor) }))
     .sort((a, b) => a.d - b.d)
     .map(({ p }) => p)
+  return udda ? sorterad.reverse() : sorterad
+}
+
+/**
+ * Den grupp en produkt ligger närmast, bortsett från sin egen.
+ *
+ * Ligger den närmare den än sin egen är det värt att säga: en julbock som
+ * mäter närmare torr porter och stout än ljus bocköl är antingen felmärkt
+ * eller en gränsgångare, och båda är intressanta. Avståndet räknas i hela
+ * smakrymden, som allt annat som handlar om likhet.
+ */
+export function främmandeGrupp(
+  p: Produkt,
+  alla: Grupp[],
+): { grupp: Grupp; närmare: number } | null {
+  const egen = alla.filter((g) => p.grupper.includes(g.namn))
+  if (!egen.length) return null
+  const tillEgen = Math.min(...egen.map((g) => avstånd(p.vektor, g.vektor)))
+  let bäst: { grupp: Grupp; d: number } | null = null
+  for (const g of alla) {
+    if (p.grupper.includes(g.namn)) continue
+    const d = avstånd(p.vektor, g.vektor)
+    if (!bäst || d < bäst.d) bäst = { grupp: g, d }
+  }
+  if (!bäst || bäst.d >= tillEgen) return null
+  return { grupp: bäst.grupp, närmare: tillEgen - bäst.d }
 }
 
 /**

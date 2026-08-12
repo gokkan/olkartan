@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { Grupp, Karta, Produkt } from './lib/typer'
 import {
+  främmandeGrupp,
   grupprad,
   heltNamn,
   klockvärden,
@@ -97,9 +98,12 @@ export default function Panel({
   onVisaMolnet,
 }: Props) {
   const kulör = palett(karta.färgskala)
+  /* Listan läses från båda hållen: närmast stilens mitt, eller längst från
+     den. Samma sortering, bara vänd — det behövs ingen andra lista. */
+  const [udda, setUdda] = useState(false)
   const lista = useMemo(
-    () => (produkter && grupp ? produkterIGrupp(produkter, grupp) : []),
-    [produkter, grupp],
+    () => (produkter && grupp ? produkterIGrupp(produkter, grupp, udda) : []),
+    [produkter, grupp, udda],
   )
   const grannar = useMemo(
     () => (grupp ? närmasteGrupper(karta.grupper, grupp) : []),
@@ -113,6 +117,27 @@ export default function Panel({
     [produkter, vald, karta],
   )
   const maten = useMemo(() => (produkter ? typiskMat(lista, produkter) : []), [lista, produkter])
+
+  /* Två sätt att vara udda, båda gratis här.
+   *
+   * Den ena kommer ur listan ovan: ligger närmaste träffen ovanligt långt bort
+   * finns det ingenting annat som smakar så. Gränsen är dubbla medianavståndet
+   * — vid tvåan börjar det bli sant på riktigt, och tre gånger är extremt.
+   *
+   * Den andra är en jämförelse mot alla gruppmittpunkter. Att en julbock mäter
+   * närmare torr porter och stout än sin egen ljusa bock är antingen en
+   * felmärkning eller en gränsgångare, och båda är värda att peka ut. */
+  const ensam = useMemo(() => {
+    const närmast = liknandeProdukter[0]?.avstånd
+    if (!närmast || !karta.typisktGrannavstånd) return null
+    const kvot = närmast / karta.typisktGrannavstånd
+    return kvot >= 2 ? kvot : null
+  }, [liknandeProdukter, karta])
+
+  const främmande = useMemo(
+    () => (vald ? främmandeGrupp(vald, karta.grupper) : null),
+    [vald, karta],
+  )
 
   return (
     <Panelram onStäng={onStäng}>
@@ -162,6 +187,30 @@ export default function Panel({
             )}
           </dl>
 
+          {/* Två sätt att sticka ut, och de nämns bara när de faktiskt gäller.
+              Ett kort utan noter är den vanliga sortens dryck. */}
+          {(ensam || främmande) && (
+            <ul className="avvikelser">
+              {främmande && (
+                <li>
+                  <button className="term-knapp" onClick={() => onVäljGrupp(främmande.grupp)}>
+                    smakar mer som {främmande.grupp.namn.toLowerCase()}
+                  </button>{' '}
+                  <span className="not">än som {vald.grupper[0]?.toLowerCase()}</span>
+                </li>
+              )}
+              {ensam && (
+                <li>
+                  <span className="märke">ensam</span>{' '}
+                  <span className="not">
+                    närmaste {karta.enhet.en} ligger {ensam.toFixed(1)} gånger längre bort än
+                    vanligt
+                  </span>
+                </li>
+              )}
+            </ul>
+          )}
+
           {/* Systembolaget lämnar druvfältet tomt för var sjätte vin och
               skriver i stället "… och övriga druvsorter" i råvarutexten, som
               inte finns i katalogdatan. Kartan vet ändå var vinet ligger — det
@@ -198,8 +247,7 @@ export default function Panel({
           )}
 
           <h3>
-            Smakprofil
-            {grupp && <span className="not">mot {karta.grupp.denna}s median</span>}
+            Smakprofil {grupp && <span className="not">mot {karta.grupp.denna}s median</span>}
           </h3>
           <Staplar
             karta={karta}
@@ -306,8 +354,18 @@ export default function Panel({
             </>
           )}
 
-          <h3>
-            Mest typiska <span className="not">närmast {karta.grupp.denna}s mitt</span>
+          {/* Samma lista, andra änden. Den som letar efter det oväntade i en
+              stil vill precis tvärtom mot den som vill veta vad stilen är. */}
+          <h3 className="med-vippa">
+            <span>
+              {udda ? 'Mest udda' : 'Mest typiska'}{' '}
+              <span className="not">
+                {udda ? 'längst från' : 'närmast'} {karta.grupp.denna}s mitt
+              </span>
+            </span>
+            <button className="vippa" onClick={() => setUdda((v) => !v)}>
+              visa {udda ? 'typiska' : 'udda'}
+            </button>
           </h3>
           {fel && <p className="fel">{fel}</p>}
           {!produkter && !fel && <p className="laddar">hämtar produkter …</p>}
