@@ -63,6 +63,9 @@ export type Produkt = {
   fatlagrad?: boolean
   /** Systembolagets matmatchning. Utanför kartan — se byggskriptet. */
   mat: string[]
+  /** Systembolagets serveringsmening, ordagrant. Säger samma sak som `mat` men
+   *  som text, plus temperatur och tillagningssätt. Saknas för ett fåtal. */
+  servering: string | null
   /** Om Systembolaget har en etikettbild. Adressen räknas ut ur id:t. */
   bild: boolean
   mörkhet: number | null

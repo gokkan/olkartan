@@ -400,6 +400,12 @@ function byggKarta(dryck) {
     // till. Ligger utanför kartan med flit: matchningen är grov och skulle dra
     // ihop grupper som inte smakar lika.
     mat: [...new Set(p.tasteSymbols ?? [])].sort(),
+    // Samma matchning en gång till, fast som mening — och med två saker
+    // symbolerna inte rymmer: serveringstemperatur, och tillagningssätt
+    // ("gärna grillat", "gärna grytor och stekar"). Citeras ordagrant, för det
+    // är Systembolagets ord och inte våra; bara blanktecken städas, eftersom
+    // katalogen släpar med radbrytningar och dubbla mellanslag.
+    servering: p.usage?.replace(/\s+/g, ' ').trim() || null,
     // Bara om det finns en bild att hämta. Adressen går att räkna ut ur id:t.
     bild: (p.images?.length ?? 0) > 0,
     mörkhet: dryck.mörkhet(p),

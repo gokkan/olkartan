@@ -413,7 +413,43 @@ for (const [fråga, väntat] of [
   )
 }
 
-/* --- 12. Rama in molnet -------------------------------------------------- */
+/* --- 12. Serveringsmeningen -----------------------------------------------
+ * Systembolagets egen mening, ordagrant. Den ska stå under "Passar till"
+ * tillsammans med symbolerna, och den ska bära temperaturen — det är det enda
+ * symbolerna inte kan säga. Blanktecknen ska vara städade: katalogen släpar
+ * med radbrytningar och dubbla mellanslag. */
+console.log('\nservering:')
+for (const [adress, väntat] of [
+  ['#produkt=507849', 'mening'], // Guinness — ölkartan
+  ['#karta=rott&produkt=64055869', 'mening'], // Poggio al Leone — tillagningssätt
+  ['#produkt=803689', 'utan'], // Julskägg — ett av två öl utan usage-text
+]) {
+  await p.goto(bas + adress, { waitUntil: 'networkidle' })
+  await klar()
+  await p.waitForSelector('.panel h2')
+  const rubrik = p.locator('.panel h3', { hasText: 'Passar till' })
+  const mening = (await rubrik.locator('+ .smaktext').count())
+    ? (await rubrik.locator('+ .smaktext').textContent()).trim()
+    : null
+  const namn = (await p.locator('.panel h2').textContent()).slice(0, 22).padEnd(23)
+  const chips = await p.locator('.termer .term-knapp').count()
+  if (väntat === 'utan') {
+    /* Utan mening ska rubriken ändå stå kvar, för symbolerna finns. */
+    console.log(`  ${namn}ingen mening, ${chips} symboler  ` + (!mening && chips > 0 ? '✓' : '✗'))
+    continue
+  }
+  console.log(`  ${namn}${mening ?? 'SAKNAS'}`)
+  console.log(
+    `  ${''.padEnd(23)}` +
+      (mening === null
+        ? '✗ ingen mening'
+        : `${/\d+\s*°C/.test(mening) ? '✓ temperatur' : '✗ ingen temperatur'}, ` +
+          `${/\s{2,}/.test(mening) ? '✗ ostädade blanktecken' : '✓ städad'}, ` +
+          `${chips > 0 ? '✓ symbolerna kvar' : '✗ symbolerna borta'}`),
+  )
+}
+
+/* --- 13. Rama in molnet -------------------------------------------------- */
 await p.goto(bas, { waitUntil: 'networkidle' })
 await klar()
 await p.goto(bas + '#grupp=' + encodeURIComponent('India pale ale (IPA)'), {

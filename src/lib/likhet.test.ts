@@ -44,6 +44,7 @@ function öl(delar: Partial<Produkt> = {}): Produkt {
     klockor: { beska: 6, fyllighet: 7, sötma: 2 },
     fatlagrad: false,
     mat: ['Nöt'],
+    servering: 'Serveras vid 8-10°C som sällskapsdryck.',
     bild: true,
     mörkhet: 1,
     smaktext: 'Maltig smak.',

@@ -310,6 +310,20 @@ Ett urval är en ram runt bläddrandet, inte en återvändsgränd. Klickar man p
 
 Stilvyn visar de rätter stilen passar till *oftare än sortimentet i stort*, inte de vanligaste — annars hade det stått "sällskapsdryck" på alla 60 stilarna.
 
+**Serveringsmeningen ✅ klar.** En fråga från en användare — går det få veta mer detaljerat vad som passar? — ledde till en genomgång av vad katalogen faktiskt rymmer. `dishPoints`, som låter som det rätta fältet, är tomt för alla 5 805 produkter. Men `usage` finns på 5 805 av 5 807 och säger samma sak som symbolerna, fast som mening — plus två saker symbolerna inte kan bära:
+
+```
+Serveras vid 16-18°C till rätter av lamm- eller nötkött, gärna grytor eller stekar.
+```
+
+**Serveringstemperatur** står i 5 784 av 5 807 texter, och **tillagningssätt** som symbolerna saknar ord för: *gärna grillat* (708), *gärna sallader* (246), *lagrade hårdostar* (77), *kallskuret och småplock* (72), *chokladdesserter* (44). Enstaka texter blir till och med konkreta — Guinness "till ostron", där symbolen bara säger "skaldjur".
+
+Meningen citeras **ordagrant**; bara blanktecken städas, för katalogen släpar med radbrytningar och dubbla mellanslag. Den står under samma rubrik som symbolerna och i samma stil som smaktexten, eftersom båda är Systembolagets ord och inte våra. Symbolerna står kvar under den: meningen är den läsbara versionen, symbolerna är det man kan klicka på.
+
+Fältet kostar 484 kB rå men bara +28 kB gzippat på ölfilen — texterna är så upprepade (699 unika av 3 395) att komprimeringen äter dem. Ingen avlusningstabell behövdes.
+
+Taket för Systembolagets matdata är därmed nått: **ingen maträtt är namngiven någonstans i katalogen.** Sökning på ett recept kräver en annan källa, och de som finns är kommersiella och saknar öl. Om det någon gång ska byggas är den hållbara formen ett förberäknat register av rätter översatta till *kartans eget ordförråd* — en målpunkt att mäta avstånd till, granskningsbar rad för rad, inte en bedömning per produkt.
+
 **Etikettbilder ✅ klara.** `product-cdn.systembolaget.se/productimages/<id>/<id>_200.png` — även `_100` och `_400`; utan storlekssuffix svarar servern 404. Adressen räknas ut ur artikelnumret, så ingenting behöver lagras utom en flagga för de 55 öl som saknar bild.
 
 Bilden är en bonus, aldrig en del av panelens form. Vi äger inte länken: ändrar Systembolaget sökvägen slocknar bilderna, och då ska panelen se ut precis som den gjorde innan de fanns. Två spärrar ser till det — `bild`-flaggan ur katalogen slipper anropet helt, och `onError` plockar bort elementet om det ändå går fel. Ingen platshållarruta, ingen bruten bildikon. Ett test i `testa-lankar.mjs` svarar 404 på alla bildanrop och kontrollerar att panelen är hel.

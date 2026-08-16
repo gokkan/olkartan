@@ -270,20 +270,27 @@ export default function Panel({
             ))}
           </ul>
 
-          {vald.mat.length > 0 && (
+          {/* Meningen och symbolerna säger delvis samma sak, och står ändå
+              båda: meningen är den läsbara versionen och den enda som bär
+              serveringstemperatur och tillagningssätt, symbolerna är det man
+              kan klicka på för att filtrera kartan. */}
+          {(vald.servering || vald.mat.length > 0) && (
             <>
               <h3>
                 Passar till <span className="not">enligt Systembolaget</span>
               </h3>
-              <ul className="termer">
-                {vald.mat.map((m) => (
-                  <li key={m}>
-                    <button className="term-knapp" onClick={() => onVäljMat(m)}>
-                      {m.toLowerCase()}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {vald.servering && <p className="smaktext">{vald.servering}</p>}
+              {vald.mat.length > 0 && (
+                <ul className="termer">
+                  {vald.mat.map((m) => (
+                    <li key={m}>
+                      <button className="term-knapp" onClick={() => onVäljMat(m)}>
+                        {m.toLowerCase()}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </>
           )}
 
