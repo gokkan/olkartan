@@ -607,6 +607,10 @@ Inversionen är värd att minnas: oron gäller små grupper, vilket bara finns p
 
 Och en avgränsning som gör hela frågan mindre än den låter: `vektor` som skrivs på varje produkt är hela V, inte kartkoordinaterna. Kartplanet styr bara var prickarna ritas — "Liknande" och alla avstånd räknas i den fulla rymden.
 
+**Testet vaktade fel fil.** Buggen rapporterades från produktionen, men lokalt hittade jag ett annat ord — och orsaken var att kartorna inte är samma karta. Publiceringen hämtar sortimentet och kör `npm run data` i körningen, så `src/data/kartor.json` i repot är en lokal kopia som aldrig når någon. Med råfilen från 8 augusti hette dubbletten *svarta vinbär*; med den som publiceras hette den *salvia*, precis som rapporten sa. Samma bugg, annan rotation.
+
+Följden är att ett test över den incheckade filen inte bevisar något om det som ligger uppe. Enhetstesterna körs därför i publiceringen, **efter** `npm run data` och före appbygget. Det var ingen tidigare — bygget hade inget teststeg alls.
+
 ---
 
 ## Formgivning

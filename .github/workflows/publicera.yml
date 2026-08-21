@@ -89,6 +89,13 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run data
 
+      # Enhetstesterna körs här och inte tidigare, för de som betyder något
+      # läser den byggda datan. Kartorna som publiceras byggs av det sortiment
+      # jobbet just hämtat, inte av filen i repot — testar man före bygget
+      # granskar man en kopia som aldrig når någon.
+      - name: Testa den byggda datan
+        run: npm test
+
       - name: Bygg appen
         env:
           BASE: /${{ github.event.repository.name }}/
