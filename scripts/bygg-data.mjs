@@ -363,20 +363,67 @@ function byggKarta(dryck) {
    * En PCA-axel är bara meningsfull om man kan säga vad den mäter. Kartaxlarna
    * är kombinationer av textkomponenterna, så vi kedjar tillbaka laddningarna
    * hela vägen till termerna och låter de tyngsta orden namnge axeln.
+   *
+   * Men ett ord hör inte till en axel — det har en riktning i kartplanet.
+   * "Svarta vinbär" laddade −1,13 på x och −0,89 på y, alltså ner-till-vänster,
+   * och stod därför i både vänsterlistan och nedlistan samtidigt. Vitvinskartan
+   * hade samma sak med "gula päron". Just de diagonala orden säger minst om vad
+   * som skiljer axlarna åt, och tog ändå en plats i två av fyra listor.
+   *
+   * Därför får ett ord bara namnge den av de två kartaxlarna det lutar mest åt.
+   * Det delar planet i fyra kvadranter som inte kan överlappa, så dubbletterna
+   * är borta av konstruktion och inte av undantag.
+   *
+   * Tredje komponenten står utanför uppdelningen. Den ritas aldrig samtidigt
+   * som de två andra — bara 3D-läget använder den — så den har ingen granne att
+   * förväxlas med, och att sålla mot en osynlig axel skulle bara plocka bort
+   * ord från kartan utan att någon såg varför.
    */
-  function axelOrd(kartKomponent) {
+  const termLaddningar = kartKomp.map((k) => {
     const bidrag = new Map()
-    for (let k = 0; k < TEXT_KOMPONENTER; k++) {
-      const vikt = kartKomponent.vektor[k]
-      textKomp[k].vektor.forEach((laddning, t) => {
-        bidrag.set(vokabulär[t], (bidrag.get(vokabulär[t]) ?? 0) + (vikt * laddning) / txSd[k])
+    for (let i = 0; i < TEXT_KOMPONENTER; i++) {
+      const vikt = k.vektor[i]
+      textKomp[i].vektor.forEach((laddning, t) => {
+        bidrag.set(vokabulär[t], (bidrag.get(vokabulär[t]) ?? 0) + (vikt * laddning) / txSd[i])
       })
     }
-    const sorterat = [...bidrag.entries()].sort((a, b) => a[1] - b[1])
-    const rensa = (par) => par.map(([t]) => t.slice(2))
-    return { negativ: rensa(sorterat.slice(0, 6)), positiv: rensa(sorterat.slice(-6).reverse()) }
+    return bidrag
+  })
+
+  function axelOrd(nr, motpart) {
+    const par = [...termLaddningar[nr].entries()].filter(
+      ([t, v]) => motpart === undefined || Math.abs(v) >= Math.abs(termLaddningar[motpart].get(t)),
+    )
+    par.sort((a, b) => a[1] - b[1])
+    // Halva ordförrådet per axel räcker för sex ord åt varje håll, men listan
+    // får aldrig ta samma ord i båda ändarna om en axel skulle bli mager.
+    const n = Math.min(6, par.length >> 1)
+    const rensa = (lista) => lista.map(([t]) => t.slice(2))
+    return { negativ: rensa(par.slice(0, n)), positiv: rensa(par.slice(-n).reverse()) }
   }
-  const axlar = kartKomp.map(axelOrd)
+  const axlar = [axelOrd(0, 1), axelOrd(1, 0), axelOrd(2)]
+
+  /* Etiketterna ovan är ord, men kartaxlarna är inte bara ord: klockorna,
+     alkoholhalten och extraaxlarna ligger i samma vektor och drar med. På
+     ölkartan är nära halva riktningen numerisk — syran laddar tyngre på PC1 än
+     sju av åtta textkomponenter — och det syns inte i etiketten, som per
+     konstruktion bara kan visa ord. Skriv ut det i loggen så att den som ändrar
+     en ratt ser när en axel styrs av annat än texten. */
+  const numNamn = [
+    ...dryck.klockor.map((k) => k.nyckel),
+    'abv',
+    ...dryck.extra.map((e) => e.nyckel),
+  ]
+  const numLaddning = kartKomp.slice(0, 2).map((k) => {
+    let text = 0
+    let num = 0
+    for (let i = 0; i < k.vektor.length; i++)
+      i < TEXT_KOMPONENTER ? (text += k.vektor[i] ** 2) : (num += k.vektor[i] ** 2)
+    return {
+      andel: num / (text + num),
+      per: numNamn.map((namn, j) => ({ namn, värde: k.vektor[TEXT_KOMPONENTER + j] })),
+    }
+  })
 
   /* --- skriv ut ----------------------------------------------------------- */
   const produkter = valda.map((p, i) => ({
@@ -656,7 +703,7 @@ function byggKarta(dryck) {
     return { text, a, b, op, gräns, d, ok }
   })
 
-  return { karta, produkter, kastat, dubbletter, utanGrupp, vokabulär, utfall, txRåSd }
+  return { karta, produkter, kastat, dubbletter, utanGrupp, vokabulär, utfall, txRåSd, numLaddning }
 }
 
 /* --- kör alla drycker ----------------------------------------------------- */
@@ -669,8 +716,17 @@ let allaGodkända = true
 for (const dryck of DRYCKER) {
   if (BARA && dryck.id !== BARA) continue
   console.log(`\n${'='.repeat(62)}\n${dryck.namn.toUpperCase()}\n`)
-  const { karta, produkter, kastat, dubbletter, utanGrupp, vokabulär, utfall, txRåSd } =
-    byggKarta(dryck)
+  const {
+    karta,
+    produkter,
+    kastat,
+    dubbletter,
+    utanGrupp,
+    vokabulär,
+    utfall,
+    txRåSd,
+    numLaddning,
+  } = byggKarta(dryck)
 
   // Grupperna byggs in och behövs direkt. Produkterna är megabyte och behövs
   // först vid ett klick, så de läggs i public/ och hämtas då. Kartan målas
@@ -695,6 +751,11 @@ syns på kartan     ${(karta.synligAndel.grupp * 100).toFixed(0)}% av skillnaden
   höger    ${karta.axlar[0].positiv.join(', ')}
   ned      ${karta.axlar[1].negativ.join(', ')}
   upp      ${karta.axlar[1].positiv.join(', ')}`)
+  for (const [i, l] of numLaddning.entries())
+    console.log(
+      `  PC${i + 1} numeriskt ${(l.andel * 100).toFixed(0)} % av riktningen · ` +
+        l.per.map((p) => `${p.namn} ${p.värde.toFixed(2)}`).join('  '),
+    )
 
   const störst = [...karta.grupper].sort((a, b) => b.antal - a.antal)
   console.log(`\nstörsta ${dryck.grupp.flera}`)

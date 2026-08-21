@@ -566,6 +566,49 @@ Frågan var hur man hittar det som sticker ut. Det finns fler sätt än man tror
 
 ---
 
+## Vad axeletiketterna får säga
+
+En genomläsning av byggkedjan pekade på två val — i `axelOrd` och i grupp-PCA:n — som såg ut att ha gjort sig själva. Båda var värda att mäta, och mätningarna pekade åt olika håll.
+
+**Ett ord kunde namnge två riktningar.** Buggen syntes på kartan: rödvinskartan skrev `← björnbär, svarta vinbär, mynta` till vänster och `↓ ceder, kaffe, svarta vinbär` nedtill, samtidigt. Vitvinskartan gjorde samma sak med *gula päron*, och ölkartan hade tre dubbletter längre ned i sexordslistorna. Alltid samma hörn: vänster + ned.
+
+Orsaken är att varje axel rankades för sig. Men ett ord hör inte till en axel — det har en riktning i kartplanet. "Svarta vinbär" laddar −1,13 på x och −0,89 på y, alltså **−142°**, ner-till-vänster, och kvalificerade sig därmed till båda listorna. De tre rödvinsdubbletterna låg på −131°, −135° och −142°: samma diagonal allihop.
+
+Det är inte matematiskt fel — båda etiketterna säger sant. Det är en dålig etikett, för de diagonala orden är just de som *inte* skiljer axlarna åt. De bär minst information av allt som visas och tog ändå en plats i två av fyra listor.
+
+Nu får ett ord bara namnge den av de två kartaxlarna det lutar mest åt. Det delar planet i fyra kvadranter som inte kan överlappa, så dubbletterna är borta av konstruktion och inte av undantag. Tredje komponenten står utanför uppdelningen: den ritas aldrig samtidigt som de andra två, så den har ingen granne att förväxlas med. Alla fjorton kontrollerna är oförändrade — det är bara etiketterna som ändras, aldrig geometrin. `src/data/kartor.test.ts` vaktar det nu, verifierat mot den gamla datan.
+
+**Etiketterna kan ändå inte säga allt.** Kartaxlarna är inte bara ord: klockorna, alkoholhalten och extraaxlarna ligger i samma vektor. Uppmätt andel av axelriktningen som är numerisk:
+
+```
+öl      PC1 45 %   PC2 44 %
+rött    PC1  7 %   PC2 33 %
+vitt    PC1 28 %   PC2 17 %
+```
+
+Ölkartan är alltså nästan till hälften klockor och syra i båda riktningarna. Syraflaggan laddar **0,45** på PC1 — starkare än sju av åtta textkomponenter — och etiketten kan per konstruktion bara visa ord. Att blockvariansen (text 2,69 mot numeriskt 1,62) ser mildare ut är en synvilla: textens varians är utsmetad över åtta dimensioner medan det numeriska bär sin på fem, så per dimension är de numeriska axlarna tätare och PCA:n laddar dem därefter.
+
+Etiketterna är sällan direkt fel — ölets PC1 har `syrlig` som första positiva ord, så orden beskriver syran ändå. Men de har rätt av korrelation, inte av konstruktion, och det kan tystna utan förvarning. Bygget skriver därför ut laddningarna, så att den som vrider på en ratt ser när en axel styrs av annat än texten.
+
+**Grupp-PCA:n förblir oviktad, nu av mätning.** Varje grupp räknas en gång oavsett storlek, så en druva med fem viner styr planet lika mycket som cabernet med 240. På ölkartan finns till och med två enproduktsstilar; de sju stilar som har färre än fem öl har 12 % av rösterna men 1 % av produkterna. Invändningen är befogad — men den viktade varianten är mätbart sämre:
+
+| | plan kvar | kontroller |
+|---|---|---|
+| öl, vikt = n | 89 % | 5/5 ✓ |
+| öl, vikt = √n | 98 % | 5/5 ✓ |
+| rött, vikt = n | 73 % | ✗ shiraz/syrah 0,47 → **0,97** · ✗ rhône 0,41 → **0,98** |
+| rött, vikt = √n | 82 % | ✗ shiraz/syrah **0,85** · ✗ rhône **0,96** |
+| vitt, vikt = n | 49 % | ✗ vinho verde 0,03 → **0,67** · ✗ chardonnay/chenin |
+| vitt, vikt = √n | 90 % | 4/4 ✓ |
+
+Storleksviktning slår sönder **Shiraz = Syrah**, kontrollen som finns just för att fånga en trasig karta, och √n räddar inte rödvinet. Oviktat är det enda av tre alternativ som klarar alla fjorton. Vitvinets fulla viktning är tydligast: `|cos|` mot PC1 blir 0,046 — planet vrids nästan vinkelrätt, eftersom chardonnay ensam är 26 % av massan.
+
+Inversionen är värd att minnas: oron gäller små grupper, vilket bara finns på ölkartan (vinet har `minGrupp: 5`, noll grupper under fem). Där ändrar viktning nästan ingenting. Skadan uppstår på vinkartorna, där problemet inte finns.
+
+Och en avgränsning som gör hela frågan mindre än den låter: `vektor` som skrivs på varje produkt är hela V, inte kartkoordinaterna. Kartplanet styr bara var prickarna ritas — "Liknande" och alla avstånd räknas i den fulla rymden.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.

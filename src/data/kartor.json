@@ -82,7 +82,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-16",
+  "byggd": "2026-08-21",
   "antalProdukter": 3395,
   "antalGrupper": 60,
   "antalTermer": 152,
@@ -105,15 +105,15 @@
      "choklad",
      "torkad frukt",
      "tallbarr",
-     "örter"
+     "nötter"
     ],
     "positiv": [
      "syrlig",
      "fruktig",
-     "ljust bröd",
      "kryddig",
      "banan",
-     "bärig"
+     "bärig",
+     "kryddnejlika"
     ]
    },
    {
@@ -122,9 +122,9 @@
      "kaffe",
      "kavring",
      "rostad",
-     "syrlig",
      "mörk choklad",
-     "lakrits"
+     "lakrits",
+     "tobak"
     ],
     "positiv": [
      "örter",
@@ -2977,7 +2977,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-16",
+  "byggd": "2026-08-21",
   "antalProdukter": 1445,
   "antalGrupper": 52,
   "antalTermer": 100,
@@ -2998,9 +2998,9 @@
      "björnbär",
      "svarta vinbär",
      "mynta",
-     "kaffe",
      "svartpeppar",
-     "plommon"
+     "lagerblad",
+     "mörk choklad"
     ],
     "positiv": [
      "salvia",
@@ -3016,10 +3016,10 @@
     "negativ": [
      "ceder",
      "kaffe",
-     "svarta vinbär",
      "kakao",
      "plommon",
-     "tobak"
+     "tobak",
+     "korinter"
     ],
     "positiv": [
      "bärig",
@@ -3027,7 +3027,7 @@
      "jordgubbar",
      "blodapelsin",
      "körsbär",
-     "lagerblad"
+     "viol"
     ]
    },
    {
@@ -5348,7 +5348,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-16",
+  "byggd": "2026-08-21",
   "antalProdukter": 967,
   "antalGrupper": 39,
   "antalTermer": 95,
@@ -5385,20 +5385,20 @@
    {
     "komponent": 2,
     "negativ": [
-     "gula päron",
      "honung",
      "aprikos",
      "kryddor",
-     "blommig",
-     "söt"
+     "söt",
+     "kryddig",
+     "torkade aprikoser"
     ],
     "positiv": [
      "lime",
      "aromatisk",
      "svartvinbärsblad",
-     "ungdomlig",
      "krusbär",
-     "honungsmelon"
+     "gröna äpplen",
+     "päron"
     ]
    },
    {
