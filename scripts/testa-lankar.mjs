@@ -465,5 +465,70 @@ await p.waitForTimeout(900)
 const efterRam = await skala()
 console.log(`\nrama in molnet: skala ${före.toFixed(2)} → ${efterRam.toFixed(2)}`)
 
+/* --- 14. Landfiltret ------------------------------------------------------
+ * Filtret är ett raster och inte ett val: det ska smalna av kartan utan att
+ * kasta bort det man tittar på, och överleva ett klick. Tre saker prövas —
+ * att räkningen i listan stämmer med kartan, att filtret följer med genom ett
+ * gruppval, och att ett land som saknas på den nya kartan går att klicka bort
+ * i stället för att låsa in en i en tom karta. */
+await p.goto(bas, { waitUntil: 'networkidle' })
+await klar()
+await p.locator('.landval > button').click()
+await p.waitForSelector('.landval-lista')
+const toppland = await p.locator('.landval-lista button').nth(1).textContent()
+await p.locator('.landval-lista button', { hasText: /^Sverige/ }).click()
+await p.waitForTimeout(700)
+const svenska = await p.locator('.olprick').count()
+const foten = await p.locator('footer span').nth(1).textContent()
+console.log(`\nlandfiltret`)
+console.log(`  listans topp    ${toppland}`)
+console.log(`  prickar på kartan ${svenska} · foten "${foten.trim()}"`)
+/* Talet i foten sätts med toLocaleString('sv-SE'), som skiljer tusental med
+   hårt blanksteg. Alla blanktecken plockas därför bort ur båda sidorna innan
+   de jämförs — annars mäter man teckenkodning i stället för räkning. */
+const utanMellanrum = (s) => s.replace(/\s/gu, '')
+console.log(
+  `  ${utanMellanrum(foten).includes(utanMellanrum(svenska.toLocaleString('sv-SE'))) ? '✓' : '✗'} foten räknar samma som kartan ritar`,
+)
+
+await p.keyboard.press('Escape')
+await p.locator('circle[data-grupp="Torr porter och stout"]').click()
+await p.waitForTimeout(700)
+const hashEfter = await p.evaluate(() => location.hash)
+const not = await p.locator('.panel .källnot').first().textContent()
+console.log(`  ${hashEfter.includes('land=Sverige') ? '✓' : '✗'} filtret överlever ett gruppval`)
+console.log(`  ${/Bara Sverige visas/.test(not) ? '✓' : '✗'} panelen säger att den är avsmalnad`)
+
+/* Eritrea finns bland ölen och inte bland vinerna. Byter man karta blir den
+   tom — och då är listan enda vägen ut. Står landet inte kvar där sitter man
+   fast med ett filter man inte kan se. */
+await p.goto(bas + '#karta=rott&land=Eritrea', { waitUntil: 'networkidle' })
+await klar()
+await p.locator('.landval > button').click()
+await p.waitForSelector('.landval-lista')
+const kvarstår = await p.locator('.landval-lista button.aktiv').textContent()
+console.log(
+  `  ${/Eritrea/.test(kvarstår) ? '✓' : '✗'} bortvalt land går att klicka bort: "${kvarstår.trim()}"`,
+)
+
+/* --- 15. Axelkorset i 3D --------------------------------------------------
+ * Sex armar ut från en mittpunkt, och sex namn som alla är olika. Att inget
+ * ord namnger två riktningar prövas också i enhetstestet mot kartor.json —
+ * här prövas att de faktiskt ritas ut, alla sex, efter att molnet vridit sig
+ * ur startläget där djupaxeln pekar rakt mot en. */
+await p.goto(bas + '#vy=3d', { waitUntil: 'networkidle' })
+await klar()
+const armar = await p.locator('.axelkors line').count()
+const mitt = await p.locator('.mittpunkt').count()
+await p.waitForTimeout(4000)
+const spetsar = await p.locator('.axelnamn text').allTextContents()
+console.log(`\naxelkorset i 3D`)
+console.log(`  ${armar === 6 ? '✓' : '✗'} sex armar · ${mitt === 1 ? '✓' : '✗'} en mittpunkt`)
+console.log(`  ${spetsar.length === 6 ? '✓' : '✗'} sex namngivna spetsar efter vridning`)
+console.log(
+  `  ${new Set(spetsar.flatMap((s) => s.split(', '))).size === spetsar.flatMap((s) => s.split(', ')).length ? '✓' : '✗'} inget ord på två spetsar`,
+)
+for (const s of spetsar) console.log(`    ${s}`)
+
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

@@ -82,7 +82,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-21",
+  "byggd": "2026-08-25",
   "antalProdukter": 3395,
   "antalGrupper": 60,
   "antalTermer": 152,
@@ -100,39 +100,39 @@
    {
     "komponent": 1,
     "negativ": [
-     "sirapslimpa",
      "pomerans",
      "choklad",
      "torkad frukt",
      "tallbarr",
-     "nötter"
+     "nötter",
+     "humlearomatisk"
     ],
     "positiv": [
      "syrlig",
      "fruktig",
-     "kryddig",
-     "banan",
      "bärig",
-     "kryddnejlika"
+     "vanilj",
+     "citrus",
+     "hallon"
     ]
    },
    {
     "komponent": 2,
     "negativ": [
-     "kaffe",
-     "kavring",
-     "rostad",
-     "mörk choklad",
-     "lakrits",
-     "tobak"
+     "söt",
+     "fat",
+     "mörkt bröd",
+     "kokos",
+     "kanel",
+     "peppar"
     ],
     "positiv": [
      "örter",
      "aprikos",
      "honung",
-     "ljust bröd",
-     "apelsinskal",
-     "citrusskal"
+     "citrusskal",
+     "färska örter",
+     "ananas"
     ]
    },
    {
@@ -149,9 +149,9 @@
      "ljust bröd",
      "sirapslimpa",
      "apelsinskal",
-     "aprikos",
      "kryddig",
-     "kryddor"
+     "kryddor",
+     "banan"
     ]
    }
   ],
@@ -2977,7 +2977,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-21",
+  "byggd": "2026-08-25",
   "antalProdukter": 1445,
   "antalGrupper": 52,
   "antalTermer": 100,
@@ -2998,17 +2998,17 @@
      "björnbär",
      "svarta vinbär",
      "mynta",
-     "svartpeppar",
-     "lagerblad",
-     "mörk choklad"
+     "mörk choklad",
+     "peppar",
+     "smakrikt vin"
     ],
     "positiv": [
      "salvia",
      "kanel",
      "kryddnejlika",
-     "mörka körsbär",
      "pomerans",
-     "utvecklad"
+     "utvecklad",
+     "kryddig"
     ]
    },
    {
@@ -3035,18 +3035,18 @@
     "negativ": [
      "lagerblad",
      "svartpeppar",
-     "björnbär",
      "lakrits",
      "vitpeppar",
-     "kryddig"
+     "lavendel",
+     "nyanserad"
     ],
     "positiv": [
      "blåbär",
      "choklad",
-     "kryddnejlika",
-     "svarta vinbär",
      "fruktig",
-     "mörka körsbär"
+     "mörka körsbär",
+     "vanilj",
+     "örter"
     ]
    }
   ],
@@ -5348,7 +5348,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-21",
+  "byggd": "2026-08-25",
   "antalProdukter": 967,
   "antalGrupper": 39,
   "antalTermer": 95,
@@ -5404,20 +5404,18 @@
    {
     "komponent": 3,
     "negativ": [
-     "galiamelon",
      "vit persika",
-     "gula päron",
-     "örter",
-     "lime",
-     "mineral"
+     "bivax",
+     "vitpeppar",
+     "apelsinblommor",
+     "gula krusbär"
     ],
     "positiv": [
-     "honungsmelon",
-     "ungdomlig",
      "vita blommor",
      "citron",
-     "fläder",
-     "persika"
+     "färska örter",
+     "macadamianötter",
+     "valnötter"
     ]
    }
   ],

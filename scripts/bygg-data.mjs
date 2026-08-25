@@ -370,14 +370,15 @@ function byggKarta(dryck) {
    * hade samma sak med "gula päron". Just de diagonala orden säger minst om vad
    * som skiljer axlarna åt, och tog ändå en plats i två av fyra listor.
    *
-   * Därför får ett ord bara namnge den av de två kartaxlarna det lutar mest åt.
-   * Det delar planet i fyra kvadranter som inte kan överlappa, så dubbletterna
-   * är borta av konstruktion och inte av undantag.
+   * Därför får ett ord bara namnge den av kartaxlarna det lutar mest åt. Det
+   * delar rymden i oktanter som inte kan överlappa, så dubbletterna är borta av
+   * konstruktion och inte av undantag.
    *
-   * Tredje komponenten står utanför uppdelningen. Den ritas aldrig samtidigt
-   * som de två andra — bara 3D-läget använder den — så den har ingen granne att
-   * förväxlas med, och att sålla mot en osynlig axel skulle bara plocka bort
-   * ord från kartan utan att någon såg varför.
+   * Uppdelningen gällde först bara de två platta axlarna, med motiveringen att
+   * tredje komponenten aldrig ritas samtidigt som dem. Det stämmer inte längre:
+   * 3D-läget ritar ett axelkors med alla tre samtidigt, och då stod
+   * "sirapslimpa" på både x-negativ och z-positiv i samma bild. Nu är alla tre
+   * med i samma uppdelning.
    */
   const termLaddningar = kartKomp.map((k) => {
     const bidrag = new Map()
@@ -390,10 +391,19 @@ function byggKarta(dryck) {
     return bidrag
   })
 
-  function axelOrd(nr, motpart) {
-    const par = [...termLaddningar[nr].entries()].filter(
-      ([t, v]) => motpart === undefined || Math.abs(v) >= Math.abs(termLaddningar[motpart].get(t)),
-    )
+  /* Vilken axel varje ord tillhör: den där dess laddning är störst till
+     beloppet. Räknas en gång, med strikt större-än, så att ett ord som skulle
+     ligga exakt lika på två axlar hamnar på den första och inte på båda. */
+  const ägare = new Map()
+  for (const term of termLaddningar[0].keys()) {
+    let bäst = 0
+    for (let i = 1; i < termLaddningar.length; i++)
+      if (Math.abs(termLaddningar[i].get(term)) > Math.abs(termLaddningar[bäst].get(term))) bäst = i
+    ägare.set(term, bäst)
+  }
+
+  function axelOrd(nr) {
+    const par = [...termLaddningar[nr].entries()].filter(([t]) => ägare.get(t) === nr)
     par.sort((a, b) => a[1] - b[1])
     // Halva ordförrådet per axel räcker för sex ord åt varje håll, men listan
     // får aldrig ta samma ord i båda ändarna om en axel skulle bli mager.
@@ -401,7 +411,7 @@ function byggKarta(dryck) {
     const rensa = (lista) => lista.map(([t]) => t.slice(2))
     return { negativ: rensa(par.slice(0, n)), positiv: rensa(par.slice(-n).reverse()) }
   }
-  const axlar = [axelOrd(0, 1), axelOrd(1, 0), axelOrd(2)]
+  const axlar = termLaddningar.map((_, i) => axelOrd(i))
 
   /* Etiketterna ovan är ord, men kartaxlarna är inte bara ord: klockorna,
      alkoholhalten och extraaxlarna ligger i samma vektor och drar med. På
@@ -417,8 +427,10 @@ function byggKarta(dryck) {
   const numLaddning = kartKomp.slice(0, 2).map((k) => {
     let text = 0
     let num = 0
-    for (let i = 0; i < k.vektor.length; i++)
-      i < TEXT_KOMPONENTER ? (text += k.vektor[i] ** 2) : (num += k.vektor[i] ** 2)
+    for (let i = 0; i < k.vektor.length; i++) {
+      if (i < TEXT_KOMPONENTER) text += k.vektor[i] ** 2
+      else num += k.vektor[i] ** 2
+    }
     return {
       andel: num / (text + num),
       per: numNamn.map((namn, j) => ({ namn, värde: k.vektor[TEXT_KOMPONENTER + j] })),

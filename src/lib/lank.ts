@@ -26,9 +26,20 @@ export type Läge = {
   vy?: string
   /** Vilken smakklocka prickarna färgas efter. Utelämnad = dryckens egen färg. */
   farg?: string
+  /** Ursprungsländer, kommaseparerade. Utelämnad betyder alla — filtret är ett
+   *  raster över kartan, inte ett val av något, så tomt är det normala läget.
+   *  Inget av Systembolagets 53 landsnamn innehåller komma. */
+  land?: string
 }
 
-const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy', 'farg'] as const
+const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy', 'farg', 'land'] as const
+
+/** Landfiltret som lista. Tom lista betyder att allt får synas. */
+export const läsLänder = (l: Läge): string[] => (l.land ? l.land.split(',').filter(Boolean) : [])
+
+/** Motsatsen. Tom lista tar bort nyckeln helt i stället för att skriva `land=`. */
+export const skrivLänder = (länder: string[]): string | undefined =>
+  länder.length ? länder.join(',') : undefined
 
 export function läsLäge(hash = location.hash): Läge {
   const p = new URLSearchParams(hash.replace(/^#/, ''))

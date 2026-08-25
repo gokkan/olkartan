@@ -576,7 +576,7 @@ Orsaken är att varje axel rankades för sig. Men ett ord hör inte till en axel
 
 Det är inte matematiskt fel — båda etiketterna säger sant. Det är en dålig etikett, för de diagonala orden är just de som *inte* skiljer axlarna åt. De bär minst information av allt som visas och tog ändå en plats i två av fyra listor.
 
-Nu får ett ord bara namnge den av de två kartaxlarna det lutar mest åt. Det delar planet i fyra kvadranter som inte kan överlappa, så dubbletterna är borta av konstruktion och inte av undantag. Tredje komponenten står utanför uppdelningen: den ritas aldrig samtidigt som de andra två, så den har ingen granne att förväxlas med. Alla fjorton kontrollerna är oförändrade — det är bara etiketterna som ändras, aldrig geometrin. `src/data/kartor.test.ts` vaktar det nu, verifierat mot den gamla datan.
+Nu får ett ord bara namnge den av de två kartaxlarna det lutar mest åt. Det delar planet i fyra kvadranter som inte kan överlappa, så dubbletterna är borta av konstruktion och inte av undantag. Tredje komponenten stod först utanför uppdelningen, med motiveringen att den aldrig ritas samtidigt som de andra två. Den motiveringen föll när 3D-läget fick ett axelkors — se nedan — och nu är alla tre med i samma uppdelning. Alla fjorton kontrollerna är oförändrade — det är bara etiketterna som ändras, aldrig geometrin. `src/data/kartor.test.ts` vaktar det nu, verifierat mot den gamla datan.
 
 **Etiketterna kan ändå inte säga allt.** Kartaxlarna är inte bara ord: klockorna, alkoholhalten och extraaxlarna ligger i samma vektor. Uppmätt andel av axelriktningen som är numerisk:
 
@@ -610,6 +610,49 @@ Och en avgränsning som gör hela frågan mindre än den låter: `vektor` som sk
 **Testet vaktade fel fil.** Buggen rapporterades från produktionen, men lokalt hittade jag ett annat ord — och orsaken var att kartorna inte är samma karta. Publiceringen hämtar sortimentet och kör `npm run data` i körningen, så `src/data/kartor.json` i repot är en lokal kopia som aldrig når någon. Med råfilen från 8 augusti hette dubbletten *svarta vinbär*; med den som publiceras hette den *salvia*, precis som rapporten sa. Samma bugg, annan rotation.
 
 Följden är att ett test över den incheckade filen inte bevisar något om det som ligger uppe. Enhetstesterna körs därför i publiceringen, **efter** `npm run data` och före appbygget. Det var ingen tidigare — bygget hade inget teststeg alls.
+
+---
+
+## 3D fick axlar, och kartan fick ett landfilter
+
+Två saker på en gång, av olika skäl.
+
+### Axelkorset
+
+3D-läget hade legat parkerat: nåbart via `#vy=3d`, men utan knapp. Skälet var att molnet var svårt att orientera sig i. Det hade ett rutnätsgolv under sig och en kompass i hörnet, och tillsammans sa de vilket håll man vridit — men aldrig vad hållen betyder. Kompassen kom till av en anledning: ett tidigare försök med streck genom molnet lästes som innehåll och togs bort.
+
+Nu står strecken där igen, men läsbara som ram. Tre saker gör skillnaden:
+
+- de ritas **bakom** prickarna, så varje dryck skymmer dem
+- den bortre halvan av varje arm bleknar med **samma dis** som prickarna, så korset ligger i samma rymd som molnet i stället för ovanpå det
+- spetsarna bär **kartans egna axelord**, vilket ingen prick gör
+
+Sex namngivna spetsar, en mittpunkt där de möts. Armarna är lika långa åt alla håll fast molnet är plattare i djupled: ett kors som följde utbredningen skulle stämma bättre med datan men vore obrukbart som referens — det ändrade form vid varje kartbyte, och en kortare arm skulle läsas som en mindre viktig riktning.
+
+Vyn **börjar rakt framifrån**, alltså exakt den platta kartan: samma ord åt vänster, höger, upp och ned, och djupaxeln hoptryckt till en punkt i mitten. Sedan tippar den upp av sig själv till 0,3 radianer på två och en halv sekund, medan den snurrar. Man ska känna igen sig innan något rör sig. `prefers-reduced-motion` får i stället ett fast, redan tippat läge — startvyn ensam säger ingenting om djupet.
+
+Golvet är borta, och med det lodlinjens fotpunkt. Den valda prickens streck går nu ned till **planet genom mitten** i stället, vilket är den enda ärliga referensen kvar och samtidigt den mest läsbara: strecket säger hur långt över eller under mitten drycken ligger, och foten landar på det kors man redan tittar på.
+
+**Korset avslöjade en bugg i etiketterna.** Kvadrantregeln ovan delade bara de två platta axlarna, med motiveringen att PC3 aldrig ritas samtidigt som dem. Det stämde när den skrevs. Med axelkorset ritas alla tre samtidigt — och då stod `sirapslimpa` på både x-negativ och z-positiv i samma bild. Uppdelningen omfattar nu alla tre komponenterna: varje ord äger den axel det laddar tyngst på, oktanter i stället för kvadranter. Alla arton riktningarna är unika, alla fjorton kontrollerna oförändrade, ingen geometri rörd. `src/data/kartor.test.ts` prövar nu sex riktningar i stället för fyra.
+
+Ordförrådet räcker: den magraste listan är vitvinets djupaxel med fem ord per håll, mot golvet tre.
+
+### Landfiltret
+
+Ett filter på ursprungsland, ett eller flera, med `#land=Sverige,Belgien` i hashen som allt annat.
+
+Det som gör det annorlunda än allt annat som går att välja: **det är ett raster, inte ett val.** Ett smakord och en maträtt är saker man tittar på och utesluter därför varandra. Ett land är ett hål man tittar igenom, och gäller vad man än tittar på. Därför smalnar det av produkterna en gång, uppe i `App`, i stället för att bli ett tredje alternativ i urvalet — och därför överlever det ett klick, precis som färgvalet.
+
+Fyra följdbeslut som inte var självklara:
+
+- **Sökningen får den ofiltrerade listan.** Att slå upp något vid namn måste alltid fungera, annars blir ett påslaget filter en dold anledning till att en öl man vet finns inte går att hitta. Den valda produkten ritas därför alltid på kartan, även när filtret sorterat bort den.
+- **Panelen räknar på det som syns.** En lista som räknade upp belgiska öl medan kartan visar svenska vore en andra sanning om samma sak. Gruppens egna tal — medianen, kännetecknen — kommer däremot ur hela sortimentet och rör sig inte: de beskriver stilen, inte urvalet. Panelen säger det i klartext när filtret är på.
+- **Listan räknas ur den karta man tittar på**, inte ur en fast lista. Sortiment kommer och går, och en rad som påstod att det finns eritreanskt öl den vecka det inte gör det vore ett tomt filter att klicka i.
+- **Ett land som försvann står ändå kvar** i listan, med noll bredvid sig. Filtret följer med vid kartbyte — Eritrea finns bland ölen och inte bland vinerna — och utan raden sitter man fast med en tom karta och ett filter man inte kan se sig ur.
+
+Ett tidigare filter ströks (se *Mat, och ett filter som ströks*): sortimentsfiltret dolde nio prickar av tio och gjorde kartan till en annan, glesare karta. Landfiltret är inte samma ingrepp. Sverige är 2 866 av 3 395 öl, och även de smala urvalen behåller kartans form — Italien och Frankrike tillsammans är 744 av 1 445 rödviner. Foten räknar om sig så att bortsorteringen syns: *2 866 öl av 3 395*.
+
+Prestandan håller: 2 866 enskilda prickar ritas utan att något knakar, vilket är det tätaste urvalet som finns.
 
 ---
 

@@ -6,10 +6,11 @@ import Sok from './Sok'
 import Kartval from './Kartval'
 import Karta3D from './Karta3D'
 import Om from './Om'
+import Landval from './Landval'
 import Fangare from './Fangare'
 import kartorData from './data/kartor.json'
 import { useProdukter } from './lib/hämtaProdukter'
-import { läsLäge, skrivLäge, type Läge } from './lib/lank'
+import { läsLäge, läsLänder, skrivLäge, skrivLänder, type Läge } from './lib/lank'
 import { KLOCKSKALA } from './lib/färg'
 import type { Karta as KartaTyp, Produkt, Grupp } from './lib/typer'
 
@@ -74,6 +75,22 @@ export default function App() {
     return namn ? (gruppPerNamn.get(namn) ?? null) : null
   }, [läge.grupp, produkt, gruppPerNamn])
 
+  /* Landfiltret är ett raster, inte ett val. Ett smakord och en maträtt är
+     saker man tittar på och utesluter därför varandra; ett land är ett hål man
+     tittar igenom och gäller vad man än tittar på. Därför smalnar det av
+     produkterna en gång här, i stället för att bli ett tredje alternativ i
+     urvalet nedanför.
+
+     Sökningen får den ofiltrerade listan. Att slå upp något vid namn måste
+     alltid fungera — annars blir ett påslaget filter en dold anledning till
+     att en öl man vet finns inte går att hitta. */
+  const länder = useMemo(() => läsLänder(läge), [läge])
+  const synliga = useMemo(
+    () =>
+      produkter && länder.length ? produkter.filter((p) => länder.includes(p.land)) : produkter,
+    [produkter, länder],
+  )
+
   /* Vad som ska ligga som ett moln av enskilda produkter ovanpå grupperna. Ett
      smakord och en maträtt utesluter gruppen: de plockar produkter tvärs över
      kartan, och att samtidigt lysa upp en grupp vore två svar på en fråga. */
@@ -84,15 +101,26 @@ export default function App() {
       : null
 
   const molnet = useMemo(() => {
-    if (!produkter) return []
-    if (läge.ord) return produkter.filter((p) => p.termer.includes(läge.ord!))
-    if (läge.mat) return produkter.filter((p) => p.mat.includes(läge.mat!))
-    if (grupp) return produkter.filter((p) => p.grupper.includes(grupp.namn))
-    // En produkt utan grupp har inget moln att ingå i. Den ritas ensam, för
-    // annars skulle kartan vara tom när man sökt upp den.
-    if (produkt) return [produkt]
-    return []
-  }, [produkter, läge.ord, läge.mat, grupp, produkt])
+    if (!synliga) return []
+    const ur = läge.ord
+      ? synliga.filter((p) => p.termer.includes(läge.ord!))
+      : läge.mat
+        ? synliga.filter((p) => p.mat.includes(läge.mat!))
+        : grupp
+          ? synliga.filter((p) => p.grupper.includes(grupp.namn))
+          : /* Utan grupp, ord och maträtt är filtret självt det man tittar på:
+               alla drycker från de valda länderna, utspridda över kartan.
+               Utan filter finns ingenting att visa, och grupperna får kartan
+               för sig själva. */
+            länder.length
+            ? synliga
+            : []
+    // Den valda produkten ritas alltid, även om filtret sorterat bort den. Man
+    // kan nå den via sökningen eller via "liknande", och en panel som beskriver
+    // en dryck som inte finns någonstans på kartan är obegriplig.
+    if (produkt && !ur.some((p) => p.id === produkt.id)) return [produkt, ...ur]
+    return ur
+  }, [synliga, läge.ord, läge.mat, grupp, produkt, länder])
 
   /* I 3D-läget går det inte att klicka på något. Det är hela skälet till att
      läget är möjligt: utan träffytor slipper man djupsorterad träffprövning,
@@ -116,11 +144,14 @@ export default function App() {
    *  inte kastas ur molnet av att välja en stil. Och färgvalet: har man ställt
    *  om prickarna till beska är det en inställning man gjort för att titta på
    *  kartan, inte en del av det man tittar på. Att den nollställdes vid varje
-   *  klick gjorde den nästan oanvändbar. */
+   *  klick gjorde den nästan oanvändbar. Landfiltret av samma skäl: det är ett
+   *  raster man lagt över kartan, och att det försvann vid varje klick vore
+   *  samma fel en gång till. */
   const bas = (): Läge => ({
     ...(karta.id === kartor[0].id ? {} : { karta: karta.id }),
     ...(läge.vy ? { vy: läge.vy } : {}),
     ...(läge.farg ? { farg: läge.farg } : {}),
+    ...(läge.land ? { land: läge.land } : {}),
   })
 
   /* Kartan äger sin zoom och position och tappar dem inte när man klickar sig
@@ -163,10 +194,25 @@ export default function App() {
     // fyllighet, pris och alkoholhalt finns däremot överallt.
     const ny = kartor.find((k) => k.id === id)
     const farg = ny?.färgkanaler.some((k) => k.nyckel === läge.farg) ? läge.farg : undefined
-    gåTill({ ...(id === kartor[0].id ? {} : { karta: id }), om: läge.om, vy: läge.vy, farg })
+    /* Landfiltret följer med ovalidderat, till skillnad från färgen. Vilka
+       länder den nya kartan har vet vi inte förrän dess produktfil är hämtad,
+       och det är efter det här klicket. Väljer man en karta där landet saknas
+       blir kartan tom — men filtret står kvar i reglaget med noll bredvid sig,
+       och listan visar landet så att man kan klicka bort det. */
+    gåTill({
+      ...(id === kartor[0].id ? {} : { karta: id }),
+      om: läge.om,
+      vy: läge.vy,
+      farg,
+      land: läge.land,
+    })
   }
 
   const stäng = () => gåTill(bas())
+
+  /** Filtret som en läsbar fras, till de ställen som annars ser tomma ut utan
+   *  förklaring: "Bara Sverige visas", "Bara 3 länder visas". */
+  const etikettFörFilter = länder.length === 1 ? länder[0] : `${länder.length} länder`
 
   return (
     <main>
@@ -211,20 +257,29 @@ export default function App() {
           </Fangare>
           <div className="reglage-rad">
             <Kartval kartor={kartor} vald={karta} onVälj={väljKarta} />
-            {/* 3D-läget är parkerat: knappen som tog en dit är borttagen, men
-                `#vy=3d` fungerar och gränssnittstestet kör det. Ett läge som
-                bara ligger kvar som oanropad kod ruttnar utan att någon märker
-                det; ett som går att nå och mäta gör inte det. Vägen ut måste
-                däremot finnas, annars sitter den som följt en länk fast. */}
-            {tredje && (
+            {/* En växel, inte en väg ut. Läget var länge parkerat — nåbart via
+                `#vy=3d` men utan knapp — eftersom molnet saknade axlar och var
+                svårt att orientera sig i. Med axelkorset går det att läsa, och
+                då ska det gå att hitta. Båda lägena står alltid, så att det
+                syns att man kan gå tillbaka innan man gått dit. */}
+            <div className="vyval" role="group" aria-label="Välj vy">
               <button
-                className="vy-knapp aktiv"
+                className={tredje ? undefined : 'aktiv'}
+                aria-pressed={!tredje}
                 onClick={() => gåTill({ ...läge, vy: undefined })}
-                title="Tillbaka till kartan"
+                title="Platt karta — här går det att klicka"
               >
                 2D
               </button>
-            )}
+              <button
+                className={tredje ? 'aktiv' : undefined}
+                aria-pressed={tredje}
+                onClick={() => gåTill({ ...läge, vy: '3d' })}
+                title="Roterbart moln med den tredje riktningen"
+              >
+                3D
+              </button>
+            </div>
             <button
               className={`om-knapp${läge.om ? ' aktiv' : ''}`}
               onClick={() => gåTill(läge.om ? { ...läge, om: undefined } : { ...läge, om: '1' })}
@@ -246,49 +301,57 @@ export default function App() {
               visar där mest hur väl kartan fångat det den matats med. Priset
               ligger helt utanför och är det enda som lägger till något
               positionen omöjligt kan bära. */}
-          <label className="fargval">
-            <span>färg</span>
-            <select
-              value={färgkanal?.nyckel ?? ''}
-              onChange={(e) => gåTill({ ...läge, farg: e.target.value || undefined })}
-            >
-              <option value="">{karta.id === 'ol' ? 'ölets färg' : 'vinets färg'}</option>
-              <optgroup label="smakprofil">
-                {karta.färgkanaler
-                  .filter((k) => k.sort === 'klocka')
-                  .map((k) => (
-                    <option key={k.nyckel} value={k.nyckel}>
-                      {k.etikett}
-                    </option>
-                  ))}
-              </optgroup>
-              <optgroup label="om flaskan">
-                {karta.färgkanaler
-                  .filter((k) => k.sort === 'annat')
-                  .map((k) => (
-                    <option key={k.nyckel} value={k.nyckel}>
-                      {k.etikett}
-                    </option>
-                  ))}
-              </optgroup>
-            </select>
-            {/* Ändarna är där produkterna faktiskt ligger, inte skalans slut —
-                annars vore kartan enfärgad. Talen står ut så att ingen tror att
-                bandet spänner över allt. */}
-            {färgkanal && (
-              <span className="fargskala" aria-hidden>
-                <span>{färgkanal.spann[0].toLocaleString('sv-SE')}</span>
-                <span
-                  className="fargband"
-                  style={{ background: `linear-gradient(90deg, ${KLOCKSKALA.join(',')})` }}
-                />
-                <span>
-                  {färgkanal.spann[1].toLocaleString('sv-SE')}
-                  {färgkanal.enhet}
+          <div className="reglage-rad raster">
+            <Landval
+              produkter={produkter}
+              valda={länder}
+              enhet={karta.enhet.flera}
+              onÄndra={(l) => gåTill({ ...läge, land: skrivLänder(l) }, false)}
+            />
+            <label className="fargval">
+              <span>färg</span>
+              <select
+                value={färgkanal?.nyckel ?? ''}
+                onChange={(e) => gåTill({ ...läge, farg: e.target.value || undefined })}
+              >
+                <option value="">{karta.id === 'ol' ? 'ölets färg' : 'vinets färg'}</option>
+                <optgroup label="smakprofil">
+                  {karta.färgkanaler
+                    .filter((k) => k.sort === 'klocka')
+                    .map((k) => (
+                      <option key={k.nyckel} value={k.nyckel}>
+                        {k.etikett}
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="om flaskan">
+                  {karta.färgkanaler
+                    .filter((k) => k.sort === 'annat')
+                    .map((k) => (
+                      <option key={k.nyckel} value={k.nyckel}>
+                        {k.etikett}
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+              {/* Ändarna är där produkterna faktiskt ligger, inte skalans slut —
+                  annars vore kartan enfärgad. Talen står ut så att ingen tror att
+                  bandet spänner över allt. */}
+              {färgkanal && (
+                <span className="fargskala" aria-hidden>
+                  <span>{färgkanal.spann[0].toLocaleString('sv-SE')}</span>
+                  <span
+                    className="fargband"
+                    style={{ background: `linear-gradient(90deg, ${KLOCKSKALA.join(',')})` }}
+                  />
+                  <span>
+                    {färgkanal.spann[1].toLocaleString('sv-SE')}
+                    {färgkanal.enhet}
+                  </span>
                 </span>
-              </span>
-            )}
-          </label>
+              )}
+            </label>
+          </div>
         </div>
 
         {/* Om-rutan tar hela panelplatsen så länge den är öppen. Det man
@@ -303,13 +366,13 @@ export default function App() {
         {/* Produkten tar över panelen även när man kom via ett smakord eller en
             maträtt — annars går listan inte att klicka sig in i. Urvalet
             ligger kvar i adressen, och tillbakalänken går dit. */}
-        {!läge.om && urval && produkter && !produkt && (
+        {!läge.om && urval && synliga && !produkt && (
           <Fangare namn="Urvalsvyn">
             <Urval
               karta={karta}
               sort={urval.sort}
               värde={urval.värde}
-              produkter={produkter}
+              produkter={synliga}
               onVäljProdukt={väljProdukt}
               onStäng={stäng}
             />
@@ -321,7 +384,13 @@ export default function App() {
             <Panel
               karta={karta}
               grupp={grupp}
-              produkter={produkter}
+              /* Panelen räknar på det som syns. En lista som räknade upp
+                 belgiska öl medan kartan visar svenska vore en andra sanning
+                 om samma sak. Gruppens egna tal — medianen, kännetecknen —
+                 kommer däremot ur hela sortimentet och rör sig inte: de
+                 beskriver stilen, inte urvalet. */
+              produkter={synliga}
+              filter={länder.length ? etikettFörFilter : null}
               fel={fel}
               vald={produkt}
               tillbaka={urval ? urval.värde.toLowerCase() : (grupp?.namn ?? null)}
@@ -339,9 +408,16 @@ export default function App() {
       </div>
       <footer>
         <span>{karta.sida}</span>
+        {/* Med ett filter på är antalet i foten det enda stället som säger hur
+            mycket som sorterats bort. Grupperna räknas inte om: de ligger kvar
+            på kartan och är räknade ur hela sortimentet. */}
         <span>
-          {karta.antalGrupper} {karta.grupp.flera}, {karta.antalProdukter.toLocaleString('sv-SE')}{' '}
+          {karta.antalGrupper} {karta.grupp.flera},{' '}
+          {(länder.length && synliga ? synliga.length : karta.antalProdukter).toLocaleString(
+            'sv-SE',
+          )}{' '}
           {karta.enhet.flera}
+          {länder.length > 0 && <> av {karta.antalProdukter.toLocaleString('sv-SE')}</>}
         </span>
         <span>
           {tredje

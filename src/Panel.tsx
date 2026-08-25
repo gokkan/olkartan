@@ -23,6 +23,10 @@ type Props = {
    *  Då finns bara produktvyn, och den visas utan jämförelse mot en median. */
   grupp: Grupp | null
   produkter: Produkt[] | null
+  /** Vad landfiltret heter, när det är på. Panelens listor är redan avsmalnade
+   *  när den kommer hit — det här är bara namnet, så att en kort eller tom
+   *  lista läses som ett filter och inte som ett fel. Null = inget filter. */
+  filter: string | null
   fel: string | null
   vald: Produkt | null
   /** Vad tillbakalänken i produktvyn heter. Gruppens namn i vanliga fall, men
@@ -87,6 +91,7 @@ export default function Panel({
   karta,
   grupp,
   produkter,
+  filter,
   fel,
   vald,
   tillbaka,
@@ -294,8 +299,12 @@ export default function Panel({
             </>
           )}
 
+          {/* Grannarna hämtas ur det filtrerade underlaget. En lista som pekade
+              ut en belgisk granne medan kartan bara visar svenska öl vore ett
+              råd man inte kan följa tillbaka till kartan. */}
           <h3>
-            Liknande <span className="not">och hur de skiljer sig</span>
+            Liknande{' '}
+            <span className="not">och hur de skiljer sig{filter ? ` · bara ${filter}` : ''}</span>
           </h3>
           {!produkter && !fel && <p className="laddar">hämtar produkter …</p>}
           <ul className="liknande">
@@ -319,9 +328,19 @@ export default function Panel({
         <>
           <p className="meta">{grupp.förälder}</p>
           <h2>{grupp.namn}</h2>
+          {/* Antalet är listans, inte gruppens, så snart listan finns — med ett
+              landfilter på är det den enda siffran som stämmer med kartan.
+              Gruppens eget antal står kvar så länge produkterna hämtas, för då
+              är listan tom av fel skäl. */}
           <p className="undertitel" data-kik>
-            {lista.length || grupp.antal} st · {grupp.abv} % · {kr(grupp.prisPerLiter)}
+            {produkter ? lista.length : grupp.antal} st · {grupp.abv} % · {kr(grupp.prisPerLiter)}
           </p>
+          {filter && (
+            <p className="källnot">
+              Bara {filter} visas. Smakprofilen och kännetecknen nedan gäller {karta.grupp.denna} i
+              sin helhet.
+            </p>
+          )}
           {lista.length > 1 && (
             <button className="visa-molnet" onClick={onVisaMolnet}>
               Rama in alla {lista.length} på kartan

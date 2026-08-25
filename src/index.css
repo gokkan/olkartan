@@ -88,15 +88,27 @@ main {
   pointer-events: none;
 }
 
-/* Golvet ska kännas som underlag, inte som innehåll. Opaciteten sätts per
-   linje efter djup — här bara färgen. */
-.karta3d .golv line {
+/* Axelkorset ska kännas som ram, inte som innehåll. Opaciteten sätts per arm
+   efter djup — här bara färgen. */
+.karta3d .axelkors line {
   stroke: var(--svag);
 }
 
-.karta3d .golv .stolpe {
-  opacity: 0.3;
-  stroke-dasharray: 4 5;
+.karta3d .axelnamn text {
+  fill: var(--svag);
+  letter-spacing: 0.02em;
+  paint-order: stroke;
+  stroke: var(--botten);
+  stroke-linejoin: round;
+}
+
+/* Punkten där de tre linjerna möts. Den enda ljusa saken i ramen, för den är
+   det enda i den som står stilla när molnet vrids. */
+.karta3d .mittpunkt {
+  fill: var(--text);
+  stroke: var(--botten);
+  paint-order: stroke;
+  opacity: 0.7;
 }
 
 .karta3d .lodlinje line {
@@ -108,26 +120,9 @@ main {
   fill: rgb(255 255 255 / 0.55);
 }
 
-.karta3d .kompass line {
-  stroke: var(--svag);
-}
-
-.karta3d .kompassring {
-  fill: color-mix(in srgb, var(--yta) 55%, transparent);
-  stroke: var(--linje);
-}
-
-.karta3d .kompass text {
-  fill: var(--svag);
-  letter-spacing: 0.03em;
-  paint-order: stroke;
-  stroke: var(--botten);
-  stroke-linejoin: round;
-}
-
-/* Vad den tredje riktningen är. Står nere i mitten, där axelorden annars
-   ligger — de går inte att visa i 3D eftersom riktningarna vrider sig. */
-.tredje-not {
+/* Hur man tar i molnet. Att det går att vrida är det enda i läget som inte
+   syns av sig självt — riktningarna står numera på axlarna. */
+.grepp-not {
   position: absolute;
   left: 50%;
   bottom: 10px;
@@ -856,12 +851,29 @@ footer span:last-child {
   border: 1px solid var(--linje);
 }
 
-/* Samma pillerform som kartvalet — det är ett läge man växlar, inte en text
-   man öppnar, och ska därför inte se ut som i-knappen. */
-.vy-knapp {
+/* Landfiltret och färgvalet delar rad. Båda ändrar hur kartan ser ut utan att
+   ändra vad man tittar på, och de hör ihop starkare med varandra än med
+   navigeringen ovanför. Raden bryts hellre än att reglagen krymper. */
+.reglage-rad.raster {
+  flex-wrap: wrap;
+}
+
+.reglage-rad.raster .fargval {
+  margin-top: 0;
+}
+
+.landval {
+  position: relative;
   flex: none;
+}
+
+.landval > button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 30px;
-  padding: 0 11px;
+  padding: 0 9px 0 11px;
+  max-width: 190px;
   border: 1px solid var(--linje);
   border-radius: 6px;
   background: color-mix(in srgb, var(--yta) 88%, transparent);
@@ -869,15 +881,144 @@ footer span:last-child {
   color: var(--svag);
   font: inherit;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.landval > button:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.landval > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Ett påslaget filter döljer prickar, och ett dolt urval man glömt bort är
+   det värsta ett sådant reglage kan göra. Därför lyser knappen så länge det
+   är på — den ska gå att se utan att man letar. */
+.landval > button.aktiv {
+  background: var(--botten);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
+}
+
+.landval-namn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landval-pil {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.landval.öppen .landval-pil {
+  transform: rotate(180deg);
+}
+
+.landval-lista {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-height: min(340px, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border: 1px solid var(--linje);
+  border-radius: 7px;
+  background: var(--yta);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.4);
+}
+
+.landval-lista button {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--svag);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.landval-lista button:hover {
+  background: var(--botten);
+  color: var(--text);
+}
+
+.landval-lista button.aktiv {
+  color: var(--text);
+}
+
+/* Skriven med listan framför sig för att slå `.landval-lista button`, som
+   nollar ramen. Utan den vikten hade raden inget streck under sig. */
+.landval-lista .landval-alla {
+  border-bottom: 1px solid var(--linje);
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 3px;
+}
+
+.landval-kryss {
+  flex: none;
+  width: 10px;
+  color: var(--text);
+}
+
+.landval-land {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landval-antal {
+  flex: none;
+  font-size: 11px;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Samma segmenterade piller som kartvalet, och av samma skäl: det är ett läge
+   man växlar mellan två givna, inte en text man öppnar. Att båda knapparna
+   alltid står är hela poängen — man ska se att det finns en väg tillbaka
+   innan man tryckt sig bort. */
+.vyval {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--linje);
+}
+
+.vyval button {
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--svag);
+  font: inherit;
+  font-size: 12px;
   letter-spacing: 0.03em;
   cursor: pointer;
 }
 
-.vy-knapp:hover {
+.vyval button:hover {
   color: var(--text);
 }
 
-.vy-knapp.aktiv {
+.vyval button.aktiv {
   background: var(--botten);
   color: var(--text);
 }

@@ -41,12 +41,23 @@ const PRICKANDEL = 0.6
 
 /** Grader per sekund när molnet snurrar av sig självt. */
 const SNURRFART = 9
+/** Hur långt molnet tippar av sig självt, i radianer, och hur fort dit. Runt
+ *  0,3 ser man ovansidan utan att den platta kartans upp och ned blir otydliga;
+ *  två och en halv sekund är långsamt nog att läsa som en rörelse och inte som
+ *  ett hopp. */
+const LUTNING = 0.3
+const LUTFART = 0.12
 /** Hur mycket de bortre prickarna bleknar. 1 = ingen dis. */
 const MINSTA_DIS = 0.3
 /** Så många gruppnamn skrivs ut. Fler blir en väv av text. */
 const NAMN = 14
-/** Rutor per sida i golvet. Fler blir ett moaré, färre ger inget att hålla i. */
-const RUTOR = 8
+/** Hur långt axlarna når ut, som andel av sfärens radie. Resten är luft åt
+ *  spetsarnas namn, som annars klipps när korset vrids mot en kant. */
+const AXELDEL = 0.84
+/** En axelspets som projiceras kortare än så namnges inte. Tittar man rakt in
+ *  i djupaxeln blir den en punkt i mitten, och dess båda namn skulle hamna
+ *  ovanpå varandra just där de tre linjerna möts. */
+const KORTASTE_ARM = 30
 
 type Vinkel = { gir: number; lut: number; k: number }
 
@@ -68,7 +79,11 @@ export default function Karta3D({
   const smal = useSmalSkärm('(max-width: 700px)')
   const svgRef = useRef<SVGSVGElement>(null)
   const [ruta, setRuta] = useState({ ritfaktor: REFERENSFAKTOR, bredd: 1060, höjd: 864 })
-  const [vinkel, setVinkel] = useState<Vinkel>({ gir: 0.6, lut: 0.35, k: 1 })
+  /* Rakt framifrån, alltså exakt den platta kartan: samma ord åt vänster,
+     höger, upp och ned, och djupaxeln en punkt i mitten. Den som kommer hit
+     ska känna igen sig innan något börjar röra sig. Vridningen tar sedan över
+     och tippar upp det tredje hållet av sig självt. */
+  const [vinkel, setVinkel] = useState<Vinkel>({ gir: 0, lut: 0, k: 1 })
   const [snurrar, setSnurrar] = useState(true)
   const drag = useRef<{ x: number; y: number; gir: number; lut: number } | null>(null)
   const nu = useRef(vinkel)
@@ -106,7 +121,11 @@ export default function Karta3D({
      man får dra. Efter första taget är vinkeln användarens. */
   useEffect(() => {
     if (!snurrar) return
+    /* Den som bett om stillhet får ingen ingång — men inte heller startvyn,
+       för rakt framifrån är djupaxeln en punkt och läget säger ingenting.
+       I stället ett fast, redan tippat läge att titta på. */
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVinkel((v) => ({ ...v, gir: 0.6, lut: 0.32 }))
       setSnurrar(false)
       return
     }
@@ -115,7 +134,14 @@ export default function Karta3D({
     const steg = (t: number) => {
       const dt = Math.min(64, t - sist)
       sist = t
-      setVinkel((v) => ({ ...v, gir: v.gir + ((SNURRFART * Math.PI) / 180) * (dt / 1000) }))
+      setVinkel((v) => ({
+        ...v,
+        gir: v.gir + ((SNURRFART * Math.PI) / 180) * (dt / 1000),
+        // Lutningen reser sig en gång, från platt till LUTNING, och stannar
+        // där. Utan den vore vridningen ett karusellsvep där ingenting någonsin
+        // syns uppifrån; med den vecklar rymden ut sig ur den platta kartan.
+        lut: Math.min(LUTNING, v.lut + LUTFART * (dt / 1000)),
+      }))
       bild = requestAnimationFrame(steg)
     }
     bild = requestAnimationFrame(steg)
@@ -251,58 +277,65 @@ export default function Karta3D({
     return ut
   }, [punkter, karta, lupp, luppPrick])
 
-  /* Ett golv med rutnät under molnet, plus ett lodrätt streck genom mitten.
-     Utan referens går det inte att avgöra hur långt man vridit eller vad som
-     är upp — prickarna ensamma ser likadana ut från varje håll. Golvet ligger
-     i planet för de två axlar man ser på den platta kartan, så det man känner
-     igen därifrån är golvet och det nya är höjden.
+  /* Tre axlar genom mitten, sex namngivna spetsar och en punkt där de möts.
+     Detta ersatte ett rutnätsgolv och en kompass i hörnet, som tillsammans sa
+     vilket håll man vridit men aldrig vad hållen betyder.
 
-     Rutorna är inte till för att mätas i. De finns för att ögat ska ha något
-     att hålla fast vid när molnet rör sig, och därför är de bleka. */
-  /* Golvhöjden är molnets egen underkant, inte sfärens botten. Sfären rymmer
-     rotationen åt alla håll, men molnet är platt i höjdled — mäter man mot
-     sfären svävar prickarna långt över sitt golv och lodlinjerna blir längre
-     än allt de ska förklara. */
-  const golvY = useMemo(() => {
-    const ys = karta.grupper.map((g) => (g.y - rymd.mitt.y) * rymd.skala)
-    return Math.min(...ys) - R * 0.06
-  }, [karta, rymd, R])
+     Att streck genom molnet lästes som innehåll var en gång skälet till att de
+     togs bort. Tre saker gör dem läsbara som ram i stället: de ritas bakom
+     prickarna, så varje dryck skymmer dem; den bortre halvan av varje arm
+     bleknar med samma dis som prickarna, så korset ligger i samma rymd som
+     molnet i stället för ovanpå det; och spetsarna bär kartans egna axelord,
+     vilket ingen prick gör.
 
-  const golv = useMemo(() => {
-    /* Rutnätet är en kvadrat, och en kvadrats hörn ligger √2 gånger längre ut
-       än dess sida. Sidan måste därför hållas innanför R/√2, annars sticker
-       hörnen utanför bild när golvet vrids. Inom den gränsen läggs det så tätt
-       intill molnet som molnet självt kräver. */
-    const bredast = Math.max(
-      ...karta.grupper.map((g) =>
-        Math.max(
-          Math.abs((g.x - rymd.mitt.x) * rymd.skala),
-          Math.abs((g.z - rymd.mitt.z) * rymd.skala),
-        ),
-      ),
+     Armarna är lika långa åt alla sex håll fast molnet är plattare i djupled.
+     Ett kors som följde utbredningen skulle stämma bättre med datan men vore
+     obrukbart som referens: det ändrade form vid varje kartbyte, och en
+     kortare arm skulle läsas som en mindre viktig riktning. */
+  const axelkors = useMemo(() => {
+    const L = R * AXELDEL
+    const riktningar: [number, number, number][] = [
+      [L, 0, 0],
+      [0, L, 0],
+      [0, 0, L],
+    ]
+    return riktningar.flatMap(([rx, ry, rz], i) =>
+      [1, -1].map((tecken) => {
+        const spets = rotera(rx * tecken, ry * tecken, rz * tecken)
+        const dx = spets.px - W / 2
+        const dy = spets.py - H / 2
+        const arm = Math.hypot(dx, dy) || 1
+        return {
+          nyckel: `${i}:${tecken}`,
+          px: spets.px,
+          py: spets.py,
+          d: spets.d,
+          arm,
+          ord: (tecken > 0 ? karta.axlar[i].positiv : karta.axlar[i].negativ)
+            .slice(0, smal ? 1 : 2)
+            .join(', '),
+          /* Namnet sätts en bit bortom spetsen i armens egen riktning, och
+             ankras åt det håll armen pekar. Utan ankringen lägger sig texten
+             tvärs över linjen den namnger så fort korset vridits ett kvarv. */
+          tx: spets.px + (dx / arm) * 9 * lupp,
+          ty: spets.py + (dy / arm) * 9 * lupp,
+          ankare: (dx > arm * 0.35 ? 'start' : dx < -arm * 0.35 ? 'end' : 'middle') as
+            'start' | 'end' | 'middle',
+          lyft: dy > arm * 0.35 ? 10 * lupp : dy < -arm * 0.35 ? -4 * lupp : 4 * lupp,
+        }
+      }),
     )
-    const kant = Math.min(R / Math.SQRT2, bredast * 1.12)
-    const steg = (kant * 2) / RUTOR
-    const linjer: { x1: number; y1: number; x2: number; y2: number; d: number }[] = []
-    for (let i = 0; i <= RUTOR; i++) {
-      const t = -kant + i * steg
-      for (const [a, b] of [
-        [rotera(t, golvY, -kant), rotera(t, golvY, kant)],
-        [rotera(-kant, golvY, t), rotera(kant, golvY, t)],
-      ])
-        linjer.push({ x1: a.px, y1: a.py, x2: b.px, y2: b.py, d: (a.d + b.d) / 2 })
-    }
-    // Lodrätt streck ur golvets mitt upp till molnets tak, så att "upp" har en
-    // riktning även när golvet ses nästan från kanten.
-    const tak = Math.max(...karta.grupper.map((g) => (g.y - rymd.mitt.y) * rymd.skala))
-    const ned = rotera(0, golvY, 0)
-    const upp = rotera(0, tak, 0)
-    return { linjer, stolpe: { x1: ned.px, y1: ned.py, x2: upp.px, y2: upp.py } }
-  }, [rotera, R, golvY, karta, rymd])
+  }, [rotera, R, karta, smal, lupp])
 
-  /* Lodlinjen från den valda pricken ned till golvet. Ett enda streck, men det
-     är det som gör att man ser var i höjdled något ligger — utan det svävar
-     prickarna utan förankring. */
+  /* Lodlinjen från den valda pricken till planet genom mitten — det plan som
+     de två vågräta axlarna spänner upp. Ett enda streck, men det är det som
+     gör att man ser var i höjdled något ligger; utan det svävar prickarna
+     utan förankring.
+
+     Den gick förut ned till golvet. Med golvet borta är mittplanet den enda
+     ärliga referensen kvar, och samtidigt den mest läsbara: strecket säger nu
+     hur långt över eller under mitten drycken ligger, och foten landar på det
+     kors man redan tittar på. */
   const lodlinje = useMemo(() => {
     const träff = valdProdukt ?? karta.grupper.find((g) => g.namn === vald)
     if (!träff) return null
@@ -310,42 +343,9 @@ export default function Karta3D({
     const dy = (träff.y - rymd.mitt.y) * rymd.skala
     const dz = (träff.z - rymd.mitt.z) * rymd.skala
     const a = rotera(dx, dy, dz)
-    const b = rotera(dx, golvY, dz)
+    const b = rotera(dx, 0, dz)
     return { x1: a.px, y1: a.py, x2: b.px, y2: b.py, fot: b }
-  }, [valdProdukt, vald, karta, rymd, rotera, golvY])
-
-  /* En kompass i hörnet i stället för axlar genom molnet. Strecken genom
-     prickarna såg ut som innehåll; i hörnet läser de som det de är — en
-     upplysning om vilken väg man vridit. */
-  const kompass = useMemo(() => {
-    const L = 40 * lupp
-    const O = { x: 26 * lupp + L, y: H - 26 * lupp - L }
-    const cg = Math.cos(vinkel.gir)
-    const sg = Math.sin(vinkel.gir)
-    const cl = Math.cos(vinkel.lut)
-    const sl = Math.sin(vinkel.lut)
-    const enhet = [
-      [1, 0, 0],
-      [0, 1, 0],
-      [0, 0, 1],
-    ]
-    return enhet.map(([x, y, z], i) => {
-      const x1 = x * cg + z * sg
-      const z1 = -x * sg + z * cg
-      const y1 = y * cl - z1 * sl
-      const z2 = y * sl + z1 * cl
-      return {
-        px: O.x + x1 * L,
-        py: O.y - y1 * L,
-        ox: O.x,
-        oy: O.y,
-        d: z2,
-        ord: karta.axlar[i].positiv[0],
-        origo: O,
-        radie: L,
-      }
-    })
-  }, [vinkel, karta, lupp])
+  }, [valdProdukt, vald, karta, rymd, rotera])
 
   function ned(e: React.PointerEvent<SVGSVGElement>) {
     setSnurrar(false)
@@ -396,19 +396,20 @@ export default function Karta3D({
         onPointerCancel={släpp}
         onPointerLeave={släpp}
       >
-        {/* Golvet först av allt — det ska ligga under molnet, inte i det. */}
-        <g className="golv" strokeWidth={0.7 * lupp}>
-          {golv.linjer.map((l, i) => (
+        {/* Axelkorset först av allt. Att prickarna målar över det är avsikten:
+            en ram man ser förbi, inte innehåll att läsa. */}
+        <g className="axelkors">
+          {axelkors.map((a) => (
             <line
-              key={i}
-              x1={l.x1}
-              y1={l.y1}
-              x2={l.x2}
-              y2={l.y2}
-              opacity={0.1 + 0.22 * ((l.d + 1) / 2)}
+              key={a.nyckel}
+              x1={W / 2}
+              y1={H / 2}
+              x2={a.px}
+              y2={a.py}
+              strokeWidth={0.9 * lupp}
+              opacity={dis(a.d)}
             />
           ))}
-          <line className="stolpe" {...golv.stolpe} strokeWidth={0.7 * lupp} />
         </g>
 
         {lodlinje && (
@@ -457,37 +458,48 @@ export default function Karta3D({
           </text>
         ))}
 
-        {/* Kompassen sist, så att den aldrig hamnar under en prick. */}
-        <g className="kompass" style={{ fontSize: 10 * lupp }}>
+        {/* Axelnamnen och mittpunkten sist. Namnen ligger utanför molnet ändå;
+            punkten är navet allt vrids kring och får inte hamna under en prick.
+
+            En arm som projiceras kort namnges inte. Rakt framifrån är
+            djupaxeln en punkt i mitten, och dess båda ord skulle ligga ovanpå
+            varandra där de tre linjerna möts — men vridningen fäller ut dem
+            inom ett par sekunder, och noten under kartan säger vad de är
+            under tiden. */}
+        <g className="axelnamn" style={{ fontSize: 11 * lupp }}>
+          {axelkors.map(
+            (a) =>
+              a.arm > KORTASTE_ARM * lupp && (
+                <text
+                  key={a.nyckel}
+                  x={a.tx}
+                  y={a.ty}
+                  dy={a.lyft}
+                  textAnchor={a.ankare}
+                  strokeWidth={3 * lupp}
+                  opacity={0.45 + 0.5 * ((a.d + 1) / 2)}
+                >
+                  {a.ord}
+                </text>
+              ),
+          )}
+          {/* Navet. Ritad med mörk kontur, för den ligger ofta mitt i den
+              tätaste delen av molnet och skulle annars försvinna in i en ljus
+              prick just där den behövs som mest. */}
           <circle
-            className="kompassring"
-            cx={kompass[0].origo.x}
-            cy={kompass[0].origo.y}
-            r={kompass[0].radie}
-            strokeWidth={lupp}
+            className="mittpunkt"
+            cx={W / 2}
+            cy={H / 2}
+            r={2.6 * lupp}
+            strokeWidth={2 * lupp}
           />
-          {kompass.map((a, i) => (
-            <g key={i} opacity={0.35 + 0.45 * ((a.d + 1) / 2)}>
-              <line x1={a.ox} y1={a.oy} x2={a.px} y2={a.py} strokeWidth={1.2 * lupp} />
-              <text
-                x={a.px}
-                y={a.py}
-                dy={(a.py < a.oy ? -5 : 11) * lupp}
-                textAnchor="middle"
-                strokeWidth={3 * lupp}
-              >
-                {a.ord}
-              </text>
-            </g>
-          ))}
         </g>
       </svg>
 
-      <div className="tredje-not">
-        Tredje riktningen: {karta.axlar[2].positiv.slice(0, 2).join(', ')} ↔{' '}
-        {karta.axlar[2].negativ.slice(0, 2).join(', ')} · dra för att vrida
-        {smal ? '' : ', rulla för att zooma'}
-      </div>
+      {/* Noten stod förut för att säga vad den tredje riktningen var — den
+          gick inte att rita. Nu står den på sin egen axel med sina egna ord,
+          och kvar är bara det man inte kan se: att man får ta i molnet. */}
+      <div className="grepp-not">dra för att vrida{smal ? '' : ', rulla för att zooma'}</div>
     </div>
   )
 }
