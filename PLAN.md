@@ -656,6 +656,37 @@ Prestandan håller: 2 866 enskilda prickar ritas utan att något knakar, vilket 
 
 ---
 
+## Att hitta i rymden, och att peka från listan
+
+Två tillägg efter att axelkorset kommit på plats. Båda svarar på samma sorts fråga — *var ligger det här?* — men på var sitt håll.
+
+### Rutnät och lodlinjer
+
+Axelkorset sa vilket håll man vridit. Det sa inte hur långt bort något ligger, och det är en annan fråga: två prickar med samma skärmläge kan sitta på var sin sida om mitten utan att det syns.
+
+Två saker löser det, och de behöver varandra:
+
+- **Ett rutnät i mittplanet**, det plan de två vågräta axlarna spänner upp. Inte till för att mätas i — det finns för att perspektivet ska ha något att verka på. Rutorna blir trängre bortåt och glesare framåt, och det är den kilformen ögat läser djup ur.
+- **Lodlinjer från landmärkena** ned till det planet, med en fot där de landar. Det är det här som faktiskt placerar en prick: en prick som svävar går inte att bedöma, men en prick med ett streck ned till en fot i rutnätet gör det. Man läser av foten i stället för pricken, och foten ligger i ett plan man ser lutningen på.
+
+Ett rutnätsgolv fanns en gång och togs bort tillsammans med hörnkompassen. Skillnaden mot då är två: det ligger i **mittplanet** i stället för under molnet, alltså i samma plan som korset — det läser som att korset fått en yta, inte som ett andra föremål i bilden. Och det står inte ensamt: utan lodlinjerna var golvet bara ett mönster i bakgrunden.
+
+Bara de utskrivna grupperna får en lodlinje. Alla sextio vore en skog, och landmärken man inte kan namnge är inga landmärken — det ska vara samma prickar man ändå läser namnen på. Samma `störst`-mängd styr båda.
+
+### Markering från listan
+
+Håller man pekaren över en rad i panelen lyser drycken upp på kartan, med ett streck till den man tittar på.
+
+Det som gör det värt att bygga är **"Liknande"**. Grannarna där räknas i hela smakrymden och hamnar ofta i en annan grupp — det är själva poängen med appen — och de ligger då per definition *inte* i molnet. Markeringen ritas därför fristående och inte som en markering av en befintlig prick. Strecket mellan de två är det som gör den till ett avstånd i stället för bara en prick till.
+
+I 3D får den dessutom en egen lodlinje ned till mittplanet. Den är viktigare där än på den platta kartan: utan den ser man att grannen ligger åt vänster, men inte att den ligger åt vänster *och* bakom.
+
+Markeringen ligger med flit **utanför hashen**. Den ändras vid varje musrörelse, och en hash som skrivs om per bildruta gör bakåtknappen obrukbar — samma skäl som håller 3D-lägets kameravinkel utanför. Den nollställs på tre ställen: när pekaren lämnar en rad, när den lämnar listan som helhet (lämnar man snett över ett hörn hinner raden inte alltid säga ifrån), och vid varje klick som byter det panelen visar.
+
+Det är en musfunktion. På telefon finns ingen hovring, och där är listan redan ett klick från samma svar.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.

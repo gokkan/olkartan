@@ -10,7 +10,7 @@ import {
 } from 'react'
 import type { Färgkanal, Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
-import { grupprad } from './lib/urval'
+import { grupprad, heltNamn } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -91,12 +91,15 @@ type Props = {
    *  träffarna på ett smakord — kartan bryr sig inte om vilket. */
   molnet: Produkt[]
   valdProdukt: Produkt | null
+  /** Drycken man håller pekaren över i panelens listor. Ritas fristående, för
+   *  den ligger ofta utanför molnet — se `märke` nedan. */
+  markerad: Produkt | null
   onVälj: (g: Grupp) => void
   onVäljProdukt: (p: Produkt) => void
 }
 
 const Karta = forwardRef<KartHandtag, Props>(function Karta(
-  { karta, färgkanal, vald, molnet, valdProdukt, onVälj, onVäljProdukt },
+  { karta, färgkanal, vald, molnet, valdProdukt, markerad, onVälj, onVäljProdukt },
   ref,
 ) {
   const grupper = karta.grupper
@@ -286,6 +289,24 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
     () => molnet.map((p) => ({ produkt: p, px: skala.px(p.x), py: skala.py(p.y) })),
     [molnet, skala],
   )
+
+  /* Den dryck man håller pekaren över i panelens listor.
+   *
+   * Ritas fristående och inte som en markering av en prick i molnet, för det
+   * intressanta fallet är just det där drycken *inte* ligger i molnet:
+   * "Liknande" plockar grannar tvärs över kartan, och frågan man ställer när
+   * man hovrar över en av dem är var den ligger i förhållande till den man
+   * tittar på. Därför också strecket mellan de två — utan det ser man en till
+   * prick, inte ett avstånd. */
+  const märke = useMemo(() => {
+    if (!markerad) return null
+    const till = { px: skala.px(markerad.x), py: skala.py(markerad.y) }
+    const från =
+      valdProdukt && valdProdukt.id !== markerad.id
+        ? { px: skala.px(valdProdukt.x), py: skala.py(valdProdukt.y) }
+        : null
+    return { till, från, produkt: markerad }
+  }, [markerad, valdProdukt, skala])
 
   useImperativeHandle(
     ref,
@@ -576,6 +597,45 @@ const Karta = forwardRef<KartHandtag, Props>(function Karta(
               />
             )
           })}
+
+          {/* Markeringen ligger ovanpå molnet men under gruppnamnen. Ringen är
+              ihålig så att prickens egen färg syns igenom — det är samma dryck
+              som i listan, inte en ny sorts punkt. */}
+          {märke && (
+            <g className="marke">
+              {märke.från && (
+                <line
+                  x1={märke.från.px}
+                  y1={märke.från.py}
+                  x2={märke.till.px}
+                  y2={märke.till.py}
+                  strokeWidth={sk(1)}
+                />
+              )}
+              <circle
+                cx={märke.till.px}
+                cy={märke.till.py}
+                r={skPrick(3.4)}
+                fill={kulör.litenPrick(märke.produkt)}
+              />
+              <circle
+                className="marke-ring"
+                cx={märke.till.px}
+                cy={märke.till.py}
+                r={skPrick(9)}
+                strokeWidth={sk(1.5)}
+              />
+              <text
+                className="etikett aktiv"
+                x={märke.till.px}
+                y={märke.till.py - skPrick(9) - sk(5)}
+                textAnchor="middle"
+                fontSize={sk(11)}
+              >
+                {heltNamn(märke.produkt)}
+              </text>
+            </g>
+          )}
 
           {punkter.map((p) => {
             const aktiv = hovrad?.namn === p.grupp.namn

@@ -51,7 +51,16 @@ export default function App() {
     }
   }, [])
 
+  /* Drycken pekaren vilar på i någon av panelens listor. Den ligger med flit
+     utanför hashen: den ändras vid varje musrörelse och betyder ingenting när
+     man kommer tillbaka till en delad länk. */
+  const [markerad, setMarkerad] = useState<Produkt | null>(null)
+
   const gåTill = useCallback((nytt: Läge, nyPost = true) => {
+    // Ett klick byter det panelen visar, och listan under pekaren är inte
+    // längre den man pekade i. Utan nollställningen lyser den gamla
+    // markeringen kvar tills man rör musen igen.
+    setMarkerad(null)
     skrivLäge(nytt, nyPost)
     sättLäge(nytt)
   }, [])
@@ -224,6 +233,7 @@ export default function App() {
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
+            markerad={markerad}
           />
         ) : (
           <Karta
@@ -233,6 +243,7 @@ export default function App() {
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
+            markerad={markerad}
             onVälj={väljGrupp}
             onVäljProdukt={väljProdukt}
           />
@@ -374,6 +385,7 @@ export default function App() {
               värde={urval.värde}
               produkter={synliga}
               onVäljProdukt={väljProdukt}
+              onMarkera={setMarkerad}
               onStäng={stäng}
             />
           </Fangare>
@@ -396,6 +408,7 @@ export default function App() {
               tillbaka={urval ? urval.värde.toLowerCase() : (grupp?.namn ?? null)}
               onVäljGrupp={väljGrupp}
               onVäljProdukt={väljProdukt}
+              onMarkera={setMarkerad}
               onVäljMat={väljMat}
               onTillbaka={() => gåTill({ ...läge, produkt: undefined }, false)}
               onStäng={stäng}

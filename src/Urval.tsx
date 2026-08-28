@@ -23,6 +23,7 @@ export default function Urval({
   värde,
   produkter,
   onVäljProdukt,
+  onMarkera,
   onStäng,
 }: {
   karta: Karta
@@ -30,6 +31,7 @@ export default function Urval({
   värde: string
   produkter: Produkt[]
   onVäljProdukt: (p: Produkt) => void
+  onMarkera: (p: Produkt | null) => void
   onStäng: () => void
 }) {
   const träffar = useMemo(
@@ -76,7 +78,12 @@ export default function Urval({
       )}
 
       <h3>Träffarna</h3>
-      <Produktlista karta={karta} produkter={träffar} onVälj={onVäljProdukt} />
+      <Produktlista
+        karta={karta}
+        produkter={träffar}
+        onVälj={onVäljProdukt}
+        onMarkera={onMarkera}
+      />
     </Panelram>
   )
 }

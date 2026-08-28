@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Färgkanal, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
+import { heltNamn } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -58,6 +59,9 @@ const AXELDEL = 0.84
  *  i djupaxeln blir den en punkt i mitten, och dess båda namn skulle hamna
  *  ovanpå varandra just där de tre linjerna möts. */
 const KORTASTE_ARM = 30
+/** Rutor per sida i mittplanets rutnät. Fler blir ett moaré, färre ger ögat
+ *  inget perspektiv att läsa djup ur. */
+const RUTOR = 8
 
 type Vinkel = { gir: number; lut: number; k: number }
 
@@ -67,6 +71,7 @@ export default function Karta3D({
   vald,
   molnet,
   valdProdukt,
+  markerad,
 }: {
   karta: KartaTyp
   /** Vad prickarna färgas efter, eller null för dryckens egen färg. */
@@ -74,6 +79,10 @@ export default function Karta3D({
   vald: string | null
   molnet: Produkt[]
   valdProdukt: Produkt | null
+  /** Drycken man håller pekaren över i panelens listor. Molnet går inte att
+   *  peka på härinne, men listan gör det — och då är det här den enda vägen
+   *  att se var i rymden den drycken ligger. */
+  markerad: Produkt | null
 }) {
   const kulör = kartfärger(karta.färgskala, färgkanal)
   const smal = useSmalSkärm('(max-width: 700px)')
@@ -249,13 +258,20 @@ export default function Karta3D({
      de som ändå krockar hoppas över. Att hoppa över är rätt sort av instabilitet
      här: ett namn som försvinner när en annan prick glider förbi stör mindre än
      ett som flyttar sig, för det är rörelsen man tittar på. */
+  /** De grupper som är stora nog att skrivas ut. Samma urval styr lodlinjerna
+   *  nedan: landmärkena ska vara samma prickar man ändå läser namnen på. */
+  const störst = useMemo(
+    () =>
+      new Set(
+        [...karta.grupper]
+          .sort((a, b) => b.antal - a.antal)
+          .slice(0, NAMN)
+          .map((g) => g.namn),
+      ),
+    [karta],
+  )
+
   const namnen = useMemo(() => {
-    const störst = new Set(
-      [...karta.grupper]
-        .sort((a, b) => b.antal - a.antal)
-        .slice(0, NAMN)
-        .map((g) => g.namn),
-    )
     const upptaget: { x: number; y: number; w: number; h: number }[] = []
     const ut: { nyckel: string; namn: string; px: number; py: number; d: number }[] = []
     for (const p of punkter) {
@@ -275,7 +291,7 @@ export default function Karta3D({
       ut.push({ nyckel: p.nyckel, namn: p.namn, px: p.px, py: låda.y + 10 * lupp, d: p.d })
     }
     return ut
-  }, [punkter, karta, lupp, luppPrick])
+  }, [punkter, störst, lupp, luppPrick])
 
   /* Tre axlar genom mitten, sex namngivna spetsar och en punkt där de möts.
      Detta ersatte ett rutnätsgolv och en kompass i hörnet, som tillsammans sa
@@ -327,15 +343,75 @@ export default function Karta3D({
     )
   }, [rotera, R, karta, smal, lupp])
 
-  /* Lodlinjen från den valda pricken till planet genom mitten — det plan som
-     de två vågräta axlarna spänner upp. Ett enda streck, men det är det som
-     gör att man ser var i höjdled något ligger; utan det svävar prickarna
-     utan förankring.
+  /* Ett rutnät i mittplanet — det plan som de två vågräta axlarna spänner upp.
+     Axelkorset säger vilket håll man vridit, men inte hur långt bort något
+     ligger: två prickar med samma skärmläge kan sitta på var sin sida om
+     mitten och man ser ingen skillnad.
 
-     Den gick förut ned till golvet. Med golvet borta är mittplanet den enda
-     ärliga referensen kvar, och samtidigt den mest läsbara: strecket säger nu
-     hur långt över eller under mitten drycken ligger, och foten landar på det
-     kors man redan tittar på. */
+     Rutnätet är inte till för att mätas i. Det finns för att perspektivet ska
+     ha något att verka på: rutorna blir trängre bortåt och glesare framåt, och
+     det är den kilformen ögat läser djup ur. Därför är det blekt och därför
+     ligger det i samma plan som korset, inte under molnet som det gamla golvet
+     gjorde — det ska läsas som att korset fått en yta, inte som ett andra
+     föremål i bilden. */
+  const rutnät = useMemo(() => {
+    /* Rutnätet är en kvadrat, och en kvadrats hörn ligger √2 gånger längre ut
+       än dess sida. Sidan hålls därför innanför R/√2, annars sticker hörnen
+       utanför bild när planet vrids. Inom den gränsen läggs det så tätt intill
+       molnet som molnet självt kräver. */
+    const bredast = Math.max(
+      ...karta.grupper.map((g) =>
+        Math.max(
+          Math.abs((g.x - rymd.mitt.x) * rymd.skala),
+          Math.abs((g.z - rymd.mitt.z) * rymd.skala),
+        ),
+      ),
+    )
+    const kant = Math.min(R / Math.SQRT2, bredast * 1.12)
+    const steg = (kant * 2) / RUTOR
+    const linjer: { x1: number; y1: number; x2: number; y2: number; d: number }[] = []
+    for (let i = 0; i <= RUTOR; i++) {
+      const t = -kant + i * steg
+      for (const [a, b] of [
+        [rotera(t, 0, -kant), rotera(t, 0, kant)],
+        [rotera(-kant, 0, t), rotera(kant, 0, t)],
+      ])
+        linjer.push({ x1: a.px, y1: a.py, x2: b.px, y2: b.py, d: (a.d + b.d) / 2 })
+    }
+    return linjer
+  }, [rotera, R, karta, rymd])
+
+  /* Lodlinjer från landmärkena ned till mittplanet, med en fot där de landar.
+     Det här är det som faktiskt löser djupet: en prick som svävar går inte att
+     placera, men en prick med ett streck ned till en fot i rutnätet gör det —
+     man läser av foten i stället för pricken, och foten ligger i ett plan man
+     ser lutningen på.
+
+     Bara de utskrivna grupperna får ett. Alla sextio vore en skog, och
+     landmärken man inte kan namnge är inga landmärken: det ska vara samma
+     prickar man ändå läser namnen på. */
+  const stolpar = useMemo(
+    () =>
+      karta.grupper
+        .filter((g) => störst.has(g.namn))
+        .map((g) => {
+          const dx = (g.x - rymd.mitt.x) * rymd.skala
+          const dz = (g.z - rymd.mitt.z) * rymd.skala
+          const topp = vrid(g)
+          const fot = rotera(dx, 0, dz)
+          return { nyckel: g.namn, x1: topp.px, y1: topp.py, x2: fot.px, y2: fot.py, d: fot.d }
+        }),
+    [karta, störst, rymd, vrid, rotera],
+  )
+
+  /* Lodlinjen från den valda pricken till mittplanet. Samma sak som stolparna
+     ovan, men ljusare och alltid utritad — den svarar på var just den här
+     drycken ligger, inte på var rummet är.
+
+     Den gick förut ned till ett golv under molnet. Mittplanet är bättre av två
+     skäl: foten landar i rutnätet i stället för i tomma luften, och strecket
+     säger hur långt över eller under mitten drycken ligger i stället för hur
+     högt den svävar över en godtycklig underkant. */
   const lodlinje = useMemo(() => {
     const träff = valdProdukt ?? karta.grupper.find((g) => g.namn === vald)
     if (!träff) return null
@@ -346,6 +422,22 @@ export default function Karta3D({
     const b = rotera(dx, 0, dz)
     return { x1: a.px, y1: a.py, x2: b.px, y2: b.py, fot: b }
   }, [valdProdukt, vald, karta, rymd, rotera])
+
+  /* Samma markering som på den platta kartan: pricken man hovrar över i
+     panelen, ett streck till den man tittar på, och en egen lodlinje ned till
+     mittplanet. Lodlinjen är viktigare här än där — utan den syns bara att
+     grannen ligger åt vänster, inte att den ligger åt vänster *och* bakom. */
+  const märke = useMemo(() => {
+    if (!markerad) return null
+    const till = vrid(markerad)
+    const fot = rotera(
+      (markerad.x - rymd.mitt.x) * rymd.skala,
+      0,
+      (markerad.z - rymd.mitt.z) * rymd.skala,
+    )
+    const från = valdProdukt && valdProdukt.id !== markerad.id ? vrid(valdProdukt) : null
+    return { till, fot, från, produkt: markerad }
+  }, [markerad, valdProdukt, vrid, rotera, rymd])
 
   function ned(e: React.PointerEvent<SVGSVGElement>) {
     setSnurrar(false)
@@ -396,8 +488,31 @@ export default function Karta3D({
         onPointerCancel={släpp}
         onPointerLeave={släpp}
       >
-        {/* Axelkorset först av allt. Att prickarna målar över det är avsikten:
-            en ram man ser förbi, inte innehåll att läsa. */}
+        {/* Rutnätet allra först, sedan stolparna, sedan korset. Alltihop ligger
+            bakom molnet — det är avsikten att prickarna målar över det: en ram
+            man ser förbi, inte innehåll att läsa. */}
+        <g className="rutnat" strokeWidth={0.7 * lupp}>
+          {rutnät.map((l, i) => (
+            <line
+              key={i}
+              x1={l.x1}
+              y1={l.y1}
+              x2={l.x2}
+              y2={l.y2}
+              opacity={0.07 + 0.17 * ((l.d + 1) / 2)}
+            />
+          ))}
+        </g>
+
+        <g className="stolpar" strokeWidth={0.7 * lupp}>
+          {stolpar.map((s) => (
+            <g key={s.nyckel} opacity={0.12 + 0.26 * ((s.d + 1) / 2)}>
+              <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} />
+              <circle cx={s.x2} cy={s.y2} r={1.5 * lupp} />
+            </g>
+          ))}
+        </g>
+
         <g className="axelkors">
           {axelkors.map((a) => (
             <line
@@ -443,6 +558,50 @@ export default function Karta3D({
             opacity={dis(p.d) * (molnet.length && p.grupp && !p.utvald ? 0.3 : 1)}
           />
         ))}
+
+        {märke && (
+          <g className="marke">
+            <line
+              x1={märke.till.px}
+              y1={märke.till.py}
+              x2={märke.fot.px}
+              y2={märke.fot.py}
+              strokeWidth={1.1 * lupp}
+            />
+            {märke.från && (
+              <line
+                x1={märke.från.px}
+                y1={märke.från.py}
+                x2={märke.till.px}
+                y2={märke.till.py}
+                strokeWidth={1.1 * lupp}
+              />
+            )}
+            <circle
+              cx={märke.till.px}
+              cy={märke.till.py}
+              r={3.4 * luppPrick}
+              fill={kulör.litenPrick(märke.produkt)}
+              stroke="none"
+            />
+            <circle
+              className="marke-ring"
+              cx={märke.till.px}
+              cy={märke.till.py}
+              r={9 * luppPrick}
+              strokeWidth={1.5 * lupp}
+            />
+            <text
+              className="etikett aktiv"
+              x={märke.till.px}
+              y={märke.till.py - 9 * luppPrick - 5 * lupp}
+              textAnchor="middle"
+              fontSize={11 * lupp}
+            >
+              {heltNamn(märke.produkt)}
+            </text>
+          </g>
+        )}
 
         {namnen.map((t) => (
           <text

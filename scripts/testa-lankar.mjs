@@ -530,5 +530,62 @@ console.log(
 )
 for (const s of spetsar) console.log(`    ${s}`)
 
+/* --- 16. Markering från listan -------------------------------------------
+ * Pekaren över en rad i panelen ska peka ut drycken på kartan, med ett streck
+ * till den man tittar på. Det intressanta fallet är "Liknande", där grannen
+ * ofta hör hemma i en annan grupp och alltså inte ligger i molnet — den måste
+ * ritas ändå. Markeringen ska också släckas: både när pekaren lämnar listan
+ * och när ett klick byter det panelen visar. */
+await p.goto(bas + '#produkt=507849', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.liknande button')
+const grannenNamn = (await p.locator('.liknande .l-namn').nth(2).textContent()).trim()
+const grannenStil = (await p.locator('.liknande .l-stil').nth(2).textContent()).trim()
+await p.locator('.liknande button').nth(2).hover()
+await p.waitForTimeout(350)
+const utpekat = await p.locator('.marke text').textContent()
+console.log(`\nmarkering från listan`)
+console.log(`  hovrar "${grannenNamn}" · ${grannenStil}`)
+console.log(`  ${utpekat === grannenNamn ? '✓' : '✗'} kartan pekar ut samma dryck`)
+console.log(
+  `  ${(await p.locator('.marke line').count()) === 1 ? '✓' : '✗'} ett streck till den man tittar på`,
+)
+await p.mouse.move(500, 400)
+await p.waitForTimeout(300)
+console.log(
+  `  ${(await p.locator('.marke').count()) === 0 ? '✓' : '✗'} släcks när pekaren lämnar listan`,
+)
+
+await p.goto(bas + '#grupp=' + encodeURIComponent('Torr porter och stout'), {
+  waitUntil: 'networkidle',
+})
+await klar()
+await p.locator('.produkter button').nth(3).hover()
+await p.waitForTimeout(300)
+const fannsFöre = await p.locator('.marke').count()
+await p.locator('.produkter button').nth(3).click()
+await p.waitForTimeout(500)
+console.log(
+  `  ${fannsFöre === 1 && (await p.locator('.marke').count()) === 0 ? '✓' : '✗'} släcks av ett klick`,
+)
+
+/* --- 17. Rutnätet och stolparna i 3D --------------------------------------
+ * Axelkorset säger vilket håll man vridit, men inte hur långt bort något
+ * ligger. Rutnätet i mittplanet ger perspektivet något att verka på, och
+ * lodlinjerna från landmärkena är det som faktiskt placerar en prick i
+ * djupled — man läser av foten i rutnätet i stället för pricken. */
+await p.goto(bas + '#vy=3d', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForTimeout(4000)
+const rutor = await p.locator('.rutnat line').count()
+const stolpar = await p.locator('.stolpar line').count()
+const fötter = await p.locator('.stolpar circle').count()
+console.log(`\norientering i 3D`)
+console.log(`  ${rutor === 18 ? '✓' : '✗'} rutnätet: ${rutor} linjer (9 + 9)`)
+console.log(`  ${stolpar === 14 && fötter === 14 ? '✓' : '✗'} ${stolpar} stolpar med ${fötter} fötter`)
+console.log(
+  `  ${(await p.locator('.axelkors line').count()) === 6 ? '✓' : '✗'} korset kvar med sina sex armar`,
+)
+
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

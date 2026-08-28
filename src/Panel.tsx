@@ -35,6 +35,10 @@ type Props = {
   tillbaka: string | null
   onVäljGrupp: (g: Grupp) => void
   onVäljProdukt: (p: Produkt) => void
+  /** Pekaren över en rad i någon av listorna lyser upp drycken på kartan, så
+   *  att man ser var den ligger utan att först behöva klicka sig dit. Mest
+   *  värd i "Liknande", där grannarna ofta hör hemma i en annan grupp. */
+  onMarkera: (p: Produkt | null) => void
   onVäljMat: (mat: string) => void
   onTillbaka: () => void
   onStäng: () => void
@@ -97,6 +101,7 @@ export default function Panel({
   tillbaka,
   onVäljGrupp,
   onVäljProdukt,
+  onMarkera,
   onVäljMat,
   onTillbaka,
   onStäng,
@@ -307,10 +312,14 @@ export default function Panel({
             <span className="not">och hur de skiljer sig{filter ? ` · bara ${filter}` : ''}</span>
           </h3>
           {!produkter && !fel && <p className="laddar">hämtar produkter …</p>}
-          <ul className="liknande">
+          <ul className="liknande" onPointerLeave={() => onMarkera(null)}>
             {liknandeProdukter.map((t) => (
               <li key={t.produkt.id}>
-                <button onClick={() => onVäljProdukt(t.produkt)}>
+                <button
+                  onClick={() => onVäljProdukt(t.produkt)}
+                  onPointerEnter={() => onMarkera(t.produkt)}
+                  onPointerLeave={() => onMarkera(null)}
+                >
                   <span
                     className="l-prick"
                     style={{ background: kulör.fyllning(t.produkt.mörkhet) }}
@@ -395,10 +404,14 @@ export default function Panel({
           </h3>
           {fel && <p className="fel">{fel}</p>}
           {!produkter && !fel && <p className="laddar">hämtar produkter …</p>}
-          <ol className="produkter">
+          <ol className="produkter" onPointerLeave={() => onMarkera(null)}>
             {lista.map((p) => (
               <li key={p.id}>
-                <button onClick={() => onVäljProdukt(p)}>
+                <button
+                  onClick={() => onVäljProdukt(p)}
+                  onPointerEnter={() => onMarkera(p)}
+                  onPointerLeave={() => onMarkera(null)}
+                >
                   <span className="p-namn">{heltNamn(p)}</span>
                   <span className="p-meta">{producentRad(p)}</span>
                   <span className="p-tal">

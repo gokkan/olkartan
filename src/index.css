@@ -88,10 +88,18 @@ main {
   pointer-events: none;
 }
 
-/* Axelkorset ska kännas som ram, inte som innehåll. Opaciteten sätts per arm
-   efter djup — här bara färgen. */
-.karta3d .axelkors line {
+/* Axelkorset, rutnätet och stolparna är alla ram och inte innehåll. Opaciteten
+   sätts per linje efter djup — här bara färgen. */
+.karta3d .axelkors line,
+.karta3d .rutnat line,
+.karta3d .stolpar line {
   stroke: var(--svag);
+}
+
+/* Foten där en stolpe möter mittplanet. Det är den man läser av, inte
+   pricken — därför får den vara en aning tydligare än strecket. */
+.karta3d .stolpar circle {
+  fill: var(--svag);
 }
 
 .karta3d .axelnamn text {
@@ -174,6 +182,35 @@ main {
   bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+/* Drycken man hovrar över i panelens listor, utpekad på kartan. Strecket går
+   till den man tittar på och är det som gör markeringen till ett avstånd i
+   stället för bara en prick till. Ingenting här tar emot pekaren — det är en
+   spegling av var pekaren redan är. */
+.marke {
+  pointer-events: none;
+}
+
+.marke line {
+  stroke: rgb(255 255 255 / 0.45);
+  stroke-dasharray: 4 4;
+}
+
+.marke-ring {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.9);
+}
+
+/* Markeringens namn vinner över gruppnamn och axelord när de krockar. Det är
+   den enda etiketten på kartan som svarar på något man just nu gör, och den
+   står bara så länge pekaren gör det — de andra får vara otydliga en stund.
+   Skriven med .karta framför för att slå .etikett.aktiv, som är lika tung. */
+.karta .marke text {
+  fill: var(--text);
+  stroke: var(--botten);
+  stroke-width: 5px;
+  paint-order: stroke;
 }
 
 .knappnål {
