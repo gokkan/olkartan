@@ -858,7 +858,8 @@ footer span:last-child {
   color: var(--svag);
 }
 
-.fargval select {
+.fargval select,
+.axelval select {
   border: 0;
   background: transparent;
   color: var(--text);
@@ -868,7 +869,8 @@ footer span:last-child {
   cursor: pointer;
 }
 
-.fargval select option {
+.fargval select option,
+.axelval select option {
   background: var(--yta);
   color: var(--text);
 }
@@ -886,6 +888,39 @@ footer span:last-child {
   height: 8px;
   border-radius: 99px;
   border: 1px solid var(--linje);
+}
+
+/* Vad de tre riktningarna i molnet visar. Egen rad under de andra reglagen,
+   och bara i 3D — den platta kartan har två axlar och de är kartans egna.
+
+   Staplade och inte på rad: tre menyer bredvid varandra ryms inte i reglagets
+   340 px, och en stapel läser dessutom som en tilldelning. Bokstaven har fast
+   bredd, annars radar menyerna inte upp sig under varandra. */
+.axelval {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 7px;
+  padding: 4px 9px 5px 11px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--linje);
+  background: color-mix(in srgb, var(--yta) 88%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 12px;
+  color: var(--svag);
+}
+
+.axelval label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.axelval label > span {
+  width: 9px;
+  font-style: italic;
 }
 
 /* Landfiltret och färgvalet delar rad. Båda ändrar hur kartan ser ut utan att

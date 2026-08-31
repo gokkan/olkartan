@@ -140,7 +140,7 @@ export function palett(skala: Skala): Palett {
    kartan. Bara kartan byter; panelen, sökträffarna och kartvalet behåller
    dryckens färg, för där svarar färgen på "vad är det här" och inte på "hur
    mycket beska". Formerna är avsiktligt lika: samma anrop, annan skala. */
-type Mätt = {
+export type Mätt = {
   mörkhet: number | null
   klockor: Record<string, number>
   abv: number

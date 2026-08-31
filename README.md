@@ -16,7 +16,7 @@ I-knappen vid kartvalet förklarar hela kedjan, inklusive vad kartan inte visar:
 
 Färgen går att byta: en smakklocka (beska, fyllighet, sötma), priset per liter eller alkoholhalten. Klockorna och alkoholhalten är sådant kartan redan är byggd av; priset ligger utanför och är det enda som lägger till något platsen omöjligt kan bära.
 
-Det finns också ett roterbart 3D-läge på `#vy=3d`, där den tredje huvudkomponenten blir djup. Knappen till det är borttagen tills vidare; läget är kvar och testas, se [PLAN.md](PLAN.md).
+Det finns också ett roterbart 3D-läge på `#vy=3d`, där den tredje huvudkomponenten blir djup. Där går de tre riktningarna att välja: en huvudkomponent, en smakklocka, priset eller alkoholhalten på var och en av x, y och z — `#vy=3d&axlar=beska,fyllighet,sötma` ger de tre ölklockorna på varsin axel. Utan valet är molnet kartans egna tre huvudkomponenter, och då betyder avstånd smaklikhet som vanligt. Se [PLAN.md](PLAN.md).
 
 **→ [gokkan.github.io/olkartan](https://gokkan.github.io/olkartan/)**
 
