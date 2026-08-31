@@ -80,8 +80,11 @@ main {
   cursor: pointer;
 }
 
-/* I 3D-läget går ingenting att klicka på. Prickarna ska varken byta pekare
-   eller svara på hovring — hela ytan är ett enda dragfält. */
+/* I 3D-läget går ingenting att klicka på, och prickarna ska inte byta pekare:
+   hela ytan är ett enda dragfält. Regeln står kvar även sedan hovringen kom —
+   den prövas matematiskt mot svg-elementet, i lib/traff, så prickarna behöver
+   aldrig ta emot pekaren själva. Det är just därför ett drag som råkar börja
+   ovanpå en prick fortfarande vrider molnet. */
 .karta3d circle,
 .karta3d text {
   cursor: inherit;
