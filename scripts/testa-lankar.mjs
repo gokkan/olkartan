@@ -646,5 +646,88 @@ await p.waitForTimeout(500)
 const efterByte = decodeURIComponent(await p.evaluate(() => location.hash))
 console.log(`  ${!/axlar=/.test(efterByte) ? '✓' : '✗'} valet faller bort vid kartbyte: ${efterByte}`)
 
+/* --- 19. Hovring i 3D ------------------------------------------------------
+ * Molnet gick länge inte att peka på. Nu säger en ruta vilken dryck man håller
+ * pekaren över — och det som är värt att pröva är inte att rutan dyker upp,
+ * utan de tre saker runt omkring som är lätta att få fel:
+ *
+ *   att molnet slutar snurra i samma stund (ett mål som glider undan går inte
+ *   att läsa), att ett drag inte samtidigt öppnar en ruta, och att rutan
+ *   släcks när pekaren lämnar kartan i stället för att lysa kvar i kanten. */
+const mittPå = async (väljare, i = 0) => {
+  const r = await p.locator(väljare).nth(i).boundingBox()
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+}
+const rutan = async () =>
+  (await p.locator('.knappnål').count())
+    ? {
+        rubrik: (await p.locator('.knappnål strong').textContent()).trim(),
+        under: (await p.locator('.knappnål span').textContent()).trim(),
+      }
+    : null
+
+await p.goto(bas + '#grupp=Hefeweizen&vy=3d', { waitUntil: 'networkidle' })
+await klar()
+await p.waitForSelector('.karta3d circle[data-produkt]')
+await p.waitForTimeout(4000)
+console.log(`\nhovring i 3D`)
+
+/* En molnprick som ingen gruppprick ligger framför. Tar man bara den första
+   bästa svarar ofta gruppen i stället — den är i vägen och ska vara det — och
+   då prövar testet inte den väg det tror sig pröva. */
+const fri = await p.evaluate(() => {
+  const av = (s) =>
+    [...document.querySelectorAll(s)].map((e) => ({
+      id: e.getAttribute('data-produkt'),
+      x: +e.getAttribute('cx'),
+      y: +e.getAttribute('cy'),
+      r: +e.getAttribute('r'),
+    }))
+  const grupper = av('.karta3d circle[data-grupp]')
+  return (
+    av('.karta3d circle[data-produkt]').find((q) =>
+      grupper.every((g) => Math.hypot(g.x - q.x, g.y - q.y) > g.r + q.r + 4),
+    )?.id ?? null
+  )
+})
+const mål = await mittPå(`.karta3d circle[data-produkt="${fri}"]`)
+await p.mouse.move(mål.x, mål.y)
+await p.waitForTimeout(250)
+const pekadRuta = await rutan()
+/* Raden under namnet är stilen, inte ett antal. Är det "39 st" har en
+   gruppprick svarat och den enskilda drycken prövades aldrig. */
+console.log(
+  `  ${pekadRuta?.rubrik && !/^\d+ st$/.test(pekadRuta.under) ? '✓' : '✗'} rutan namnger en enskild dryck: ${pekadRuta ? pekadRuta.rubrik + ' · ' + pekadRuta.under : 'ingen ruta'}`,
+)
+console.log(`  ${(await p.locator('.marke-ring').count()) > 0 ? '✓' : '✗'} ring runt den pekade pricken`)
+
+/* Mätningen börjar efter träffen. Mäter man innan får man med den bit molnet
+   hann vrida sig medan pekaren var på väg, och testet blir alltid rött. */
+const stod = await mittPå(`.karta3d circle[data-produkt="${fri}"]`)
+await p.waitForTimeout(1500)
+const står = await mittPå(`.karta3d circle[data-produkt="${fri}"]`)
+const rört = Math.hypot(står.x - stod.x, står.y - stod.y)
+console.log(`  ${rört < 0.5 ? '✓' : '✗'} molnet stannade av träffen (${rört.toFixed(2)} px på 1,5 s)`)
+
+await p.mouse.move(10, 890)
+await p.waitForTimeout(200)
+console.log(`  ${(await rutan()) === null ? '✓' : '✗'} rutan släcks när pekaren lämnar kartan`)
+
+/* En gruppprick svarar också, med sitt antal i stället för sin stil. */
+const gruppmål = await mittPå('.karta3d circle[data-grupp="Hefeweizen"]')
+await p.mouse.move(gruppmål.x, gruppmål.y)
+await p.waitForTimeout(200)
+const gruppruta = await rutan()
+console.log(
+  `  ${/^\d+ st$/.test(gruppruta?.under ?? '') ? '✓' : '✗'} en gruppprick svarar med antal: ${gruppruta ? gruppruta.rubrik + ' · ' + gruppruta.under : 'ingen ruta'}`,
+)
+
+await p.mouse.move(720, 300)
+await p.mouse.down()
+await p.mouse.move(820, 340, { steps: 8 })
+const underDrag = await rutan()
+await p.mouse.up()
+console.log(`  ${underDrag === null ? '✓' : '✗'} ingen ruta medan man vrider molnet`)
+
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

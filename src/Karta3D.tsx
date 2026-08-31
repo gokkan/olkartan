@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Färgkanal, Karta as KartaTyp, Produkt } from './lib/typer'
+import type { Färgkanal, Grupp, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
 import { plats, rymdmått, type Axlar, type Punkt } from './lib/axlar'
-import { heltNamn } from './lib/urval'
+import { grupprad, heltNamn } from './lib/urval'
+import { träffa } from './lib/traff'
 import { useSmalSkärm } from './lib/skarm'
 
 const W = 1000
@@ -31,10 +32,12 @@ const PRICKANDEL = 0.6
  * Se PLAN.md — vinsten är att *se* att en granne bedrar en, inte att kunna
  * mäta hur mycket.
  *
- * Man kan bara titta. Inga klick, ingen hovring, inget val — knappen tillbaka
- * till 2D är vägen till att välja något. Det är därför läget alls är rimligt:
- * utan träffytor försvinner djupsorterad träffprövning, etikettkollisioner och
- * en tredje gest på telefonen, och kvar blir ett moln som snurrar.
+ * Man kan titta och peka, men inte välja — knappen tillbaka till 2D är vägen
+ * till att välja något. Av de tre saker som en gång motiverade att läget inte
+ * hade några träffytor alls kommer bara den ena tillbaka med hovringen:
+ * djupsorterad träffprövning, och den är billig och ligger i `lib/traff`.
+ * Etikettkollisioner blir det inga av — rutan är ett enda element som följer
+ * pekaren — och ingen tredje gest på telefonen, för hovring finns inte där.
  *
  * Skalan är enhetlig på alla tre axlarna. Den platta kartan sträcker x mot y
  * för att fylla rutan, men det går inte här: ett moln som deformeras när det
@@ -60,6 +63,12 @@ const AXELDEL = 0.84
  *  i djupaxeln blir den en punkt i mitten, och dess båda namn skulle hamna
  *  ovanpå varandra just där de tre linjerna möts. */
 const KORTASTE_ARM = 30
+/** Hur långt utanför sin egen kant en prick svarar på pekaren. Molnets prickar
+ *  är drygt tre ritenheter och vore annars nästan omöjliga att träffa. Talet är
+ *  litet med flit: blir det stort svarar ett tätt moln alltid någonting, och ett
+ *  svar man inte kan lita på är sämre än inget svar alls. */
+const SLOP = 2
+
 /** Rutor per sida i mittplanets rutnät. Fler blir ett moaré, färre ger ögat
  *  inget perspektiv att läsa djup ur. */
 const RUTOR = 8
@@ -99,6 +108,11 @@ export default function Karta3D({
      och tippar upp det tredje hållet av sig självt. */
   const [vinkel, setVinkel] = useState<Vinkel>({ gir: 0, lut: 0, k: 1 })
   const [snurrar, setSnurrar] = useState(true)
+  /* Prickens nyckel, inte pricken själv: `punkter` räknas om vid varje vridning,
+     och ett sparat objekt vore inaktuellt nästa bildruta. Klientkoordinaterna
+     följer med separat, för rutan ligger i sidans rum och inte i svg:ns. */
+  const [pekad, setPekad] = useState<string | null>(null)
+  const [pekare, setPekare] = useState({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number; gir: number; lut: number } | null>(null)
   const nu = useRef(vinkel)
   nu.current = vinkel
@@ -245,6 +259,10 @@ export default function Karta3D({
           klockor: g.klockor,
           abv: g.abv,
           prisPerLiter: g.prisPerLiter as number | null,
+          // Källan följer med så att hovringen kan fråga den om namn och stil
+          // utan att slå upp den en gång till. Typen tas från den som kan vara
+          // båda, av samma skäl som priset ovan.
+          ur: g as Grupp | Produkt,
           grupp: true,
           utvald: vald === g.namn,
         },
@@ -263,6 +281,7 @@ export default function Karta3D({
         klockor: p.klockor,
         abv: p.abv,
         prisPerLiter: p.prisPerLiter,
+        ur: p,
         grupp: false,
         utvald: valdProdukt?.id === p.id,
       })
@@ -448,24 +467,63 @@ export default function Karta3D({
     return { till, fot, från, produkt: markerad }
   }, [markerad, valdProdukt, vrid, fotpunkt])
 
+  /** Klientkoordinater till ritytans egna. Molnet har ingen `<g>`-transform —
+   *  zoomen ligger i `vinkel.k` inne i projektionen — så matrisen landar direkt
+   *  i samma rum som prickarnas `px`/`py`. Samma grepp som den platta kartan. */
+  const tillSvg = useCallback((e: { clientX: number; clientY: number }) => {
+    const ctm = svgRef.current?.getScreenCTM()
+    if (!ctm) return null
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse())
+    return { x: p.x, y: p.y }
+  }, [])
+
   function ned(e: React.PointerEvent<SVGSVGElement>) {
     setSnurrar(false)
+    setPekad(null)
     drag.current = { x: e.clientX, y: e.clientY, gir: nu.current.gir, lut: nu.current.lut }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
+
   function rör(e: React.PointerEvent<SVGSVGElement>) {
     const d = drag.current
-    if (!d) return
-    setVinkel((v) => ({
-      ...v,
-      gir: d.gir + (e.clientX - d.x) * 0.008,
-      // Lutningen stannar strax före rakt uppifrån. Passerar man polen vänds
-      // vridningen bakvänd och man tappar bort sig.
-      lut: Math.max(-1.35, Math.min(1.35, d.lut - (e.clientY - d.y) * 0.008)),
-    }))
+    if (d) {
+      setVinkel((v) => ({
+        ...v,
+        gir: d.gir + (e.clientX - d.x) * 0.008,
+        // Lutningen stannar strax före rakt uppifrån. Passerar man polen vänds
+        // vridningen bakvänd och man tappar bort sig.
+        lut: Math.max(-1.35, Math.min(1.35, d.lut - (e.clientY - d.y) * 0.008)),
+      }))
+      return
+    }
+    /* Ett finger som vrider molnet ska inte samtidigt öppna en ruta, och en
+       pekskärm har ingen hovring att tala om — den skickar ändå pointermove
+       under en dragning. Båda faller bort här. */
+    if (e.pointerType === 'touch') return
+
+    const i = tillSvg(e)
+    const träff = i && träffa(punkter, i.x, i.y, luppPrick, SLOP * lupp)
+    /* Ingen träff och ingen sedan förut: rör ingenting. Utan den grinden ritas
+       varje prick i molnet om vid varje musrörelse över tom yta, och molnet kan
+       vara tusentals prickar. */
+    if (!träff && !pekad) return
+    setPekad(träff?.nyckel ?? null)
+    setPekare({ x: e.clientX, y: e.clientY })
+    /* Ett mål som glider undan under pekaren går inte att läsa. Snurren har
+       ändå gjort sitt när man börjat peka på enskilda prickar — då tittar man
+       inte längre på att rymden vecklar ut sig, utan på vad något är. */
+    if (träff && snurrar) setSnurrar(false)
   }
+
   const släpp = () => {
     drag.current = null
+  }
+
+  /* Pekaren lämnar kartan: både dragningen och rutan ska släppa. Utan det
+     lyser rutan kvar i kanten när man glidit ut ur bilden. */
+  const ut = () => {
+    drag.current = null
+    setPekad(null)
   }
 
   useEffect(() => {
@@ -483,6 +541,19 @@ export default function Karta3D({
     return () => el.removeEventListener('wheel', hjul)
   }, [])
 
+  /* Vad rutan säger, och var pricken den talar om ligger. Samma innehåll som
+     den platta kartans knappnål: en dryck heter sitt hela namn och sin stil, en
+     grupp sitt namn och sitt antal. Uppslagningen går via nyckeln, för `punkter`
+     är en ny lista efter varje vridning. */
+  const knappnål = useMemo(() => {
+    const p = pekad ? punkter.find((q) => q.nyckel === pekad) : null
+    if (!p) return null
+    const text = p.grupp
+      ? { rubrik: (p.ur as Grupp).namn, under: `${(p.ur as Grupp).antal} st` }
+      : { rubrik: heltNamn(p.ur as Produkt), under: grupprad(p.ur as Produkt, karta) }
+    return { ...text, px: p.px, py: p.py, r: p.r }
+  }, [pekad, punkter, karta])
+
   const dis = (d: number) => MINSTA_DIS + (1 - MINSTA_DIS) * ((d + 1) / 2)
 
   return (
@@ -495,7 +566,7 @@ export default function Karta3D({
         onPointerMove={rör}
         onPointerUp={släpp}
         onPointerCancel={släpp}
-        onPointerLeave={släpp}
+        onPointerLeave={ut}
       >
         {/* Rutnätet allra först, sedan stolparna, sedan korset. Alltihop ligger
             bakom molnet — det är avsikten att prickarna målar över det: en ram
@@ -553,8 +624,9 @@ export default function Karta3D({
           <circle
             key={p.nyckel}
             // Bara till för att gå att mäta utifrån. Pekaren når dem inte —
-            // se `.karta3d circle` i index.css.
-            {...(p.grupp ? { 'data-grupp': p.namn } : {})}
+            // se `.karta3d circle` i index.css. Molnets prickar bär sitt id av
+            // samma skäl: utan det går hovringen inte att pröva i webbläsaren.
+            {...(p.grupp ? { 'data-grupp': p.namn } : { 'data-produkt': (p.ur as Produkt).id })}
             cx={p.px}
             cy={p.py}
             // Prickarna behåller sin storlek på skärmen när man zoomar, precis
@@ -634,6 +706,20 @@ export default function Karta3D({
             varandra där de tre linjerna möts — men vridningen fäller ut dem
             inom ett par sekunder, och noten under kartan säger vad de är
             under tiden. */}
+        {/* Ringen runt den prick rutan talar om. Bara en ring: rutan säger
+            redan vad drycken heter, och en etikett i svg:n till vore två svar
+            på samma fråga. Den ritas efter prickarna för att en granne i
+            förgrunden inte ska måla över svaret man just bett om. */}
+        {knappnål && (
+          <circle
+            className="marke-ring"
+            cx={knappnål.px}
+            cy={knappnål.py}
+            r={(knappnål.r + 5) * luppPrick}
+            strokeWidth={1.5 * lupp}
+          />
+        )}
+
         <g className="axelnamn" style={{ fontSize: 11 * lupp }}>
           {axelkors.map(
             (a) =>
@@ -673,10 +759,24 @@ export default function Karta3D({
           det syns direkt, och den som inte vet varför tror att det är ett fel.
           Hellre skrivet än dolt, och absolut hellre än utsuddat med brus. */}
       <div className="grepp-not">
-        dra för att vrida{smal ? '' : ', rulla för att zooma'}
+        dra för att vrida
+        {/* Hovringen står bakom samma flagga som zoomen: på en telefon finns
+            varken hjul eller pekare, och en not om något som inte går är sämre
+            än ingen not. */}
+        {smal ? '' : ', rulla för att zooma · peka på en prick för att se vilken'}
         {axel.some((a) => a.sort === 'klocka') &&
           ' · klockorna är heltal, så prickarna lägger sig i skivor'}
       </div>
+
+      {/* Samma ruta som den platta kartan, samma klass och samma innehåll.
+          Ligger i sidans rum och inte i svg:ns, så den kan hänga utanför
+          ritytan utan att klippas. */}
+      {knappnål && (
+        <div className="knappnål" style={{ left: pekare.x + 14, top: pekare.y + 14 }}>
+          <strong>{knappnål.rubrik}</strong>
+          <span>{knappnål.under}</span>
+        </div>
+      )}
     </div>
   )
 }

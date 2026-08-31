@@ -554,6 +554,20 @@ Blandas en klocka in normaliseras varje axel mot sin egen utbredning. Doktrinen 
 
 Två småsaker föll ut av att bygga det. Huvudkomponenterna hette först "smakrymd 1, 2, 3" i menyn, vilket är ett nummer och ingen upplysning — nu heter de `2: söt → örter`, samma ord som står på spetsarna. Och en dimension får bara ligga på en axel: samma klocka på två av dem ger ett moln som är en linje, så det som redan är valt gråas i de andra menyerna.
 
+### Träffytorna kommer tillbaka, halvvägs
+
+Med väljbara axlar blev enskilda prickar intressanta på ett sätt de inte var förut: ställer man molnet till beska mot fyllighet ser man en öl som ligger avsides, och vill veta vilken. Det gick inte. Läget byggdes utan träffytor, och skälet som står i `Karta3D` var tre saker man slapp: djupsorterad träffprövning, etikettkollisioner och en tredje gest på telefonen.
+
+Hovring hämtar tillbaka *en* av de tre. Prövningen är fjorton rader i `lib/traff` och kostar ingenting. De andra två kommer inte tillbaka: rutan är ett enda element som följer pekaren, så det finns ingenting att krocka med, och hovring finns inte på pekskärm, så dragningen rörs inte. Klick är fortfarande vägen till 2D — doktrinen står kvar, med en enda lucka: man får veta vad man tittar på.
+
+**Regeln `pointer-events: none` står kvar.** Prövningen är matematisk mot svg-elementet, inte via webbläsarens träffprövning, och det är just därför ett drag som råkar börja ovanpå en prick fortfarande vrider molnet i stället för att fastna.
+
+**Träffen stannar snurren.** Det är den enda beteendefrågan som var värd att tänka på. Molnet snurrar tills man tar tag i det, och ett mål som glider undan under pekaren går inte att läsa. Snurren har ändå gjort sitt när man börjat peka på enskilda prickar: då tittar man inte längre på att rymden vecklar ut sig, utan på vad något är. Testet mäter båda halvorna — 24 px vridning på en och en halv sekund utan hovring, exakt 0 efter en träff.
+
+Två detaljer kostade en runda var. **Räckvidden räknas på den ritade radien**, inte grundradien, annars blir träffytan mindre än pricken man ser så fort luppen slår till på en trång skärm — det slaget av fel ser ut att fungera, men bara ibland. Och **ingen `setState` när pekaren rör sig över tom yta**: utan den grinden ritas tusentals `<circle>` om vid varje musrörelse, och molnet kan vara hela sortimentet.
+
+Att den främsta pricken vinner är hela poängen med att pröva baklänges, och den sortens sak går sönder tyst — hovringen skulle fortsätta svara, bara med fel dryck. Därför är det ett enhetstest och inte bara ett webbläsartest.
+
 ---
 
 ## Att leta efter det udda
