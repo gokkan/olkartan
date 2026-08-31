@@ -540,6 +540,20 @@ Prisbilden på ölkartan är läsvärd: hela surölshörnet, imperial stout, bar
 
 **Och en gammal fälla igen.** Färgrutan gav reglaget en tredje rad, och uppåtpilens axelord hamnade under det — samma bugg som när kartvalet kom till. Talet stod handsatt i css:en (`top: 96px`). Nu mäter App reglagets höjd och skickar den som `--reglage`, så nästa rad flyttar etiketten av sig själv.
 
+### Axlarna går att välja
+
+Mätningen ovan sa att klockorna är sämre än PC3 som z-axel, och den står kvar. Men den svarade på en annan fråga än den som kom sedan: *vilken* axel kartan ska ha, inte om man ska få byta den. "Hur förhåller sig beskan till fylligheten" går inte att ställa till en karta som bara har smakrymden — färgen rymmer en klocka åt gången, och två klockor mot varandra är en annan bild än en klocka utspridd över smakrymden.
+
+Tre menyer i reglaget, en per riktning, och varje axel går att sätta till en huvudkomponent, en smakklocka, priset eller alkoholhalten. Samma lista som färgvalet redan har, för samma tal ligger redan på varje grupp och varje produkt. Bara i 3D: den platta kartan har två axlar och hela dess uträkning, zoom och flygningar sitter i dem.
+
+**Förvalet rör sig inte.** Det var villkoret. Skalräkningen fick ett mellansteg — en enhet per axel — men enheten är 1 på alla tre så länge alla tre kommer ur samma PCA, och då är räkningen taltroget densamma som förut. Det är inget påstående utan ett test: den gamla räkningen står skriven en gång till i `axlar.test.ts` och prövas mot den nya, med exakt likhet, för varje karta.
+
+Blandas en klocka in normaliseras varje axel mot sin egen utbredning. Doktrinen om enhetlig skala — *ett moln som deformeras när det vrids ljuger om varje avstånd utom de två man råkar titta rakt på* — gäller inom smakrymden, där axlarna är jämförbara. Beska mot pris är de inte, och då är enhetlig skala inte ärlighet utan bara en tunn skiva. Foten säger vilket som gäller: `avstånd är smaklikhet` blir `valda axlar — avstånd är inte smaklikhet`. Det är den viktigaste raden i hela ändringen. En karta som fortsatte lova smaklikhet just när den slutat leverera den vore värre än ingen valmöjlighet alls.
+
+**Gallret står skrivet.** Klockorna är fortfarande heltal och 3 395 öl ligger fortfarande på 267 platser. Det syns direkt när man lägger tre klockor på tre axlar — prickarna staplar sig i skivor — och den som inte vet varför tror att det är ett ritfel. Noten under molnet säger det: *klockorna är heltal, så prickarna lägger sig i skivor*. Inget brus läggs på för att sudda ut det. Att kunna se gallret är en del av vad axelvalet visar.
+
+Två småsaker föll ut av att bygga det. Huvudkomponenterna hette först "smakrymd 1, 2, 3" i menyn, vilket är ett nummer och ingen upplysning — nu heter de `2: söt → örter`, samma ord som står på spetsarna. Och en dimension får bara ligga på en axel: samma klocka på två av dem ger ett moln som är en linje, så det som redan är valt gråas i de andra menyerna.
+
 ---
 
 ## Att leta efter det udda

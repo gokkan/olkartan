@@ -587,5 +587,64 @@ console.log(
   `  ${(await p.locator('.axelkors line').count()) === 6 ? '✓' : '✗'} korset kvar med sina sex armar`,
 )
 
+/* --- 18. Valda axlar i 3D --------------------------------------------------
+ * Axlarna går att sätta till vad kartan kan mäta, inte bara till
+ * huvudkomponenterna. Tre saker prövas: att adressen bär valet in, att korset
+ * namnger de valda riktningarna i stället för smakrymdens ord, och att foten
+ * slutar lova smaklikhet — avståndet mellan två prickar betyder ingenting när
+ * axlarna är beska, fyllighet och sötma.
+ *
+ * Att en dimension bara får ligga på en axel prövas i menyn: väljer man beska
+ * på x ska den vara spärrad på y och z. Utan det går molnet att ställa till en
+ * linje. */
+await p.goto(bas + '#vy=3d&axlar=' + encodeURIComponent('beska,fyllighet,sötma'), {
+  waitUntil: 'networkidle',
+})
+await klar()
+await p.waitForTimeout(4000)
+const valda = await p.locator('.axelval select').evaluateAll((s) => s.map((e) => e.value))
+const valdaSpetsar = await p.locator('.axelnamn text').allTextContents()
+const valdFot = (await p.locator('footer span').last().textContent()).trim()
+const valdNot = (await p.locator('.grepp-not').textContent()).trim()
+console.log(`\nvalda axlar i 3D`)
+console.log(
+  `  ${valda.join(',') === 'beska,fyllighet,sötma' ? '✓' : '✗'} adressen bär valet: ${valda.join(', ')}`,
+)
+console.log(
+  `  ${(await p.locator('.axelkors line').count()) === 6 ? '✓' : '✗'} korset kvar med sina sex armar`,
+)
+console.log(
+  `  ${valdaSpetsar.length === 6 && valdaSpetsar.every((s) => /beska|fyllighet|sötma/.test(s)) ? '✓' : '✗'} spetsarna namnger klockorna: ${valdaSpetsar.join(' · ')}`,
+)
+console.log(`  ${/inte smaklikhet/.test(valdFot) ? '✓' : '✗'} foten lovar inte smaklikhet längre`)
+console.log(`  ${/heltal/.test(valdNot) ? '✓' : '✗'} noten säger att klockorna är ett galler`)
+
+/* Standardläget måste vara oberört. Det är hela villkoret för att valet fick
+   byggas: den som inte rör menyerna ska se exakt den karta som fanns förut. */
+await p.goto(bas + '#vy=3d', { waitUntil: 'networkidle' })
+await klar()
+await p.locator('.axelval select').first().selectOption('beska')
+await p.waitForTimeout(300)
+const spärrade = await p.locator('.axelval select').evaluateAll((sel) =>
+  sel.map((s) => [...s.options].filter((o) => o.disabled).map((o) => o.value)),
+)
+console.log(
+  `  ${spärrade[1].includes('beska') && spärrade[2].includes('beska') ? '✓' : '✗'} beska spärrad på de andra två axlarna`,
+)
+console.log(
+  `  ${/axlar=beska/.test(decodeURIComponent(await p.evaluate(() => location.hash))) ? '✓' : '✗'} menyn skriver valet till adressen`,
+)
+
+/* Beska finns inte för vin. Hela trippeln faller tillbaka, inte en av tre —
+   två kvar och en utbytt vore en bild man inte bett om. */
+await p.goto(bas + '#vy=3d&axlar=' + encodeURIComponent('beska,pc2,fyllighet'), {
+  waitUntil: 'networkidle',
+})
+await klar()
+await p.locator('.kartval button').nth(1).click()
+await p.waitForTimeout(500)
+const efterByte = decodeURIComponent(await p.evaluate(() => location.hash))
+console.log(`  ${!/axlar=/.test(efterByte) ? '✓' : '✗'} valet faller bort vid kartbyte: ${efterByte}`)
+
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

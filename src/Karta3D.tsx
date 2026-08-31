@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Färgkanal, Karta as KartaTyp, Produkt } from './lib/typer'
 import { kartfärger } from './lib/färg'
+import { plats, rymdmått, type Axlar, type Punkt } from './lib/axlar'
 import { heltNamn } from './lib/urval'
 import { useSmalSkärm } from './lib/skarm'
 
@@ -68,6 +69,7 @@ type Vinkel = { gir: number; lut: number; k: number }
 export default function Karta3D({
   karta,
   färgkanal,
+  axel,
   vald,
   molnet,
   valdProdukt,
@@ -76,6 +78,9 @@ export default function Karta3D({
   karta: KartaTyp
   /** Vad prickarna färgas efter, eller null för dryckens egen färg. */
   färgkanal: Färgkanal | null
+  /** Vad de tre riktningarna visar. Förvalet är kartans tre huvudkomponenter,
+   *  och då är det här läget exakt det det alltid har varit. */
+  axel: Axlar
   vald: string | null
   molnet: Produkt[]
   valdProdukt: Produkt | null
@@ -161,26 +166,14 @@ export default function Karta3D({
      avståndet ut till den prick som ligger längst från mitten. Ett moln som
      ryms i en sfär går inte utanför rutan hur man än vrider det, och en sfär
      som mäts på riktigt slösar inte bort halva ytan. */
+  /* Sfären ska fylla elementets kortaste led, inte ritytans. Radien räknas
+     därför i skärmpunkter och översätts tillbaka till ritenheter. Resten —
+     tyngdpunkten som nav, enheten per axel, skalan — ligger i `rymdmått`, för
+     den räkningen går att pröva och en komponent går inte att pröva. */
   const rymd = useMemo(() => {
-    const g = karta.grupper
-    /* Vridningen sker kring tyngdpunkten, inte kring lådans mitt. Lådans mitt
-       ger den minsta omslutande sfären och alltså det största molnet, men
-       prickarna ligger inte jämnt: den täta delen skulle svepa fram och
-       tillbaka över skärmen medan man vrider, och det är just det som gör en
-       roterande vy svår att orientera sig i. Med tyngdpunkten som nav står
-       tätheten stilla och det är ytterkanterna som rör sig. */
-    const vikt = g.reduce((s, p) => s + p.antal, 0) || 1
-    const mitt = {
-      x: g.reduce((s, p) => s + p.x * p.antal, 0) / vikt,
-      y: g.reduce((s, p) => s + p.y * p.antal, 0) / vikt,
-      z: g.reduce((s, p) => s + p.z * p.antal, 0) / vikt,
-    }
-    const r = Math.max(...g.map((p) => Math.hypot(p.x - mitt.x, p.y - mitt.y, p.z - mitt.z)))
-    /* Sfären ska fylla elementets kortaste led, inte ritytans. Radien räknas
-       därför i skärmpunkter och översätts tillbaka till ritenheter. */
     const iPunkter = Math.min(ruta.bredd, ruta.höjd) / 2 - MARGINAL
-    return { mitt, skala: iPunkter / ruta.ritfaktor / r, djup: r }
-  }, [karta, ruta])
+    return rymdmått(karta.grupper, axel, iPunkter / ruta.ritfaktor)
+  }, [karta, axel, ruta])
 
   /** Radien i det lokala, skalade rummet — golvets och rutnätets måttstock. */
   const R = rymd.djup * rymd.skala
@@ -206,14 +199,23 @@ export default function Karta3D({
     [vinkel, R],
   )
 
+  /** Punkten på skärmen, eller null när någon axel saknar värde för den. */
   const vrid = useCallback(
-    (p: { x: number; y: number; z: number }) =>
-      rotera(
-        (p.x - rymd.mitt.x) * rymd.skala,
-        (p.y - rymd.mitt.y) * rymd.skala,
-        (p.z - rymd.mitt.z) * rymd.skala,
-      ),
-    [rotera, rymd],
+    (p: Punkt) => {
+      const l = plats(p, axel, rymd)
+      return l && rotera(l[0], l[1], l[2])
+    },
+    [rotera, axel, rymd],
+  )
+
+  /** Samma punkt nedfälld till mittplanet — foten stolparna och lodlinjerna
+   *  landar i. Axel 1 är den lodräta; axel 0 och 2 spänner upp planet. */
+  const fotpunkt = useCallback(
+    (p: Punkt) => {
+      const l = plats(p, axel, rymd)
+      return l && rotera(l[0], 0, l[2])
+    },
+    [rotera, axel, rymd],
   )
 
   /* Allt som ska ritas, bakifrån och fram. Prickarnas storlek följer antalet
@@ -221,28 +223,41 @@ export default function Karta3D({
      avläsningarna inte slåss om samma kanal. */
   const punkter = useMemo(() => {
     const maxAntal = Math.max(1, ...karta.grupper.map((g) => g.antal))
-    const ut = karta.grupper.map((g) => ({
-      nyckel: 'G' + g.namn,
-      namn: g.namn,
-      rang: g.antal,
-      ...vrid(g),
-      r: 4 + 20 * Math.sqrt(g.antal / maxAntal),
-      mörkhet: g.mörkhet,
-      // Färgkanalerna läser klockor, alkoholhalt och pris — alla tre måste
-      // följa med in i den projicerade punkten. En grupp har alltid ett pris,
-      // en produkt kan sakna det; typen tas från den som kan vara tom.
-      klockor: g.klockor,
-      abv: g.abv,
-      prisPerLiter: g.prisPerLiter as number | null,
-      grupp: true,
-      utvald: vald === g.namn,
-    }))
-    for (const p of molnet)
+    /* En punkt utan värde på någon av axlarna ritas inte alls. Det gäller bara
+       priset, och bara de få produkter som saknar volym hos Systembolaget —
+       att lägga dem på axelns mitt vore att placera dem någonstans de inte hör
+       hemma. Grupperna har alltid alla värden, så molnet tappar aldrig sin
+       ram. */
+    const ut = karta.grupper.flatMap((g) => {
+      const v = vrid(g)
+      if (!v) return []
+      return [
+        {
+          nyckel: 'G' + g.namn,
+          namn: g.namn,
+          rang: g.antal,
+          ...v,
+          r: 4 + 20 * Math.sqrt(g.antal / maxAntal),
+          mörkhet: g.mörkhet,
+          // Färgkanalerna läser klockor, alkoholhalt och pris — alla tre måste
+          // följa med in i den projicerade punkten. En grupp har alltid ett pris,
+          // en produkt kan sakna det; typen tas från den som kan vara tom.
+          klockor: g.klockor,
+          abv: g.abv,
+          prisPerLiter: g.prisPerLiter as number | null,
+          grupp: true,
+          utvald: vald === g.namn,
+        },
+      ]
+    })
+    for (const p of molnet) {
+      const v = vrid(p)
+      if (!v) continue
       ut.push({
         nyckel: 'P' + p.id,
         namn: '',
         rang: -1,
-        ...vrid(p),
+        ...v,
         r: valdProdukt?.id === p.id ? 5.5 : 3.2,
         mörkhet: p.mörkhet,
         klockor: p.klockor,
@@ -251,6 +266,7 @@ export default function Karta3D({
         grupp: false,
         utvald: valdProdukt?.id === p.id,
       })
+    }
     return ut.sort((a, b) => a.d - b.d)
   }, [karta, molnet, vald, valdProdukt, vrid])
 
@@ -327,21 +343,21 @@ export default function Karta3D({
           py: spets.py,
           d: spets.d,
           arm,
-          ord: (tecken > 0 ? karta.axlar[i].positiv : karta.axlar[i].negativ)
-            .slice(0, smal ? 1 : 2)
-            .join(', '),
+          ord: axel[i].spetsar[tecken > 0 ? 1 : 0].slice(0, smal ? 1 : 2).join(', '),
           /* Namnet sätts en bit bortom spetsen i armens egen riktning, och
              ankras åt det håll armen pekar. Utan ankringen lägger sig texten
              tvärs över linjen den namnger så fort korset vridits ett kvarv. */
           tx: spets.px + (dx / arm) * 9 * lupp,
           ty: spets.py + (dy / arm) * 9 * lupp,
           ankare: (dx > arm * 0.35 ? 'start' : dx < -arm * 0.35 ? 'end' : 'middle') as
-            'start' | 'end' | 'middle',
+            | 'start'
+            | 'end'
+            | 'middle',
           lyft: dy > arm * 0.35 ? 10 * lupp : dy < -arm * 0.35 ? -4 * lupp : 4 * lupp,
         }
       }),
     )
-  }, [rotera, R, karta, smal, lupp])
+  }, [rotera, R, axel, smal, lupp])
 
   /* Ett rutnät i mittplanet — det plan som de två vågräta axlarna spänner upp.
      Axelkorset säger vilket håll man vridit, men inte hur långt bort något
@@ -360,12 +376,11 @@ export default function Karta3D({
        utanför bild när planet vrids. Inom den gränsen läggs det så tätt intill
        molnet som molnet självt kräver. */
     const bredast = Math.max(
-      ...karta.grupper.map((g) =>
-        Math.max(
-          Math.abs((g.x - rymd.mitt.x) * rymd.skala),
-          Math.abs((g.z - rymd.mitt.z) * rymd.skala),
-        ),
-      ),
+      0,
+      ...karta.grupper.flatMap((g) => {
+        const l = plats(g, axel, rymd)
+        return l ? [Math.max(Math.abs(l[0]), Math.abs(l[2]))] : []
+      }),
     )
     const kant = Math.min(R / Math.SQRT2, bredast * 1.12)
     const steg = (kant * 2) / RUTOR
@@ -379,7 +394,7 @@ export default function Karta3D({
         linjer.push({ x1: a.px, y1: a.py, x2: b.px, y2: b.py, d: (a.d + b.d) / 2 })
     }
     return linjer
-  }, [rotera, R, karta, rymd])
+  }, [rotera, R, karta, axel, rymd])
 
   /* Lodlinjer från landmärkena ned till mittplanet, med en fot där de landar.
      Det här är det som faktiskt löser djupet: en prick som svävar går inte att
@@ -394,14 +409,13 @@ export default function Karta3D({
     () =>
       karta.grupper
         .filter((g) => störst.has(g.namn))
-        .map((g) => {
-          const dx = (g.x - rymd.mitt.x) * rymd.skala
-          const dz = (g.z - rymd.mitt.z) * rymd.skala
+        .flatMap((g) => {
           const topp = vrid(g)
-          const fot = rotera(dx, 0, dz)
-          return { nyckel: g.namn, x1: topp.px, y1: topp.py, x2: fot.px, y2: fot.py, d: fot.d }
+          const fot = fotpunkt(g)
+          if (!topp || !fot) return []
+          return [{ nyckel: g.namn, x1: topp.px, y1: topp.py, x2: fot.px, y2: fot.py, d: fot.d }]
         }),
-    [karta, störst, rymd, vrid, rotera],
+    [karta, störst, vrid, fotpunkt],
   )
 
   /* Lodlinjen från den valda pricken till mittplanet. Samma sak som stolparna
@@ -415,13 +429,11 @@ export default function Karta3D({
   const lodlinje = useMemo(() => {
     const träff = valdProdukt ?? karta.grupper.find((g) => g.namn === vald)
     if (!träff) return null
-    const dx = (träff.x - rymd.mitt.x) * rymd.skala
-    const dy = (träff.y - rymd.mitt.y) * rymd.skala
-    const dz = (träff.z - rymd.mitt.z) * rymd.skala
-    const a = rotera(dx, dy, dz)
-    const b = rotera(dx, 0, dz)
+    const a = vrid(träff)
+    const b = fotpunkt(träff)
+    if (!a || !b) return null
     return { x1: a.px, y1: a.py, x2: b.px, y2: b.py, fot: b }
-  }, [valdProdukt, vald, karta, rymd, rotera])
+  }, [valdProdukt, vald, karta, vrid, fotpunkt])
 
   /* Samma markering som på den platta kartan: pricken man hovrar över i
      panelen, ett streck till den man tittar på, och en egen lodlinje ned till
@@ -430,14 +442,11 @@ export default function Karta3D({
   const märke = useMemo(() => {
     if (!markerad) return null
     const till = vrid(markerad)
-    const fot = rotera(
-      (markerad.x - rymd.mitt.x) * rymd.skala,
-      0,
-      (markerad.z - rymd.mitt.z) * rymd.skala,
-    )
+    const fot = fotpunkt(markerad)
+    if (!till || !fot) return null
     const från = valdProdukt && valdProdukt.id !== markerad.id ? vrid(valdProdukt) : null
     return { till, fot, från, produkt: markerad }
-  }, [markerad, valdProdukt, vrid, rotera, rymd])
+  }, [markerad, valdProdukt, vrid, fotpunkt])
 
   function ned(e: React.PointerEvent<SVGSVGElement>) {
     setSnurrar(false)
@@ -657,8 +666,17 @@ export default function Karta3D({
 
       {/* Noten stod förut för att säga vad den tredje riktningen var — den
           gick inte att rita. Nu står den på sin egen axel med sina egna ord,
-          och kvar är bara det man inte kan se: att man får ta i molnet. */}
-      <div className="grepp-not">dra för att vrida{smal ? '' : ', rulla för att zooma'}</div>
+          och kvar är bara det man inte kan se: att man får ta i molnet.
+
+          Ligger en klocka på en axel står gallret också här. Klockorna är
+          heltal, så prickarna lägger sig i skivor med tjugo drycker i varje —
+          det syns direkt, och den som inte vet varför tror att det är ett fel.
+          Hellre skrivet än dolt, och absolut hellre än utsuddat med brus. */}
+      <div className="grepp-not">
+        dra för att vrida{smal ? '' : ', rulla för att zooma'}
+        {axel.some((a) => a.sort === 'klocka') &&
+          ' · klockorna är heltal, så prickarna lägger sig i skivor'}
+      </div>
     </div>
   )
 }

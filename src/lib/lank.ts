@@ -26,13 +26,28 @@ export type Läge = {
   vy?: string
   /** Vilken smakklocka prickarna färgas efter. Utelämnad = dryckens egen färg. */
   farg?: string
+  /** Vad de tre riktningarna i 3D-molnet visar, som `x,y,z` — till exempel
+   *  `pc1,beska,fyllighet`. Utelämnad betyder kartans egna tre
+   *  huvudkomponenter, alltså molnet som det alltid har sett ut. */
+  axlar?: string
   /** Ursprungsländer, kommaseparerade. Utelämnad betyder alla — filtret är ett
    *  raster över kartan, inte ett val av något, så tomt är det normala läget.
    *  Inget av Systembolagets 53 landsnamn innehåller komma. */
   land?: string
 }
 
-const NYCKLAR = ['karta', 'grupp', 'produkt', 'ord', 'mat', 'om', 'vy', 'farg', 'land'] as const
+const NYCKLAR = [
+  'karta',
+  'grupp',
+  'produkt',
+  'ord',
+  'mat',
+  'om',
+  'vy',
+  'farg',
+  'axlar',
+  'land',
+] as const
 
 /** Landfiltret som lista. Tom lista betyder att allt får synas. */
 export const läsLänder = (l: Läge): string[] => (l.land ? l.land.split(',').filter(Boolean) : [])

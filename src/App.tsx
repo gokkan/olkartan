@@ -5,6 +5,7 @@ import Urval from './Urval'
 import Sok from './Sok'
 import Kartval from './Kartval'
 import Karta3D from './Karta3D'
+import Axelval from './Axelval'
 import Om from './Om'
 import Landval from './Landval'
 import Fangare from './Fangare'
@@ -12,6 +13,7 @@ import kartorData from './data/kartor.json'
 import { useProdukter } from './lib/hämtaProdukter'
 import { läsLäge, läsLänder, skrivLäge, skrivLänder, type Läge } from './lib/lank'
 import { KLOCKSKALA } from './lib/färg'
+import { axelmeny, skrivAxlar, tolkaAxlar } from './lib/axlar'
 import type { Karta as KartaTyp, Produkt, Grupp } from './lib/typer'
 
 const kartor = kartorData as unknown as KartaTyp[]
@@ -147,6 +149,14 @@ export default function App() {
     [karta, läge.farg],
   )
 
+  /* Vad de tre riktningarna i molnet visar. Standard är kartans egna tre
+     huvudkomponenter — då är 3D-läget exakt det det alltid har varit. En nyckel
+     som kartan saknar faller tillbaka position för position, precis som färgen:
+     beska finns inte för vin, och en delad länk ska ge en läsbar karta. */
+  const axel = useMemo(() => tolkaAxlar(karta, läge.axlar), [karta, läge.axlar])
+  const axelnycklar = useMemo(() => axel.map((a) => a.nyckel), [axel])
+  const egnaAxlar = axel.every((a) => a.sort === 'rymd')
+
   /** Vad som överlever ett klick.
    *
    *  Kartans id, utom för den första — den är standard. Vyläget, så att man
@@ -155,11 +165,14 @@ export default function App() {
    *  kartan, inte en del av det man tittar på. Att den nollställdes vid varje
    *  klick gjorde den nästan oanvändbar. Landfiltret av samma skäl: det är ett
    *  raster man lagt över kartan, och att det försvann vid varje klick vore
-   *  samma fel en gång till. */
+   *  samma fel en gång till. Axelvalet hör till samma sort: har man ställt
+   *  molnet till beska mot fyllighet är det den bild man tittar i, och att
+   *  välja en stil ska inte kasta en tillbaka till smakrymden. */
   const bas = (): Läge => ({
     ...(karta.id === kartor[0].id ? {} : { karta: karta.id }),
     ...(läge.vy ? { vy: läge.vy } : {}),
     ...(läge.farg ? { farg: läge.farg } : {}),
+    ...(läge.axlar ? { axlar: läge.axlar } : {}),
     ...(läge.land ? { land: läge.land } : {}),
   })
 
@@ -203,6 +216,12 @@ export default function App() {
     // fyllighet, pris och alkoholhalt finns däremot överallt.
     const ny = kartor.find((k) => k.id === id)
     const farg = ny?.färgkanaler.some((k) => k.nyckel === läge.farg) ? läge.farg : undefined
+    /* Axelvalet valideras som helhet och inte per axel. Faller en av tre
+       tillbaka står två kvar och den tredje är något annat än man ställde in —
+       en bild man inte har bett om. Hellre kartans egna tre riktningar, som är
+       den bild man vet vad den betyder. */
+    const nycklar = ny ? axelmeny(ny).map((a) => a.nyckel) : []
+    const axlar = läge.axlar?.split(',').every((n) => nycklar.includes(n)) ? läge.axlar : undefined
     /* Landfiltret följer med ovalidderat, till skillnad från färgen. Vilka
        länder den nya kartan har vet vi inte förrän dess produktfil är hämtad,
        och det är efter det här klicket. Väljer man en karta där landet saknas
@@ -213,6 +232,7 @@ export default function App() {
       om: läge.om,
       vy: läge.vy,
       farg,
+      axlar,
       land: läge.land,
     })
   }
@@ -230,6 +250,7 @@ export default function App() {
           <Karta3D
             karta={karta}
             färgkanal={färgkanal}
+            axel={axel}
             vald={urval ? null : (grupp?.namn ?? null)}
             molnet={molnet}
             valdProdukt={produkt}
@@ -363,6 +384,19 @@ export default function App() {
               )}
             </label>
           </div>
+
+          {/* Bara i 3D. Den platta kartan har två axlar och de är kartans
+              egna — hela dess uträkning, zoomen och flygningarna sitter i dem.
+              Molnet har tre, och där är valet både möjligt och meningsfullt:
+              två klockor mot varandra är en annan bild än en klocka utspridd
+              över smakrymden, och den bilden fanns inte förut. */}
+          {tredje && (
+            <Axelval
+              karta={karta}
+              valda={axelnycklar}
+              onÄndra={(tre) => gåTill({ ...läge, axlar: skrivAxlar(tre) }, false)}
+            />
+          )}
         </div>
 
         {/* Om-rutan tar hela panelplatsen så länge den är öppen. Det man
@@ -433,8 +467,12 @@ export default function App() {
           {länder.length > 0 && <> av {karta.antalProdukter.toLocaleString('sv-SE')}</>}
         </span>
         <span>
+          {/* Foten får inte fortsätta lova smaklikhet när axlarna är valda.
+              Smakrymdens tre riktningar är jämförbara med varandra och
+              avståndet mellan två prickar betyder något; beska mot pris gör
+              det inte, hur mycket det än ser ut som en karta. */}
           {tredje
-            ? `avstånd är smaklikhet · dra för att vrida — tryck 2D för att kunna välja`
+            ? `${egnaAxlar ? 'avstånd är smaklikhet' : 'valda axlar — avstånd är inte smaklikhet'} · dra för att vrida — tryck 2D för att kunna välja`
             : `avstånd är smaklikhet · klicka på ${karta.grupp.obestämd}, rulla för att zooma`}
         </span>
       </footer>
