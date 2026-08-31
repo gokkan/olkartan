@@ -582,7 +582,9 @@ const stolpar = await p.locator('.stolpar line').count()
 const fötter = await p.locator('.stolpar circle').count()
 console.log(`\norientering i 3D`)
 console.log(`  ${rutor === 18 ? '✓' : '✗'} rutnätet: ${rutor} linjer (9 + 9)`)
-console.log(`  ${stolpar === 14 && fötter === 14 ? '✓' : '✗'} ${stolpar} stolpar med ${fötter} fötter`)
+console.log(
+  `  ${stolpar === 14 && fötter === 14 ? '✓' : '✗'} ${stolpar} stolpar med ${fötter} fötter`,
+)
 console.log(
   `  ${(await p.locator('.axelkors line').count()) === 6 ? '✓' : '✗'} korset kvar med sina sex armar`,
 )
@@ -728,6 +730,52 @@ await p.mouse.move(820, 340, { steps: 8 })
 const underDrag = await rutan()
 await p.mouse.up()
 console.log(`  ${underDrag === null ? '✓' : '✗'} ingen ruta medan man vrider molnet`)
+
+/* --- 20. Länken till Systembolaget ----------------------------------------
+ * Adressen byggs av `nummer`, inte av `id`. Systembolaget har två nummer per
+ * produkt och de är olika — Guinness Draught är 507849 på bildservern och
+ * 126015 på webbplatsen — så ett bygge som råkar skicka fel av de två ger en
+ * länk som ser rimlig ut och leder till 404. Testet följer därför länken på
+ * riktigt och läser sidans titel.
+ *
+ * Tre fall: öl, vin (annan kategoridel i adressen), och en produkt utan
+ * etikettbild — länken ska stå kvar även då, för den hör inte ihop med bilden
+ * utan med produkten. */
+console.log('\nlänk till Systembolaget')
+for (const [adress, vad] of [
+  ['#produkt=507849', 'öl'],
+  ['#karta=rott&produkt=64055869', 'vin'],
+  ['#produkt=803689', 'utan bild'],
+]) {
+  await p.goto(bas + adress, { waitUntil: 'networkidle' })
+  await klar()
+  await p.waitForSelector('.sb-lank')
+  const href = await p.getAttribute('.sb-lank', 'href')
+  const namn = (await p.locator('.panel h2').textContent()).trim()
+  const bilder = await p.locator('.etikettbild').count()
+  const sida = await p.context().newPage()
+  const svar = await sida.goto(href, { waitUntil: 'domcontentloaded' })
+  await sida.waitForTimeout(1500)
+  const titel = (await sida.title()).replace(' | Systembolaget', '').trim()
+  await sida.close()
+  /* Systembolaget skriver ut hela produktnamnet med årgång, vårt h2 bara
+     namnet och undertiteln — därför inledningsjämförelse och inte likhet. */
+  const rätt =
+    svar.status() === 200 && titel.toLowerCase().startsWith(namn.slice(0, 12).toLowerCase())
+  console.log(`  ${rätt ? '✓' : '✗'} ${vad.padEnd(10)} bild:${bilder} · ${namn} → ${titel}`)
+}
+const attr = await p.evaluate(() => {
+  const a = document.querySelector('.sb-lank')
+  return { text: a.textContent.trim(), target: a.target, rel: a.rel }
+})
+/* Ordvalet är en juridisk gräns och inte en formulering: appen beskriver och
+   säljer inte, så länken får heta varifrån men aldrig köp. Se PLAN.md. */
+console.log(
+  `  ${/köp|handla|beställ/i.test(attr.text) ? '✗ låter som en köplänk' : '✓ källhänvisning, inte köpuppmaning'}: "${attr.text}"`,
+)
+console.log(
+  `  ${attr.target === '_blank' && attr.rel.includes('noreferrer') ? '✓' : '✗'} öppnas i ny flik, utan referrer`,
+)
 
 console.log(fel.length ? '\nKONSOLFEL:\n' + fel.join('\n') : '\ninga konsolfel')
 await b.close()

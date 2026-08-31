@@ -158,6 +158,10 @@ export const DRYCKER = [
     namn: 'Öl',
     kort: 'öl',
     sida: 'ölkartan',
+    /* Kategoridelen i Systembolagets produktadress. Deras categoryLevel1 är
+       'Öl' respektive 'Vin' för allt som hamnar på kartorna, alltså konstant
+       per karta — därför här och inte som ett fält på varje produkt. */
+    sbVäg: 'ol',
     enhet: { en: 'öl', flera: 'öl' },
     grupp: { en: 'stil', flera: 'stilar', denna: 'stilen', obestämd: 'en stil' },
     färgskala: 'öl',
@@ -219,6 +223,7 @@ export const DRYCKER = [
     namn: 'Rött vin',
     kort: 'rött',
     sida: 'rödvinskartan',
+    sbVäg: 'vin',
     enhet: { en: 'vin', flera: 'viner' },
     grupp: { en: 'druva', flera: 'druvor', denna: 'druvan', obestämd: 'en druva' },
     färgskala: 'rött',
@@ -270,6 +275,7 @@ export const DRYCKER = [
     namn: 'Vitt vin',
     kort: 'vitt',
     sida: 'vitvinskartan',
+    sbVäg: 'vin',
     enhet: { en: 'vin', flera: 'viner' },
     grupp: { en: 'druva', flera: 'druvor', denna: 'druvan', obestämd: 'en druva' },
     färgskala: 'vitt',

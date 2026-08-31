@@ -10,6 +10,7 @@ import {
   närmasteGrupper,
   producentRad,
   produkterIGrupp,
+  systembolagetLänk,
   typiskMat,
 } from './lib/urval'
 import { palett } from './lib/färg'
@@ -159,13 +160,32 @@ export default function Panel({
               ← {tillbaka}
             </button>
           )}
-          {/* data-kik: så långt kortet öppnas på telefon vid första trycket. */}
+          {/* data-kik: så långt kortet öppnas på telefon vid första trycket.
+
+              Bilden och länken står i samma spalt, för de hör ihop: båda pekar
+              på Systembolaget, och båda är källhänvisningar snarare än
+              erbjudanden. Länken heter därför "Systembolaget" och inte "köp" —
+              appen beskriver, den säljer inte. Se PLAN.md, Juridik.
+
+              Länken står kvar även när bilden uteblir. Den hämtas från en
+              server vi inte rår över, och att källhänvisningen skulle
+              försvinna med den vore fel sorts koppling. */}
           <div className="produkthuvud" data-kik>
             <div>
               <h2>{heltNamn(vald)}</h2>
               <p className="meta">{producentRad(vald)}</p>
             </div>
-            <Etikett produkt={vald} />
+            <div className="etikettspalt">
+              <Etikett produkt={vald} />
+              <a
+                className="sb-lank"
+                href={systembolagetLänk(vald, karta)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Systembolaget<span className="not"> ↗</span>
+              </a>
+            </div>
           </div>
 
           <dl className="fakta">

@@ -440,6 +440,13 @@ function byggKarta(dryck) {
   /* --- skriv ut ----------------------------------------------------------- */
   const produkter = valda.map((p, i) => ({
     id: p.productId,
+    /* Systembolaget har två nummer per produkt och de är inte samma. `id`
+       ovan är productId, som bildservern nycklar på; `nummer` är
+       productNumber, som deras egna produktadresser nycklar på. Guinness
+       Draught är 507849 i det ena fallet och 126015 i det andra. Vill man
+       länka till deras sida behövs det senare, och det går inte att räkna
+       fram ur det förra. */
+    nummer: p.productNumber,
     namn: p.productNameBold,
     undertitel: p.productNameThin || null,
     bryggeri: p.producerName,
@@ -666,6 +673,7 @@ function byggKarta(dryck) {
     namn: dryck.namn,
     kort: dryck.kort,
     sida: dryck.sida,
+    sbVäg: dryck.sbVäg,
     grupp: dryck.grupp,
     enhet: dryck.enhet,
     färgskala: dryck.färgskala,

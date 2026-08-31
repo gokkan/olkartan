@@ -102,6 +102,33 @@ export const kronor = (n: number) =>
  */
 export const heltNamn = (p: Produkt) => [p.namn, p.undertitel].filter(Boolean).join(' ')
 
+/**
+ * Adressen till Systembolagets egen sida om produkten.
+ *
+ * Formen är `/produkt/<kategori>/<slug>-<produktnummer>/`. Bara numret bär
+ * någon information: `/produkt/ol/nagot-helt-annat-126015/` visar Guinness
+ * Draught precis som den riktiga slugen gör. Slugen är alltså dekoration —
+ * men en länk man kopierar och klistrar in någon annanstans ska gå att läsa,
+ * så den skrivs ut ändå. Att den kan bli inaktuell om produkten byter namn
+ * spelar därför ingen roll.
+ *
+ * Numret är `nummer`, inte `id`. Se byggskriptet: Systembolaget har två
+ * nummer per produkt och deras bildserver och deras webbplats använder var
+ * sitt.
+ */
+export const slugga = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[åä]/g, 'a')
+    .replace(/ö/g, 'o')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+export const systembolagetLänk = (p: Produkt, karta: Karta) =>
+  `https://www.systembolaget.se/produkt/${karta.sbVäg}/${slugga(p.namn)}-${p.nummer}/`
+
 /** Producenten upprepas inte när den redan står i namnet. */
 export const producentRad = (p: Produkt) =>
   [p.bryggeri === p.namn ? null : p.bryggeri, p.land].filter(Boolean).join(' · ')

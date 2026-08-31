@@ -715,6 +715,29 @@ Det är en musfunktion. På telefon finns ingen hovring, och där är listan red
 
 ---
 
+## Två nummer per produkt
+
+Länken till Systembolagets egen sida ser ut som en femradersändring och var det inte, av ett skäl värt att skriva ned: **Systembolaget har två nummer per produkt, och de är olika.**
+
+```
+Guinness Draught     productId 507849   productNumber 126015
+Sofiero Julöl        productId 866381   productNumber 1137212
+Poggio al Leone    productId 64055869   productNumber 9222801
+```
+
+Bildservern nycklar på `productId`, som appen redan lagrar som `id`. Webbplatsens produktadresser nycklar på `productNumber`, och det går inte att räkna fram ur det andra. Gissade adresser byggda på `id` ger en riktig 404-sida, inte en omdirigering — det upptäcktes genom att faktiskt följa dem.
+
+Adressens form är `/produkt/<kategori>/<slug>-<nummer>/`. Två mätningar formade lösningen:
+
+- **Slugen bär ingen information.** `/produkt/ol/nagot-helt-annat-126015/` visar Guinness Draught precis som den riktiga slugen gör. Den skrivs ändå ut, för en länk man kopierar ska gå att läsa — men att den kan bli inaktuell vid en namnändring spelar därmed ingen roll, och den räknas fram i webbläsaren ur namnet vi redan har.
+- **Kategoridelen är konstant per karta.** `categoryLevel1` är "Öl" för allt på ölkartan och "Vin" för båda vinkartorna, utan undantag i hela sortimentet. Den ligger därför i kartans metadata som `sbVäg` och inte som ett fält på 5 800 produkter.
+
+Kvar att lagra blev alltså ett enda nytt fält: `nummer`. Full täckning i katalogen, noll produkter utan.
+
+Testet följer länkarna på riktigt och läser sidans titel. Ett bygge som råkar skicka `id` i stället för `nummer` ger en länk som ser fullkomligt rimlig ut och leder fel, och det är precis den sortens fel ett formkontrollerande test missar.
+
+---
+
 ## Formgivning
 
 Motivet ger paletten: hela SRM-skalan från halmgult till nästan svart är redan appens färgsystem. Använd den som just det, och komplettera inte med en främmande accentfärg. Låt gränssnittet i övrigt vara nästan färglöst så att prickarna bär all kulör.
@@ -729,7 +752,14 @@ Copy på svenska, versal endast i meningsbörjan, aktiva verb. Knappen heter "Vi
 
 ## Juridik
 
-Appen presenterar och beskriver — den säljer inte. Inga köplänkar, inga affiliatelänkar, inga uppmaningar att dricka, ingen formulering som antyder att Systembolaget står bakom appen. Alkohollagens marknadsföringsregler gäller även en hobbysajt, och gränsen mellan redaktionellt innehåll och marknadsföring flyttar sig så fort ett köpflöde läggs till.
+Appen presenterar och beskriver — den säljer inte. Inga affiliatelänkar, inga uppmaningar att dricka, ingen formulering som antyder att Systembolaget står bakom appen. Alkohollagens marknadsföringsregler gäller även en hobbysajt, och gränsen mellan redaktionellt innehåll och marknadsföring flyttar sig så fort ett köpflöde läggs till.
+
+**Om länken till Systembolaget.** Regeln hette länge "inga köplänkar" rakt av. Den formuleringen var för trubbig: den förbjuder en adress, men det är inte adressen som är problemet utan vad den utger sig för att vara. Samma URL kan vara två olika saker.
+
+- *"Köp hos Systembolaget"* är ett köpflöde. Appen blir ett steg på vägen till kassan.
+- *"Systembolaget ↗"* under etikettbilden är en källhänvisning. Den säger var uppgifterna kommer ifrån och låter läsaren gå till förstahandskällan — vilket är motsatsen till att sälja, och dessutom hederligare mot den vars data hela appen bygger på.
+
+Gränsen går alltså i ordvalet och i placeringen, inte i om det finns en länk. Länken står i samma spalt som bilden, med samma dova metatextstil som producentraden, och den heter ett *varifrån*. Länktestet vaktar formuleringen: en text som innehåller *köp*, *handla* eller *beställ* fäller testet.
 
 ---
 

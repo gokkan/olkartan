@@ -4,6 +4,7 @@
   "namn": "Öl",
   "kort": "öl",
   "sida": "ölkartan",
+  "sbVäg": "ol",
   "grupp": {
    "en": "stil",
    "flera": "stilar",
@@ -82,7 +83,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-25",
+  "byggd": "2026-08-31",
   "antalProdukter": 3395,
   "antalGrupper": 60,
   "antalTermer": 152,
@@ -2899,6 +2900,7 @@
   "namn": "Rött vin",
   "kort": "rött",
   "sida": "rödvinskartan",
+  "sbVäg": "vin",
   "grupp": {
    "en": "druva",
    "flera": "druvor",
@@ -2977,7 +2979,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-25",
+  "byggd": "2026-08-31",
   "antalProdukter": 1445,
   "antalGrupper": 52,
   "antalTermer": 100,
@@ -5270,6 +5272,7 @@
   "namn": "Vitt vin",
   "kort": "vitt",
   "sida": "vitvinskartan",
+  "sbVäg": "vin",
   "grupp": {
    "en": "druva",
    "flera": "druvor",
@@ -5348,7 +5351,7 @@
     ]
    }
   ],
-  "byggd": "2026-08-25",
+  "byggd": "2026-08-31",
   "antalProdukter": 967,
   "antalGrupper": 39,
   "antalTermer": 95,

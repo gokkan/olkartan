@@ -45,6 +45,9 @@ export type Grupp = {
 
 export type Produkt = {
   id: string
+  /** Systembolagets andra nummer. Deras bildserver nycklar på id, deras
+   *  webbplats på det här — se systembolagetLänk. */
+  nummer: string
   namn: string
   undertitel: string | null
   // Saknas för ett fåtal produkter i sortimentet.
@@ -87,6 +90,8 @@ export type Karta = {
   kort: string
   /** Sidans namn i foten: ölkartan, rödvinskartan. */
   sida: string
+  /** Kategoridelen i Systembolagets produktadress: 'ol' eller 'vin'. */
+  sbVäg: string
   /** Vad en prick heter i text: stil, stilar, stilen — eller druva, druvor. */
   grupp: { en: string; flera: string; denna: string; obestämd: string }
   /** Vad produkterna heter: öl, viner. */

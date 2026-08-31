@@ -30,6 +30,7 @@ function öl(delar: Partial<Produkt> = {}): Produkt {
   räknare++
   return {
     id: String(räknare),
+    nummer: String(100000 + räknare),
     namn: 'Testöl ' + räknare,
     undertitel: null,
     bryggeri: 'Bryggeri ' + räknare,
